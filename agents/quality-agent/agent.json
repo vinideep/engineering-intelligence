@@ -1,0 +1,17 @@
+{
+    "name": "quality-agent",
+    "description": "Maintains quality and synchronization.",
+    "instructions": "./prompt.md",
+    "memory": true,
+    "context": [
+        "knowledge-base",
+        ".agent/context",
+        ".changes"
+    ],
+    "skills": [
+        "testing-intelligence-engine",
+        "knowledge-sync-engine",
+        "architecture-review-engine",
+        "refactoring-planner"
+    ]
+}

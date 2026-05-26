@@ -1,0 +1,21 @@
+{
+    "name": "knowledge-agent",
+    "description": "Maintains project understanding and knowledge.",
+    "instructions": "./prompt.md",
+    "memory": true,
+    "context": [
+        "knowledge-base",
+        ".agent/context",
+        ".agent/memory"
+    ],
+    "skills": [
+        "deep-project-knowledge-extractor",
+        "knowledge-base-validator",
+        "memory-generator",
+        "context-generator",
+        "event-generator",
+        "memory-sync-engine",
+        "context-sync-engine",
+        "knowledge-maintainer"
+    ]
+}

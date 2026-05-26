@@ -1,0 +1,22 @@
+{
+    "name": "engineering-orchestrator",
+    "description": "Main engineering coordinator that routes developer requests and triggers specialized agents.",
+    "version": "1.0.0",
+    "instructions": "./prompt.md",
+    "memory": true,
+    "context": [
+        "knowledge-base",
+        ".agent/context",
+        ".agent/memory",
+        ".changes"
+    ],
+    "agents": [
+        "knowledge-agent",
+        "change-agent",
+        "quality-agent"
+    ],
+    "execution": {
+        "autoRoute": true,
+        "parallel": false
+    }
+}
