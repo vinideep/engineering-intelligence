@@ -3,8 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const SKILL_NAMES = [
-  "initialize-engineering-intelligence",
-  "engineering-intelligence",
+  "initialize-intelligence-skill",
+  "engineering-intelligence-skill",
   "deep-project-knowledge-extractor",
   "knowledge-base-validator",
   "impact-analysis-engine",

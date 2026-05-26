@@ -1,7 +1,7 @@
 {
   "name": "engineering-intelligence",
-  "version": "0.2.0",
-  "description": "Install graph-backed engineering intelligence skills, agents, and workflows for AI coding IDEs.",
+  "version": "0.3.0",
+  "description": "Install and visualize graph-backed engineering intelligence skills, agents, and workflows for AI coding IDEs.",
   "type": "module",
   "bin": {
     "engineering-intelligence": "./dist/cli/index.js"

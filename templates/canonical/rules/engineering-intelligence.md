@@ -1,22 +1,51 @@
 # Engineering Intelligence Rules
 
-When `knowledge-base/` exists, consult its relevant documents, `.engineering-intelligence/context/`, and `.engineering-intelligence/graph/` before non-trivial project edits.
+## Pre-Edit Requirements
 
-For engineering changes:
+When `knowledge-base/` exists, consult the relevant documents, `.engineering-intelligence/context/`, and `.engineering-intelligence/graph/` before non-trivial project edits.
 
-1. Write an impact report before editing.
-2. Modify code and tests appropriate to the request.
-3. Validate honestly and report unrun checks.
-4. Incrementally update only intelligence and graph artifacts affected by changed behavior.
-5. Record completed work in `.changes/`.
+## Engineering Change Protocol
 
-Read-only workflows:
+For every engineering change, follow this sequence:
 
-- `map-architecture` maps evidence-backed graphs and may update graph-connected context.
-- `analyze-impact` writes an impact report for a proposal or diff.
-- `sync-engineering-intelligence` synchronizes intelligence for an identified change.
-- `review-engineering-change` writes findings without applying fixes.
+| Step | Action | Output |
+|---|---|---|
+| 1 | Write impact report before editing | `.engineering-intelligence/reports/IMP-XXX-*.md` |
+| 2 | Implement code changes and tests | Modified source and test files |
+| 3 | Validate honestly — report unrun checks | Test results, lint results |
+| 4 | Incrementally update affected intelligence and graph artifacts | Updated knowledge/memory/context/graph |
+| 5 | Record completed work | `.changes/CHG-XXX-*.md` |
+
+## Read-Only Workflows
+
+These workflows analyze and report but do **not** modify product code:
+
+| Workflow | Purpose | Output |
+|---|---|---|
+| `map-architecture` | Build evidence-backed graphs | Graph JSON, architecture-map.md, context updates |
+| `analyze-impact` | Write impact report for a proposal or diff | `.engineering-intelligence/reports/IMP-XXX-*.md` |
+| `sync-engineering-intelligence` | Synchronize intelligence for a change | Updated knowledge/memory/context/graph |
+| `review-engineering-change` | Write review findings | `.engineering-intelligence/reports/REV-XXX-*.md` |
 
 Only the `engineering-intelligence` implementation workflow is intended to modify product code.
 
-Use `knowledge-base/`, `.engineering-intelligence/memory/`, `.engineering-intelligence/context/`, `.engineering-intelligence/events/`, `.engineering-intelligence/graph/`, `.engineering-intelligence/reports/`, and `.changes/` as the canonical project-intelligence paths. Never invent undocumented implementation facts.
+## Canonical Paths
+
+Use these as the canonical project-intelligence paths — never invent alternatives:
+
+| Path | Purpose |
+|---|---|
+| `knowledge-base/` | Evidence-based project documentation |
+| `.engineering-intelligence/memory/` | Durable decisions, rules, patterns |
+| `.engineering-intelligence/context/` | Compact AI navigation maps |
+| `.engineering-intelligence/events/` | Change-event guidance |
+| `.engineering-intelligence/graph/` | Architecture graph JSON + Mermaid maps |
+| `.engineering-intelligence/reports/` | Impact (IMP) and review (REV) reports |
+| `.changes/` | Sequential change history records |
+
+## Evidence Rules
+
+- Never invent undocumented implementation facts
+- Back every material claim with a file path reference
+- Mark uncertainty explicitly — silence is worse than "unknown"
+- Use `**Not detected**` for absent features, not omission

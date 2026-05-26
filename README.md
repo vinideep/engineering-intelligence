@@ -83,6 +83,8 @@ npx engineering-intelligence update . --dry-run
 npx engineering-intelligence update .
 npx engineering-intelligence doctor .
 npx engineering-intelligence doctor . --json
+npx engineering-intelligence visualize . --open
+npx engineering-intelligence visualize .
 npx engineering-intelligence uninstall . --dry-run
 npx engineering-intelligence uninstall .
 ```
@@ -90,6 +92,8 @@ npx engineering-intelligence uninstall .
 Installation and update track managed content hashes. Files created by the package are updated only when they still match their installed version. Shared instruction documents such as `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` receive a marked managed block; content outside that block remains user-owned. Locally modified managed content is reported as a conflict and preserved unless `--force` is explicitly provided.
 
 `doctor` validates installed files, manifest drift, template paths, and obsolete legacy `.agent` folders.
+
+`visualize` generates an interactive HTML dashboard (`.engineering-intelligence/dashboard.html`) to display the relationship between installed skills, workflows, agents, and artifacts. The `--open` option automatically launches it in the default browser.
 
 Repositories installed with V1 can adopt V2 safely:
 

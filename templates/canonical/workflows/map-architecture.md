@@ -8,10 +8,21 @@ Use the `graph-engine` capability.
 
 Inspect repository evidence and generate or comprehensively refresh:
 
-- `.engineering-intelligence/graph/dependency-graph.json`
-- `.engineering-intelligence/graph/service-graph.json`
-- `.engineering-intelligence/graph/runtime-graph.json`
-- `.engineering-intelligence/graph/business-flow-graph.json`
-- `.engineering-intelligence/graph/architecture-map.md`
+| Artifact | Content |
+|---|---|
+| `.engineering-intelligence/graph/dependency-graph.json` | Module/package dependency relationships |
+| `.engineering-intelligence/graph/service-graph.json` | Service-to-service communication topology |
+| `.engineering-intelligence/graph/runtime-graph.json` | Runtime call flows and middleware chains |
+| `.engineering-intelligence/graph/business-flow-graph.json` | Business process flows across boundaries |
+| `.engineering-intelligence/graph/architecture-map.md` | Mermaid diagrams derived from JSON graphs |
 
-Use stable node IDs, evidence-backed confidence labels, explicit unknowns, and Mermaid diagrams. You may update graph-connected navigation context when necessary. Do not modify product code.
+## Requirements
+
+- Use stable node IDs across updates
+- Mark every edge with `verified`, `inferred`, or `unknown` confidence
+- Back every `verified` edge with evidence file paths
+- List unresolved relationships in the `unknowns` array
+- Derive Mermaid diagrams from JSON graph data — not hand-authored
+- Update graph-connected navigation context when necessary
+
+This workflow may update graph and context intelligence artifacts. It must not modify product code.

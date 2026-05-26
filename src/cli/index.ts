@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -7,9 +7,10 @@ import { fileURLToPath } from "node:url";
 import { isIdeId } from "../adapters/index.js";
 import { install, uninstall, update } from "../installer/index.js";
 import { doctor } from "../validation/index.js";
+import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall";
+type Command = "install" | "update" | "doctor" | "uninstall" | "visualize";
 
 interface Options {
   command: Command;
@@ -19,6 +20,7 @@ interface Options {
   dryRun: boolean;
   force: boolean;
   json: boolean;
+  openBrowser: boolean;
 }
 
 async function packageVersion(): Promise<string> {
@@ -33,10 +35,11 @@ function usage(): string {
 Install engineering intelligence orchestration assets for AI coding IDEs.
 
 Usage:
-  engineering-intelligence [install] [path] [--ide <id>...] [--yes] [--dry-run] [--force]
+  engineering-intelligence install [path] [--ide <id>...] [--yes] [--dry-run] [--force]
   engineering-intelligence update [path] [--dry-run] [--force]
   engineering-intelligence doctor [path] [--json]
   engineering-intelligence uninstall [path] [--dry-run] [--force]
+  engineering-intelligence visualize [path] [--open]
 
 IDE ids: ${IDE_IDS.join(", ")}
 `;
@@ -45,7 +48,7 @@ IDE ids: ${IDE_IDS.join(", ")}
 function parseArgs(args: string[]): Options {
   let command: Command = "install";
   const remaining = [...args];
-  if (remaining[0] && ["install", "update", "doctor", "uninstall"].includes(remaining[0])) {
+  if (remaining[0] && ["install", "update", "doctor", "uninstall", "visualize"].includes(remaining[0])) {
     command = remaining.shift() as Command;
   }
   if (remaining.includes("--help") || remaining.includes("-h")) {
@@ -58,6 +61,7 @@ function parseArgs(args: string[]): Options {
   let dryRun = false;
   let force = false;
   let json = false;
+  let openBrowser = false;
   for (let index = 0; index < remaining.length; index += 1) {
     const arg = remaining[index];
     if (arg === "--ide") {
@@ -87,6 +91,8 @@ function parseArgs(args: string[]): Options {
       force = true;
     } else if (arg === "--json") {
       json = true;
+    } else if (arg === "--open") {
+      openBrowser = true;
     } else if (arg.startsWith("-")) {
       throw new Error(`Unknown option "${arg}".`);
     } else if (!target) {
@@ -103,6 +109,7 @@ function parseArgs(args: string[]): Options {
     dryRun,
     force,
     json,
+    openBrowser,
   };
 }
 
@@ -152,6 +159,20 @@ async function main(): Promise<void> {
       printActions(actions);
     }
     process.exitCode = actions.some((action) => action.status === "error") ? 1 : 0;
+    return;
+  }
+  if (options.command === "visualize") {
+    const html = generateDashboardHTML();
+    const outDir = path.join(options.root, ".engineering-intelligence");
+    const outPath = path.join(outDir, "dashboard.html");
+    await mkdir(outDir, { recursive: true });
+    await writeFile(outPath, html, "utf8");
+    output.write(`Dashboard generated: ${outPath}\n`);
+    if (options.openBrowser) {
+      const { exec } = await import("node:child_process");
+      const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
+      exec(`${cmd} ${JSON.stringify(outPath)}`);
+    }
     return;
   }
   if (options.command === "uninstall") {

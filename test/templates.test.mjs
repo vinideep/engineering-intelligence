@@ -20,6 +20,6 @@ test("V2 canonical templates define graph, report, and read-only workflow contra
   const implementation = await readTemplate("workflows", "engineering-intelligence");
   assert.match(implementation, /IMP-XXX/);
   assert.match(implementation, /graph artifacts/);
-  assert.match(implementation, /validate/);
+  assert.match(implementation, /validate/i);
   assert.match(implementation, /CHG-XXX/);
 });

@@ -6,6 +6,30 @@ description: Review changed engineering work, tests, graphs, and synchronized in
 
 Use `change-detection-engine` and `engineering-change-review`.
 
-Inspect the identified implementation diff or changed scope, associated impact report, test and validation evidence, graph consistency, and documentation/context synchronization.
+## Procedure
 
-Write `.engineering-intelligence/reports/REV-XXX-<slug>.md` with severity-ordered findings, evidence paths, test gaps, and stale-intelligence risks. Do not modify product code or auto-fix findings.
+1. **Detect scope** — Identify the implementation diff or changed scope
+2. **Read context** — Load associated impact report, test evidence, and graph artifacts
+3. **Review** — Inspect across five dimensions:
+
+| Dimension | What to Check |
+|---|---|
+| Implementation | Correctness, request fulfillment, error handling |
+| Tests | Coverage, execution, results, gaps |
+| Architecture | Boundary respect, pattern compliance, dependency direction |
+| Graph consistency | New/changed nodes and edges reflected |
+| Documentation sync | Knowledge, memory, context accuracy |
+
+4. **Write report** — Generate `.engineering-intelligence/reports/REV-XXX-<slug>.md` with:
+   - Severity-ordered findings (🔴 Blocker → 🟢 Positive)
+   - Evidence paths for each finding
+   - Test gaps and coverage concerns
+   - Stale-intelligence risks
+   - Verdict: Approved / Approved with findings / Changes required
+
+## Rules
+
+- Do not modify product code
+- Do not auto-fix findings — report only
+- Include positive observations alongside issues
+- Flag unrun validation honestly

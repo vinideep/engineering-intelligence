@@ -123,9 +123,10 @@ Request types:
 
 # Folder Structure
 
-.agents/ agents/ skills/ workflows/ rules/ memory/ context/ events/
-
-knowledge-base/ .changes/
+.agents/ (or equivalent IDE adapter directory like .cursor/, .claude/, .github/, .gemini/)
+.engineering-intelligence/ (memory/, context/, events/, graph/, reports/)
+knowledge-base/
+.changes/
 
 ------------------------------------------------------------------------
 
@@ -187,23 +188,26 @@ only affected docs
 
 ------------------------------------------------------------------------
 
-# Future Engines
+# Engines Status
 
-1.  Change Detection Engine
-2.  Graph Engine
-3.  Incremental Sync Engine
-4.  Conversational Intelligence
-5.  Provider Layer
-6.  CLI
-7.  GitHub Integration
-8.  PR Automation
-9.  Runtime Intelligence
+✓ Change Detection Engine
+✓ Graph Engine
+✓ Incremental Sync Engine
+✓ CLI
+✓ Interactive Visualization Dashboard
+
+Future Engines:
+1.  Conversational Intelligence
+2.  Provider Layer
+3.  GitHub Integration
+4.  PR Automation
+5.  Runtime Intelligence
 
 ------------------------------------------------------------------------
 
 # Graph Engine
 
-.agent/graph/
+.engineering-intelligence/graph/
 
 dependency-graph.json service-graph.json runtime-graph.json
 business-flow-graph.json

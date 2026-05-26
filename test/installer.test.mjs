@@ -21,7 +21,7 @@ test("installs shared skills once for overlapping adapters", async () => {
   const result = await install(root, ["antigravity", "codex", "gemini-cli"], options);
   assert.equal(result.conflicts, 0);
   const manifest = JSON.parse(await readable(root, ".engineering-intelligence/install-manifest.json"));
-  const shared = manifest.files.filter((entry) => entry.path === ".agents/skills/engineering-intelligence/SKILL.md");
+  const shared = manifest.files.filter((entry) => entry.path === ".agents/skills/engineering-intelligence-skill/SKILL.md");
   assert.equal(shared.length, 1);
   assert.deepEqual(shared[0].owners, ["antigravity", "codex", "gemini-cli"]);
   assert.match(await readable(root, ".agents/workflows/initialize-engineering-intelligence.md"), /knowledge-base/);
@@ -57,11 +57,11 @@ test("update preserves locally modified managed files unless forced", async () =
 test("doctor reports legacy folders and locally edited managed content", async () => {
   const root = await project();
   await install(root, ["generic"], options);
-  await writeFile(path.join(root, ".agents/skills/engineering-intelligence/SKILL.md"), "changed\n");
+  await writeFile(path.join(root, ".agents/skills/engineering-intelligence-skill/SKILL.md"), "changed\n");
   await writeFile(path.join(root, ".agent"), "legacy marker");
   const actions = await doctor(root);
   assert.ok(actions.some((action) => action.path === ".agent" && action.status === "warning"));
-  assert.ok(actions.some((action) => action.path.includes("engineering-intelligence/SKILL.md") && action.status === "warning"));
+  assert.ok(actions.some((action) => action.path.includes("engineering-intelligence-skill/SKILL.md") && action.status === "warning"));
 });
 
 test("doctor recognizes an untouched installation as healthy", async () => {
@@ -76,7 +76,7 @@ test("dry run does not write installer state or adapter files", async () => {
   const result = await install(root, ["claude-code"], { ...options, dryRun: true });
   assert.ok(result.changed > 0);
   await assert.rejects(access(path.join(root, ".engineering-intelligence/install-manifest.json")));
-  await assert.rejects(access(path.join(root, ".claude/skills/engineering-intelligence/SKILL.md")));
+  await assert.rejects(access(path.join(root, ".claude/skills/engineering-intelligence-skill/SKILL.md")));
 });
 
 test("update removes an obsolete unchanged managed file recorded by an older manifest", async () => {
