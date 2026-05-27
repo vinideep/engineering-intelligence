@@ -4,7 +4,7 @@ import { renderAdapters } from "../dist/adapters/index.js";
 import { validateRender } from "../dist/validation/index.js";
 
 test("all V2 IDE adapters render internally valid native destinations and workflows", async () => {
-  const ides = ["antigravity", "codex", "claude-code", "cursor", "github-copilot", "gemini-cli", "generic"];
+  const ides = ["antigravity", "antigravity-cli", "codex", "claude-code", "cursor", "github-copilot", "gemini-cli", "generic"];
   const files = await renderAdapters(ides);
   const paths = new Set(files.map((item) => item.path));
   assert.ok(paths.has(".agent/workflows/initialize-engineering-intelligence.md"));

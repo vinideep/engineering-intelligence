@@ -1,5 +1,6 @@
 export const IDE_IDS = [
   "antigravity",
+  "antigravity-cli",
   "codex",
   "claude-code",
   "cursor",
