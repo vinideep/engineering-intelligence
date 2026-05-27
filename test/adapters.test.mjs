@@ -7,11 +7,11 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   const ides = ["antigravity", "codex", "claude-code", "cursor", "github-copilot", "gemini-cli", "generic"];
   const files = await renderAdapters(ides);
   const paths = new Set(files.map((item) => item.path));
-  assert.ok(paths.has(".agents/workflows/initialize-engineering-intelligence.md"));
-  assert.ok(paths.has(".agents/workflows/map-architecture.md"));
-  assert.ok(paths.has(".agents/workflows/analyze-impact.md"));
-  assert.ok(paths.has(".agents/workflows/sync-engineering-intelligence.md"));
-  assert.ok(paths.has(".agents/workflows/review-engineering-change.md"));
+  assert.ok(paths.has(".agent/workflows/initialize-engineering-intelligence.md"));
+  assert.ok(paths.has(".agent/workflows/map-architecture.md"));
+  assert.ok(paths.has(".agent/workflows/analyze-impact.md"));
+  assert.ok(paths.has(".agent/workflows/sync-engineering-intelligence.md"));
+  assert.ok(paths.has(".agent/workflows/review-engineering-change.md"));
   assert.ok(paths.has("AGENTS.md"));
   assert.ok(paths.has(".claude/commands/engineering-intelligence.md"));
   assert.ok(paths.has(".claude/commands/map-architecture.md"));

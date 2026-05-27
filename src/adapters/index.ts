@@ -51,10 +51,10 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
   switch (ide) {
     case "antigravity":
       return [
-        ...(await skillsAt(".agents/skills", ide)),
-        ...(await workflowsAt(".agents/workflows", ide)),
+        ...(await skillsAt(".agent/skills", ide)),
+        ...(await workflowsAt(".agent/workflows", ide)),
         file(
-          ".agents/rules/engineering-intelligence.md",
+          ".agent/rules/engineering-intelligence.md",
           await readTemplate("rules", "engineering-intelligence"),
           ide,
         ),

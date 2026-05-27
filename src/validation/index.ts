@@ -50,7 +50,7 @@ export async function doctor(root: string): Promise<FileAction[]> {
   for (const message of renderingErrors) {
     actions.push({ path: "templates", status: "error", message });
   }
-  if (await exists(path.join(root, ".agent"))) {
+  if (await exists(path.join(root, ".agent")) && !manifest.adapters.includes("antigravity")) {
     actions.push({
       path: ".agent",
       status: "warning",

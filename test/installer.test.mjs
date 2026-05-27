@@ -23,9 +23,9 @@ test("installs shared skills once for overlapping adapters", async () => {
   const manifest = JSON.parse(await readable(root, ".engineering-intelligence/install-manifest.json"));
   const shared = manifest.files.filter((entry) => entry.path === ".agents/skills/engineering-intelligence-skill/SKILL.md");
   assert.equal(shared.length, 1);
-  assert.deepEqual(shared[0].owners, ["antigravity", "codex", "gemini-cli"]);
-  assert.match(await readable(root, ".agents/workflows/initialize-engineering-intelligence.md"), /knowledge-base/);
-  assert.match(await readable(root, ".agents/workflows/map-architecture.md"), /dependency-graph\.json/);
+  assert.deepEqual(shared[0].owners, ["codex", "gemini-cli"]);
+  assert.match(await readable(root, ".agent/workflows/initialize-engineering-intelligence.md"), /knowledge-base/);
+  assert.match(await readable(root, ".agent/workflows/map-architecture.md"), /dependency-graph\.json/);
   assert.match(await readable(root, ".gemini/commands/engineering-intelligence.toml"), /User supplied scope or request/);
 });
 
@@ -127,7 +127,7 @@ test("update upgrades a V1-shaped installation with V2 graph and impact assets",
   const result = await update(root, options);
   assert.equal(result.conflicts, 0);
   assert.ok(result.actions.some((action) => action.path === ".agents/skills/graph-engine/SKILL.md" && action.status === "created"));
-  assert.ok(result.actions.some((action) => action.path === ".agents/workflows/analyze-impact.md" && action.status === "created"));
+  assert.ok(result.actions.some((action) => action.path === ".agent/workflows/analyze-impact.md" && action.status === "created"));
   const updatedManifest = JSON.parse(await readFile(manifestPath, "utf8"));
   assert.equal(updatedManifest.templateVersion, "2.0.0");
 });

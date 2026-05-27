@@ -8,7 +8,7 @@ The installer does **not** inspect the target source code, call an AI model, or 
 
 | IDE adapter | Installed integration | Invocation |
 | --- | --- | --- |
-| Antigravity | `.agents/skills`, `.agents/rules`, `.agents/workflows` | Native slash workflows |
+| Antigravity | `.agent/skills`, `.agent/rules`, `.agent/workflows` | Native slash workflows |
 | Codex | `.agents/skills`, managed `AGENTS.md` guidance | Mention the installed `$skill-name` in chat |
 | Claude Code | `.claude/skills`, `.claude/agents`, `.claude/commands`, managed `CLAUDE.md` | Native slash workflows |
 | Cursor | `.cursor/rules`, `.cursor/commands` | Native slash workflows |
