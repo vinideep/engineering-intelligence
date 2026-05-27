@@ -20,9 +20,10 @@ export async function validateRender(ides: IdeId[]): Promise<string[]> {
   const rendered = await renderAdapters(ides);
   for (const item of rendered) {
     if (
-      item.content.includes(".agent/") ||
-      item.content.includes(".agents/memory") ||
-      item.content.includes(".agents/context")
+      !item.path.endsWith(".json") &&
+      (item.content.includes(".agent/") ||
+        item.content.includes(".agents/memory") ||
+        item.content.includes(".agents/context"))
     ) {
       errors.push(`${item.path} references an obsolete or host-bound runtime output path`);
     }

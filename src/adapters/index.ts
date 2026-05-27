@@ -47,11 +47,81 @@ async function agentsAt(directory: string, owner: IdeId): Promise<RenderedFile[]
   );
 }
 
+function parseFrontmatter(content: string): { meta: Record<string, string>; body: string } {
+  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/m);
+  if (!match) return { meta: {}, body: content };
+  const meta: Record<string, string> = {};
+  for (const line of match[1].split("\n")) {
+    const colon = line.indexOf(":");
+    if (colon === -1) continue;
+    const key = line.slice(0, colon).trim();
+    const value = line.slice(colon + 1).trim();
+    meta[key] = value;
+  }
+  return { meta, body: match[2] };
+}
+
+const AGENT_METADATA: Record<
+  (typeof AGENT_NAMES)[number],
+  { context: string[]; agents?: string[]; skills?: string[]; autoRoute?: boolean; parallel?: boolean }
+> = {
+  "engineering-orchestrator": {
+    context: ["knowledge-base", ".agent/context", ".agent/memory", ".changes"],
+    agents: ["knowledge-agent", "change-agent", "quality-agent"],
+    autoRoute: true,
+    parallel: false,
+  },
+  "change-agent": {
+    context: ["knowledge-base", ".agent/context", ".changes"],
+    skills: ["engineering-intelligence-skill", "impact-analysis-engine", "change-detection-engine"],
+  },
+  "quality-agent": {
+    context: ["knowledge-base", ".agent/context"],
+    skills: ["engineering-change-review", "knowledge-base-validator", "testing-intelligence-engine"],
+  },
+  "knowledge-agent": {
+    context: ["knowledge-base", ".agent/context", ".agent/memory", ".changes"],
+    skills: ["knowledge-sync-engine", "memory-sync-engine", "context-sync-engine", "graph-engine", "change-history-engine"],
+  },
+  "product-analyst": {
+    context: ["knowledge-base", ".agent/context", ".engineering-intelligence/graph"],
+    skills: ["requirement-scoper"],
+  },
+};
+
+async function agentsAsJsonAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
+  const results: RenderedFile[] = [];
+  for (const name of AGENT_NAMES) {
+    const raw = await readTemplate("agents", name);
+    const { meta, body } = parseFrontmatter(raw);
+    const agentName = meta["name"] ?? name;
+    const description = meta["description"] ?? "";
+    const extra = AGENT_METADATA[name];
+    const manifest: Record<string, unknown> = {
+      name: agentName,
+      description,
+      version: "1.0.0",
+      instructions: "./prompt.md",
+      memory: true,
+      context: extra.context,
+    };
+    if (extra.agents) manifest["agents"] = extra.agents;
+    if (extra.skills) manifest["skills"] = extra.skills;
+    if (extra.autoRoute !== undefined) {
+      manifest["execution"] = { autoRoute: extra.autoRoute, parallel: extra.parallel ?? false };
+    }
+    results.push(file(`${directory}/${name}/agent.json`, JSON.stringify(manifest, null, 4), owner));
+    results.push(file(`${directory}/${name}/prompt.md`, body.replace(/^\n/, ""), owner));
+  }
+  return results;
+}
+
 async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
   switch (ide) {
     case "antigravity":
       return [
         ...(await skillsAt(".agent/skills", ide)),
+        ...(await agentsAsJsonAt(".agent/agents", ide)),
         ...(await workflowsAt(".agent/workflows", ide)),
         file(
           ".agent/rules/engineering-intelligence.md",
@@ -62,6 +132,7 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
     case "antigravity-cli":
       return [
         ...(await skillsAt(".agent/skills", ide)),
+        ...(await agentsAsJsonAt(".agent/agents", ide)),
         ...(await workflowsAt(".agent/workflows", ide)),
         file(
           ".agent/rules/engineering-intelligence.md",

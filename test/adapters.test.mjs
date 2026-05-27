@@ -12,6 +12,11 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.ok(paths.has(".agent/workflows/analyze-impact.md"));
   assert.ok(paths.has(".agent/workflows/sync-engineering-intelligence.md"));
   assert.ok(paths.has(".agent/workflows/scope-requirement.md"));
+  assert.ok(paths.has(".agent/agents/engineering-orchestrator/agent.json"));
+  assert.ok(paths.has(".agent/agents/engineering-orchestrator/prompt.md"));
+  assert.ok(paths.has(".agent/agents/change-agent/agent.json"));
+  assert.ok(paths.has(".agent/agents/product-analyst/agent.json"));
+  assert.ok(paths.has(".agent/agents/product-analyst/prompt.md"));
   assert.ok(paths.has("AGENTS.md"));
   assert.ok(paths.has(".claude/commands/engineering-intelligence.md"));
   assert.ok(paths.has(".claude/commands/map-architecture.md"));
@@ -24,6 +29,13 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.ok(paths.has(".gemini/commands/sync-engineering-intelligence.toml"));
   assert.ok(paths.has(".gemini/commands/scope-requirement.toml"));
   assert.match(files.find((item) => item.path === "AGENTS.md").content, /map-architecture/);
+  // Verify agent.json content is valid JSON with required fields
+  const orchJson = JSON.parse(files.find((item) => item.path === ".agent/agents/engineering-orchestrator/agent.json").content);
+  assert.equal(orchJson.name, "engineering-orchestrator");
+  assert.ok(orchJson.description.length > 0);
+  assert.deepEqual(orchJson.agents, ["knowledge-agent", "change-agent", "quality-agent"]);
+  const analystJson = JSON.parse(files.find((item) => item.path === ".agent/agents/product-analyst/agent.json").content);
+  assert.deepEqual(analystJson.skills, ["requirement-scoper"]);
   assert.deepEqual(await validateRender(ides), []);
 });
 
