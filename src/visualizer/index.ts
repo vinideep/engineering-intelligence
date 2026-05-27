@@ -121,6 +121,13 @@ const SKILL_CATALOG: Record<string, SkillInfo> = {
     usedBy: ["engineering-intelligence-skill"],
     dependsOn: ["change-detection-engine"],
   },
+  "requirement-scoper": {
+    name: "Requirement Scoper",
+    category: "planning",
+    description: "Scopes requirements and configurations interactively",
+    usedBy: [],
+    dependsOn: ["graph-engine", "deep-project-knowledge-extractor"],
+  },
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -213,6 +220,16 @@ const WORKFLOW_CATALOG: WorkflowInfo[] = [
       { name: "Review", skill: "engineering-change-review" },
     ],
   },
+  {
+    name: "scope-requirement",
+    type: "read-only",
+    description: "Scope feature requirements interactively",
+    steps: [
+      { name: "Context", skill: "deep-project-knowledge-extractor" },
+      { name: "Scoping Q&A", skill: "requirement-scoper" },
+      { name: "Document", skill: "requirement-scoper" },
+    ],
+  },
 ];
 
 export function generateDashboardHTML(): string {
@@ -271,6 +288,7 @@ export function generateDashboardHTML(): string {
     { name: "Change Agent", role: "Implements code changes, adds tests, collects evidence", skills: "engineering-intelligence-skill, testing-intelligence-engine", color: "#22c55e" },
     { name: "Quality Agent", role: "Validates correctness, runs tests, reviews architecture", skills: "engineering-change-review, testing-intelligence-engine", color: "#ef4444" },
     { name: "Knowledge Agent", role: "Maintains all intelligence artifacts", skills: "All sync engines, graph-engine, change-history-engine", color: "#06b6d4" },
+    { name: "Product Analyst", role: "Scopes requirements, asks clarifying questions, generates prompts", skills: "requirement-scoper, deep-project-knowledge-extractor", color: "#a855f7" },
   ].map((agent) => `<div class="agent-card">
     <div class="agent-icon" style="background:${agent.color}">${agent.name.charAt(0)}</div>
     <div class="agent-body">

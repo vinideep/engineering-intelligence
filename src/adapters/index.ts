@@ -99,12 +99,14 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
         "analyze-impact": "Analyze an intended change or existing diff without modifying product code.",
         "sync-engineering-intelligence": "Synchronize affected project intelligence without modifying product code.",
         "review-engineering-change": "Review an engineering change without applying fixes.",
+        "scope-requirement": "Scope requirements and create a technical requirement prompt without modifying product code.",
       };
       const inputWorkflows = new Set<(typeof WORKFLOW_NAMES)[number]>([
         "engineering-intelligence",
         "analyze-impact",
         "sync-engineering-intelligence",
         "review-engineering-change",
+        "scope-requirement",
       ]);
       const commands = await Promise.all(
         WORKFLOW_NAMES.map(async (name) => {

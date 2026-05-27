@@ -19,6 +19,7 @@ export const SKILL_NAMES = [
   "change-detection-engine",
   "incremental-sync-engine",
   "engineering-change-review",
+  "requirement-scoper",
 ] as const;
 
 export const AGENT_NAMES = [
@@ -26,6 +27,7 @@ export const AGENT_NAMES = [
   "change-agent",
   "quality-agent",
   "knowledge-agent",
+  "product-analyst",
 ] as const;
 
 export const WORKFLOW_NAMES = [
@@ -35,6 +37,7 @@ export const WORKFLOW_NAMES = [
   "analyze-impact",
   "sync-engineering-intelligence",
   "review-engineering-change",
+  "scope-requirement",
 ] as const;
 
 function templateRoot(): string {
@@ -101,6 +104,7 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
     "analyze-impact",
     "sync-engineering-intelligence",
     "review-engineering-change",
+    "scope-requirement",
   ]) {
     const content = await readTemplate("workflows", workflow).catch(() => "");
     if (!content.toLowerCase().includes("not modify product code")) {

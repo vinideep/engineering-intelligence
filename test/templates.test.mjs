@@ -22,4 +22,7 @@ test("V2 canonical templates define graph, report, and read-only workflow contra
   assert.match(implementation, /graph artifacts/);
   assert.match(implementation, /validate/i);
   assert.match(implementation, /CHG-XXX/);
+  const scoping = await readTemplate("workflows", "scope-requirement");
+  assert.match(scoping, /requirement-scoper/);
+  assert.match(scoping, /19-requirements\.md/);
 });
