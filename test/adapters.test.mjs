@@ -13,10 +13,8 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.ok(paths.has(".agent/workflows/sync-engineering-intelligence.md"));
   assert.ok(paths.has(".agent/workflows/scope-requirement.md"));
   assert.ok(paths.has(".agent/agents/engineering-orchestrator/agent.json"));
-  assert.ok(paths.has(".agent/agents/engineering-orchestrator/prompt.md"));
   assert.ok(paths.has(".agent/agents/change-agent/agent.json"));
   assert.ok(paths.has(".agent/agents/product-analyst/agent.json"));
-  assert.ok(paths.has(".agent/agents/product-analyst/prompt.md"));
   assert.ok(paths.has("AGENTS.md"));
   assert.ok(paths.has(".claude/commands/engineering-intelligence.md"));
   assert.ok(paths.has(".claude/commands/map-architecture.md"));
@@ -29,6 +27,13 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.ok(paths.has(".gemini/commands/sync-engineering-intelligence.toml"));
   assert.ok(paths.has(".gemini/commands/scope-requirement.toml"));
   assert.match(files.find((item) => item.path === "AGENTS.md").content, /map-architecture/);
+  // antigravity IDE uses .agent/ (singular)
+  assert.ok(paths.has(".agent/agents/engineering-orchestrator/agent.json"));
+  assert.ok(paths.has(".agent/agents/engineering-orchestrator/prompt.md"));
+  // antigravity-cli uses .agents/ (plural)
+  assert.ok(paths.has(".agents/agents/engineering-orchestrator/agent.json"));
+  assert.ok(paths.has(".agents/agents/engineering-orchestrator/prompt.md"));
+  assert.ok(paths.has(".agents/agents/product-analyst/agent.json"));
   // Verify agent.json content is valid JSON with required fields
   const orchJson = JSON.parse(files.find((item) => item.path === ".agent/agents/engineering-orchestrator/agent.json").content);
   assert.equal(orchJson.name, "engineering-orchestrator");
@@ -49,4 +54,16 @@ test("Gemini commands pass arguments only to input-driven workflows", async () =
   assert.match(get("sync-engineering-intelligence"), /\{\{args\}\}/);
   assert.match(get("review-engineering-change"), /\{\{args\}\}/);
   assert.match(get("scope-requirement"), /\{\{args\}\}/);
+});
+
+test("antigravity-cli adapter writes agents to .agents/ (plural) matching CLI workspace path", async () => {
+  const files = await renderAdapters(["antigravity-cli"]);
+  const paths = new Set(files.map((item) => item.path));
+  assert.ok(paths.has(".agents/agents/engineering-orchestrator/agent.json"));
+  assert.ok(paths.has(".agents/agents/engineering-orchestrator/prompt.md"));
+  assert.ok(paths.has(".agents/agents/change-agent/agent.json"));
+  assert.ok(paths.has(".agents/agents/product-analyst/agent.json"));
+  assert.ok(paths.has(".agents/skills/engineering-intelligence-skill/SKILL.md"));
+  assert.ok(paths.has(".agents/workflows/engineering-intelligence.md"));
+  assert.ok(!paths.has(".agent/agents/engineering-orchestrator/agent.json"), "CLI must not write to .agent/ (singular)");
 });

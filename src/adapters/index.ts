@@ -131,14 +131,9 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
       ];
     case "antigravity-cli":
       return [
-        ...(await skillsAt(".agent/skills", ide)),
-        ...(await agentsAsJsonAt(".agent/agents", ide)),
-        ...(await workflowsAt(".agent/workflows", ide)),
-        file(
-          ".agent/rules/engineering-intelligence.md",
-          await readTemplate("rules", "engineering-intelligence"),
-          ide,
-        ),
+        ...(await skillsAt(".agents/skills", ide)),
+        ...(await agentsAsJsonAt(".agents/agents", ide)),
+        ...(await workflowsAt(".agents/workflows", ide)),
         block("AGENTS.md", sharedInstructions, ide),
       ];
     case "codex":
