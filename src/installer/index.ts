@@ -17,6 +17,7 @@ export interface MutationOptions {
   dryRun?: boolean;
   force?: boolean;
   packageVersion: string;
+  promptOverwrite?: (filePath: string) => Promise<boolean>;
 }
 
 async function exists(location: string): Promise<boolean> {
@@ -77,6 +78,13 @@ async function applyRendered(
       (prior !== undefined && currentHash === prior.hash) ||
       options.force === true;
     if (!isSafe) {
+      if (options.promptOverwrite && await options.promptOverwrite(rendered.path)) {
+        const status = current === undefined ? "created" : "updated";
+        if (!options.dryRun) {
+          await writeTarget(root, rendered.path, rendered.content);
+        }
+        return { action: { path: rendered.path, status }, entry: desiredEntry };
+      }
       return {
         action: { path: rendered.path, status: "conflict", message: "Existing or locally modified file preserved." },
         entry: prior,
@@ -98,6 +106,13 @@ async function applyRendered(
     (prior !== undefined && existingHash === prior.hash) ||
     options.force === true;
   if (!isSafe) {
+    if (options.promptOverwrite && await options.promptOverwrite(rendered.path)) {
+      const status = current === undefined || existingBlock === undefined ? "created" : "updated";
+      if (!options.dryRun) {
+        await writeTarget(root, rendered.path, upsertManagedBlock(current ?? "", rendered.content, id));
+      }
+      return { action: { path: rendered.path, status }, entry: desiredEntry };
+    }
     return {
       action: { path: rendered.path, status: "conflict", message: "Locally modified managed block preserved." },
       entry: prior,

@@ -163,3 +163,32 @@ test("uninstall removes templates but preserves runtime graph and report artifac
   assert.equal(await readable(root, report), "# Impact\n");
   await assert.rejects(access(path.join(root, ".agents/skills/graph-engine/SKILL.md")));
 });
+
+test("update prompts to overwrite and respects user choice on conflict", async () => {
+  const root = await project();
+  await install(root, ["generic"], options);
+  const relative = ".agents/skills/graph-engine/SKILL.md";
+  await writeFile(path.join(root, relative), "locally modified skill content\n");
+
+  // Case 1: user declines to overwrite (promptOverwrite returns false)
+  const resultPreserve = await update(root, {
+    ...options,
+    promptOverwrite: async (filePath) => {
+      assert.equal(filePath, relative);
+      return false;
+    },
+  });
+  assert.equal(resultPreserve.conflicts, 1);
+  assert.equal(await readable(root, relative), "locally modified skill content\n");
+
+  // Case 2: user agrees to overwrite (promptOverwrite returns true)
+  const resultOverwrite = await update(root, {
+    ...options,
+    promptOverwrite: async (filePath) => {
+      assert.equal(filePath, relative);
+      return true;
+    },
+  });
+  assert.equal(resultOverwrite.conflicts, 0);
+  assert.notEqual(await readable(root, relative), "locally modified skill content\n");
+});

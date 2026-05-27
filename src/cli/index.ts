@@ -113,26 +113,25 @@ function parseArgs(args: string[]): Options {
   };
 }
 
-async function selectIdes(options: Options): Promise<IdeId[]> {
+async function selectIdes(options: Options, readline: any): Promise<IdeId[]> {
   if (options.command !== "install" || options.ides.length > 0) {
     return options.ides;
   }
-  if (options.yes || !input.isTTY) {
+  if (options.yes || !readline) {
     return ["generic"];
   }
-  const readline = createInterface({ input, output });
   output.write(`Select one or more IDE adapters:\n${IDE_IDS.map((ide, i) => `  ${i + 1}. ${ide}`).join("\n")}\n`);
-  const answer = await readline.question("Adapter numbers or ids, comma separated [generic]: ");
-  readline.close();
-  const choices = answer.trim().length === 0 ? ["generic"] : answer.split(",").map((part) => part.trim());
-  return [...new Set(choices.map((choice) => {
+  const answer = (await readline.question("Adapter numbers or ids, comma separated [generic]: ")) as string;
+  const choices = answer.trim().length === 0 ? ["generic"] : answer.split(",").map((part: string) => part.trim());
+  const mapped = choices.map((choice: string) => {
     const numbered = Number.parseInt(choice, 10);
     const candidate = Number.isNaN(numbered) ? choice : IDE_IDS[numbered - 1];
     if (!candidate || !isIdeId(candidate)) {
       throw new Error(`Unknown IDE selection "${choice}".`);
     }
     return candidate;
-  }))];
+  });
+  return [...new Set(mapped)] as IdeId[];
 }
 
 function printActions(actions: FileAction[]): void {
@@ -151,6 +150,19 @@ function printResult(label: string, result: OperationResult, dryRun: boolean): v
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   const version = await packageVersion();
+  let readline: any = null;
+  const usePrompt = !options.yes && input.isTTY;
+  if (usePrompt) {
+    readline = createInterface({ input, output });
+  }
+
+  const promptOverwrite = readline
+    ? async (filePath: string) => {
+        const answer = await readline.question(`Conflict: ${filePath} has been modified locally. Overwrite? (y/N): `);
+        return answer.trim().toLowerCase() === "y";
+      }
+    : undefined;
+
   if (options.command === "doctor") {
     const actions = await doctor(options.root);
     if (options.json) {
@@ -159,6 +171,7 @@ async function main(): Promise<void> {
       printActions(actions);
     }
     process.exitCode = actions.some((action) => action.status === "error") ? 1 : 0;
+    if (readline) readline.close();
     return;
   }
   if (options.command === "visualize") {
@@ -173,31 +186,36 @@ async function main(): Promise<void> {
       const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
       exec(`${cmd} ${JSON.stringify(outPath)}`);
     }
+    if (readline) readline.close();
     return;
   }
   if (options.command === "uninstall") {
     const result = await uninstall(options.root, { dryRun: options.dryRun, force: options.force, packageVersion: version });
     printResult("Uninstall complete", result, options.dryRun);
     process.exitCode = result.conflicts > 0 ? 1 : 0;
+    if (readline) readline.close();
     return;
   }
   if (options.command === "update") {
-    const result = await update(options.root, { dryRun: options.dryRun, force: options.force, packageVersion: version });
+    const result = await update(options.root, { dryRun: options.dryRun, force: options.force, packageVersion: version, promptOverwrite });
     printResult("Update complete", result, options.dryRun);
     process.exitCode = result.conflicts > 0 ? 1 : 0;
+    if (readline) readline.close();
     return;
   }
-  const ides = await selectIdes(options);
+  const ides = await selectIdes(options, readline);
   const result = await install(options.root, ides, {
     dryRun: options.dryRun,
     force: options.force,
     packageVersion: version,
+    promptOverwrite,
   });
   printResult(`Installed ${ides.join(", ")}`, result, options.dryRun);
   if (!options.dryRun && result.conflicts === 0) {
     output.write("Open your selected AI IDE and invoke the installed initialization workflow.\n");
   }
   process.exitCode = result.conflicts > 0 ? 1 : 0;
+  if (readline) readline.close();
 }
 
 main().catch((error: unknown) => {
