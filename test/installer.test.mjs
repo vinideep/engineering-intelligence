@@ -129,7 +129,7 @@ test("update upgrades a V1-shaped installation with V2 graph and impact assets",
   assert.ok(result.actions.some((action) => action.path === ".agents/skills/graph-engine/SKILL.md" && action.status === "created"));
   assert.ok(result.actions.some((action) => action.path === ".agent/workflows/analyze-impact.md" && action.status === "created"));
   const updatedManifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  assert.equal(updatedManifest.templateVersion, "2.0.0");
+  assert.equal(updatedManifest.templateVersion, "3.0.0");
 });
 
 test("upgrade installs new V2 files while preserving edited managed instructions", async () => {

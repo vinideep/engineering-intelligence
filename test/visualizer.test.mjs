@@ -20,8 +20,12 @@ test("generateDashboardHTML returns dashboard HTML content with key components",
   assert.match(html, /engineering-intelligence-skill/);
   assert.match(html, /deep-project-knowledge-extractor/);
   assert.match(html, /knowledge-base-validator/);
+  assert.match(html, /codebase-discovery-engine/);
+  assert.match(html, /convention-detector/);
 
   // Workflow pipelines
   assert.match(html, /initialize-engineering-intelligence/);
   assert.match(html, /engineering-intelligence/);
+  assert.match(html, /discover-codebase/);
+  assert.match(html, /create-project/);
 });

@@ -19,6 +19,7 @@ Analyzes this repository thoroughly without changing product code. Produces a co
 | Context | `.engineering-intelligence/context/` | 6 compact navigation maps |
 | Events | `.engineering-intelligence/events/` | 5 change-event guidance documents |
 | Graphs | `.engineering-intelligence/graph/` | 4 JSON graphs + architecture-map.md |
+| AI-DLC + Agile | `.engineering-intelligence/aidlc/` | Lifecycle state, audit, discovery placeholders, open questions, Agile backlog/sprint/DoR/DoD, cross-unit discovery log |
 | History | `.changes/CHG-000-initialization.md` | Initialization record |
 
 ## Execution Steps
@@ -29,7 +30,8 @@ Analyzes this repository thoroughly without changing product code. Produces a co
 4. **Generate Memory** — Extract durable decisions and patterns
 5. **Generate Context** — Create concise AI navigation maps
 6. **Build Graphs** — Generate evidence-backed architecture graphs
-7. **Record** — Write initialization change record
+7. **Initialize AI-DLC + Agile** — Create `aidlc-state.md`, `audit.md`, `open-questions.md`, `execution-plan.md`, Agile delivery artifacts, and `construction/cross-unit-discoveries.md`
+8. **Record** — Write initialization change record
 
 ## Important
 

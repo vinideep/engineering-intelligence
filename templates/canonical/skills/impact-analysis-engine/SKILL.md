@@ -32,9 +32,13 @@ Determine what can break before changing code. Produce a reusable impact report 
    - Services communicating with changed services (from service-graph)
    - Runtime flows passing through changed code (from runtime-graph)
    - Business processes affected (from business-flow-graph)
+   - Data pipelines affected (from data-flow-graph)
    - Test suites covering affected code
+   - Cross-reference with git change coupling data from `git-intelligence-engine` for hidden dependencies
 
-5. **Score Risk** — Assign risk based on:
+5. **Trace Transitive Impact** — Follow 2nd and 3rd order effects through the graph. Identify files that are indirectly affected by consumers of the directly affected modules. Walk the dependency chain until impact attenuates or reaches a service boundary.
+
+6. **Score Risk** — Assign risk based on:
 
 | Factor | Low | Medium | High | Critical |
 |---|---|---|---|---|
@@ -43,8 +47,9 @@ Determine what can break before changing code. Produce a reusable impact report 
 | **Auth impact** | None | UI changes | Permission logic | Auth flow |
 | **API contract** | None | Additive | Deprecated | Breaking |
 | **Test coverage** | Well-tested | Partial | Sparse | None |
+| **Change coupling** | None | Low (1-2 coupled files) | Medium (3-5 coupled files) | High (6+ coupled files) |
 
-6. **Identify Validation Needs** — Map impact to required validation:
+7. **Identify Validation Needs** — Map impact to required validation:
 
 | Impact Area | Validation Required |
 |---|---|
@@ -55,7 +60,9 @@ Determine what can break before changing code. Produce a reusable impact report 
 | UI change | Visual regression, accessibility |
 | Infrastructure | Deploy to staging, smoke test |
 
-7. **Map Intelligence Artifacts** — Determine which intelligence artifacts need synchronization after the change is implemented.
+8. **Map Intelligence Artifacts** — Determine which intelligence artifacts need synchronization after the change is implemented.
+
+> **Surprise Impact Detection**: Flag any dependency discovered during analysis that is NOT in the current graph — these are surprise impacts that should be added to the graph. Surprise impacts indicate missing edges or nodes and must be reported in the Unknowns section of the impact report.
 
 ## Output Format
 
@@ -129,6 +136,7 @@ Write `.engineering-intelligence/reports/IMP-XXX-<slug>.md`:
 
 ## Cross-References
 
-- Depends on: `change-detection-engine`, `graph-engine`
+- Depends on: `change-detection-engine`, `graph-engine`, `git-intelligence-engine`
+- Consults: `data-flow-graph.json` (for data pipeline impact)
 - Used by: `engineering-intelligence-skill`, `incremental-sync-engine`, `analyze-impact` workflow
 - Consumed by: `engineering-change-review`, `testing-intelligence-engine`

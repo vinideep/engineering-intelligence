@@ -2,7 +2,7 @@ import { SKILL_NAMES, AGENT_NAMES, WORKFLOW_NAMES } from "../templates.js";
 
 interface SkillInfo {
   name: string;
-  category: "initialization" | "implementation" | "analysis" | "sync" | "review" | "planning";
+  category: "initialization" | "implementation" | "analysis" | "sync" | "review" | "planning" | "discovery" | "security";
   description: string;
   usedBy: string[];
   dependsOn: string[];
@@ -128,6 +128,76 @@ const SKILL_CATALOG: Record<string, SkillInfo> = {
     usedBy: [],
     dependsOn: ["graph-engine", "deep-project-knowledge-extractor"],
   },
+  "codebase-discovery-engine": {
+    name: "Codebase Discovery",
+    category: "discovery",
+    description: "Autonomously explores and understands any codebase",
+    usedBy: ["initialize-intelligence-skill", "ongoing-learning-engine"],
+    dependsOn: [],
+  },
+  "convention-detector": {
+    name: "Convention Detector",
+    category: "discovery",
+    description: "Detects and codifies project coding conventions",
+    usedBy: ["engineering-intelligence-skill", "incremental-sync-engine"],
+    dependsOn: ["codebase-discovery-engine"],
+  },
+  "ongoing-learning-engine": {
+    name: "Ongoing Learning",
+    category: "sync",
+    description: "Continuous post-initialization learning and uncertainty tracking",
+    usedBy: ["incremental-sync-engine"],
+    dependsOn: ["codebase-discovery-engine", "staleness-detector"],
+  },
+  "greenfield-architect": {
+    name: "Greenfield Architect",
+    category: "planning",
+    description: "Interview-based architecture design for new projects",
+    usedBy: [],
+    dependsOn: [],
+  },
+  "git-intelligence-engine": {
+    name: "Git Intelligence",
+    category: "analysis",
+    description: "Extracts hotspots, ownership, and change coupling from git history",
+    usedBy: ["impact-analysis-engine", "graph-engine", "pr-intelligence-engine"],
+    dependsOn: [],
+  },
+  "pr-intelligence-engine": {
+    name: "PR Intelligence",
+    category: "review",
+    description: "Auto-generates PR descriptions, reviewer suggestions, and impact summaries",
+    usedBy: [],
+    dependsOn: ["git-intelligence-engine", "change-history-engine", "impact-analysis-engine"],
+  },
+  "staleness-detector": {
+    name: "Staleness Detector",
+    category: "sync",
+    description: "Tracks knowledge freshness and triggers re-verification",
+    usedBy: ["ongoing-learning-engine", "incremental-sync-engine"],
+    dependsOn: [],
+  },
+  "security-audit-engine": {
+    name: "Security Audit",
+    category: "security",
+    description: "Scans for vulnerabilities, secrets, and OWASP compliance",
+    usedBy: [],
+    dependsOn: ["graph-engine", "deep-project-knowledge-extractor"],
+  },
+  "performance-analysis-engine": {
+    name: "Performance Analysis",
+    category: "analysis",
+    description: "Identifies N+1 queries, bundle bloat, and caching opportunities",
+    usedBy: [],
+    dependsOn: ["graph-engine"],
+  },
+  "debugging-engine": {
+    name: "Debugging Engine",
+    category: "analysis",
+    description: "Root cause analysis, log correlation, and fix suggestions",
+    usedBy: [],
+    dependsOn: ["graph-engine", "change-detection-engine", "impact-analysis-engine"],
+  },
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -137,6 +207,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   sync: "#06b6d4",
   review: "#ef4444",
   planning: "#a855f7",
+  discovery: "#14b8a6",
+  security: "#f43f5e",
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -146,6 +218,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   sync: "Synchronization",
   review: "Review & Validation",
   planning: "Planning",
+  discovery: "Discovery",
+  security: "Security",
 };
 
 interface WorkflowStep {
@@ -230,6 +304,27 @@ const WORKFLOW_CATALOG: WorkflowInfo[] = [
       { name: "Document", skill: "requirement-scoper" },
     ],
   },
+  {
+    name: "discover-codebase",
+    type: "read-only",
+    description: "Autonomously understand a codebase",
+    steps: [
+      { name: "Discover", skill: "codebase-discovery-engine" },
+      { name: "Detect Conventions", skill: "convention-detector" },
+      { name: "Verify", skill: "codebase-discovery-engine" },
+    ],
+  },
+  {
+    name: "create-project",
+    type: "read-write",
+    description: "Scaffold new project with full AIDLC",
+    steps: [
+      { name: "Interview", skill: "greenfield-architect" },
+      { name: "Scaffold", skill: "greenfield-architect" },
+      { name: "Initialize", skill: "initialize-intelligence-skill" },
+      { name: "Conventions", skill: "convention-detector" },
+    ],
+  },
 ];
 
 export function generateDashboardHTML(): string {
@@ -300,13 +395,13 @@ export function generateDashboardHTML(): string {
 
   const artifactTree = `
     <div class="tree">
-      <div class="tree-node root">knowledge-base/<span class="tree-count">16 documents</span></div>
+      <div class="tree-node root">knowledge-base/<span class="tree-count">22 documents</span></div>
       <div class="tree-node root">.engineering-intelligence/
         <div class="tree-node">memory/<span class="tree-count">5 documents</span></div>
         <div class="tree-node">context/<span class="tree-count">6 maps</span></div>
-        <div class="tree-node">events/<span class="tree-count">5 guides</span></div>
-        <div class="tree-node">graph/<span class="tree-count">4 JSON + 1 map</span></div>
-        <div class="tree-node">reports/<span class="tree-count">IMP-*/REV-* reports</span></div>
+        <div class="tree-node">events/<span class="tree-count">6 guides</span></div>
+        <div class="tree-node">graph/<span class="tree-count">5 JSON + 1 map</span></div>
+        <div class="tree-node">reports/<span class="tree-count">IMP-*/REV-*/DISCOVERY/FRESHNESS/GIT/DEBUG reports</span></div>
       </div>
       <div class="tree-node root">.changes/<span class="tree-count">CHG-* records</span></div>
     </div>`;
@@ -591,7 +686,7 @@ body {
       <div class="stat"><div class="stat-num">${SKILL_NAMES.length}</div><div class="stat-label">Skills</div></div>
       <div class="stat"><div class="stat-num">${AGENT_NAMES.length}</div><div class="stat-label">Agents</div></div>
       <div class="stat"><div class="stat-num">${WORKFLOW_NAMES.length}</div><div class="stat-label">Workflows</div></div>
-      <div class="stat"><div class="stat-num">37+</div><div class="stat-label">Artifacts</div></div>
+      <div class="stat"><div class="stat-num">45+</div><div class="stat-label">Artifacts</div></div>
     </div>
   </div>
 

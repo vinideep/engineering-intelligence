@@ -68,6 +68,8 @@ Each JSON graph uses this envelope:
 | `devDependency` | Development-only dependency |
 | `peerDependency` | Peer/optional dependency |
 | `configures` | Configuration dependency |
+| `implicit-dependency` | Shared database tables, shared config |
+| `event-coupling` | Event-driven coupling |
 
 ### 2. `service-graph.json` — Service Communication Topology
 
@@ -87,6 +89,8 @@ Each JSON graph uses this envelope:
 | `subscribes` | Event/message consumption |
 | `reads` | Data store read access |
 | `writes` | Data store write access |
+| `shares-data` | Shared database/cache |
+| `feature-flag` | Feature-flag-controlled behavior |
 
 ### 3. `runtime-graph.json` — Runtime Call Flows
 
@@ -123,7 +127,25 @@ Each JSON graph uses this envelope:
 | `on-failure` | Error/failure path |
 | `requires` | Prerequisite relationship |
 
-### 5. `architecture-map.md` — Mermaid Visualization
+### 5. `data-flow-graph.json` — Data Transformation Graph
+
+| Node Kind | Description |
+|---|---|
+| `source` | Data origin |
+| `transform` | Processing step |
+| `store` | Persistence |
+| `sink` | Data output/consumer |
+| `validator` | Validation step |
+
+| Edge Relation | Description |
+|---|---|
+| `feeds` | Data feed |
+| `transforms` | Data transformation |
+| `validates` | Data validation |
+| `persists` | Data persistence |
+| `emits` | Data emission/output |
+
+### 6. `architecture-map.md` — Mermaid Visualization
 
 Derive Mermaid diagrams from the JSON graphs. Include:
 
@@ -131,17 +153,19 @@ Derive Mermaid diagrams from the JSON graphs. Include:
 - **Module Dependencies** — Package/module dependency flow (from dependency-graph)
 - **Request Flow** — Primary request lifecycle (from runtime-graph)
 - **Key Business Flows** — Critical business processes (from business-flow-graph)
+- **Data Flow** — Data transformation pipelines (from data-flow-graph)
 
 ## Procedure
 
 ### Full Mode (initialization or remapping)
 
 1. Scan all package manifests, imports, route definitions, service configs, and infrastructure files
-2. Build all four graphs from scratch
+2. Build all five graphs from scratch
 3. Assign `verified` confidence to edges backed by explicit code evidence
 4. Assign `inferred` confidence to edges derived from patterns or naming conventions
-5. Mark unresolvable relationships as `unknown` and add to `unknowns` array
-6. Generate Mermaid diagrams in `architecture-map.md`
+5. Integrate git change coupling data from `git-intelligence-engine` as `inferred` edges — files that frequently change together suggest hidden dependencies
+6. Mark unresolvable relationships as `unknown` and add to `unknowns` array
+7. Generate Mermaid diagrams in `architecture-map.md`
 
 ### Incremental Mode (post-change update)
 
@@ -163,7 +187,7 @@ Derive Mermaid diagrams from the JSON graphs. Include:
 
 ## Quality Gates
 
-- [ ] All four JSON graphs validate against the schema above
+- [ ] All five JSON graphs (`dependency-graph.json`, `service-graph.json`, `runtime-graph.json`, `business-flow-graph.json`, `data-flow-graph.json`) validate against the schema above
 - [ ] Every `verified` edge has at least one evidence path
 - [ ] No `unknown` relationships are left out of the `unknowns` array
 - [ ] `architecture-map.md` Mermaid diagrams are syntactically valid
@@ -174,5 +198,6 @@ Derive Mermaid diagrams from the JSON graphs. Include:
 - Used by: `initialize-intelligence-skill`, `impact-analysis-engine`, `incremental-sync-engine`
 - Supports: `map-architecture` workflow, `analyze-impact` workflow
 - Feeds context to: `context-sync-engine`
+- Integrates data from: `git-intelligence-engine`
 
 This capability may write intelligence artifacts. It must not modify product code.

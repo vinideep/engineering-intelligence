@@ -1,6 +1,6 @@
 # Engineering Intelligence OS
 
-`engineering-intelligence` installs a reusable, graph-backed engineering-orchestration toolkit into a software repository for AI coding IDEs. The installed skills and workflows teach the IDE agent how to initialize an evidence-based project knowledge base, map architecture, analyze change impact, and keep intelligence synchronized while implementing engineering work.
+`engineering-intelligence` installs a reusable, graph-backed Agile + AI-DLC engineering-orchestration toolkit into a software repository for AI coding IDEs. The installed skills and workflows teach the IDE agent how to initialize an evidence-based project knowledge base, maintain backlog and acceptance criteria, map architecture, analyze change impact, preserve lifecycle state, govern NFRs/ADRs, use environmental backpressure, and keep intelligence synchronized while implementing engineering work.
 
 The installer does **not** inspect the target source code, call an AI model, or generate documentation itself. That work occurs later inside the selected IDE when a developer invokes the installed workflow.
 
@@ -48,7 +48,20 @@ Then use the engineering workflow for implementation requests:
 /engineering-intelligence Add rate limiting to public authentication endpoints
 ```
 
-V2 adds four read-only-with-respect-to-product-code workflows:
+The standard workflows embed AI-DLC and Agile delivery internally:
+
+```text
+/scope-requirement Define rate limiting for public authentication endpoints
+/engineering-intelligence Add rate limiting to public authentication endpoints
+/engineering-intelligence Harden public checkout APIs using adversarial delivery mode
+/engineering-intelligence Implement invoice status transition rules using TDD delivery mode
+/engineering-intelligence Migrate orders from MongoDB to PostgreSQL using design-first delivery mode
+/engineering-intelligence Investigate intermittent checkout latency spikes using hypothesis debugging mode
+```
+
+Use the existing `/engineering-intelligence` workflow for implementation. The orchestrator selects standard Agile delivery, adversarial delivery, TDD delivery, design-first delivery, or hypothesis debugging based on risk and task shape.
+
+V2 also includes read-only-with-respect-to-product-code workflows:
 
 ```text
 /map-architecture
@@ -66,6 +79,7 @@ The IDE agent, not this installer, creates and maintains:
 ```text
 knowledge-base/
 .engineering-intelligence/memory/
+.engineering-intelligence/aidlc/
 .engineering-intelligence/context/
 .engineering-intelligence/events/
 .engineering-intelligence/graph/
@@ -74,6 +88,8 @@ knowledge-base/
 ```
 
 Graph intelligence includes `dependency-graph.json`, `service-graph.json`, `runtime-graph.json`, `business-flow-graph.json`, and a Mermaid-backed `architecture-map.md`. Impact and review results are stored as `IMP-XXX-*.md` and `REV-XXX-*.md` reports.
+
+Agile + AI-DLC lifecycle state is stored under `.engineering-intelligence/aidlc/`, including `aidlc-state.md`, `audit.md`, `open-questions.md`, `execution-plan.md`, `discovery/`, `agile/`, `inception/`, `construction/`, and `operations/`.
 
 The installer reserves only `.engineering-intelligence/install-manifest.json` for safe lifecycle management.
 
@@ -109,6 +125,11 @@ The update adds graph/impact skills and workflows and updates untouched managed 
 The default package installs only engineering-intelligence capabilities:
 
 - initialization, knowledge extraction, and validation
+- adaptive AI-DLC Discovery, Inception, Construction, and Operations lifecycle artifacts embedded into the existing workflows
+- Agile backlog, user stories, acceptance criteria, Definition of Ready, Definition of Done, sprint plan, and retrospective artifacts
+- delivery modes inside `/engineering-intelligence`: standard Agile, adversarial, TDD, design-first, and hypothesis debugging
+- specialist hats for product analysis, architecture, security, data, testing, adversarial validation, performance, compliance, release, SRE, and documentation
+- NFR and ADR governance, MCP security review, operations readiness, and environmental backpressure loops
 - impact and testing intelligence
 - evidence-backed JSON architecture graphs and Mermaid architecture mapping
 - standalone impact, synchronization, and read-only engineering review workflows

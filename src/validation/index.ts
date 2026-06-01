@@ -1,19 +1,10 @@
-import { access, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { renderAdapters } from "../adapters/index.js";
 import { readManagedBlock } from "../installer/blocks.js";
 import { MANIFEST_PATH, hashContent, readManifest } from "../manifest/index.js";
-import { validateCanonicalTemplates } from "../templates.js";
+import { exists, validateCanonicalTemplates } from "../templates.js";
 import type { FileAction, IdeId } from "../types.js";
-
-async function exists(location: string): Promise<boolean> {
-  try {
-    await access(location);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 export async function validateRender(ides: IdeId[]): Promise<string[]> {
   const errors = await validateCanonicalTemplates();
@@ -30,11 +21,12 @@ export async function validateRender(ides: IdeId[]): Promise<string[]> {
   }
   const allContent = rendered.map((item) => item.content).join("\n");
   for (const requiredPath of [
+    ".engineering-intelligence/aidlc/",
     ".engineering-intelligence/graph/",
     ".engineering-intelligence/reports/",
   ]) {
     if (!allContent.includes(requiredPath)) {
-      errors.push(`Rendered templates do not describe required V2 runtime path: ${requiredPath}`);
+      errors.push(`Rendered templates do not describe required runtime path: ${requiredPath}`);
     }
   }
   return errors;

@@ -12,9 +12,15 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.ok(paths.has(".agent/workflows/analyze-impact.md"));
   assert.ok(paths.has(".agent/workflows/sync-engineering-intelligence.md"));
   assert.ok(paths.has(".agent/workflows/scope-requirement.md"));
+  assert.ok(paths.has(".agent/workflows/discover-codebase.md"));
+  assert.ok(paths.has(".agent/workflows/create-project.md"));
+  assert.ok(!paths.has(".agent/workflows/aidlc-default.md"));
   assert.ok(paths.has(".agent/agents/engineering-orchestrator/agent.json"));
   assert.ok(paths.has(".agent/agents/change-agent/agent.json"));
   assert.ok(paths.has(".agent/agents/product-analyst/agent.json"));
+  assert.ok(paths.has(".agent/agents/system-architect/agent.json"));
+  assert.ok(paths.has(".agent/agents/security-officer/agent.json"));
+  assert.ok(paths.has(".agent/agents/site-reliability-engineer/agent.json"));
   assert.ok(paths.has("AGENTS.md"));
   assert.ok(paths.has(".claude/commands/engineering-intelligence.md"));
   assert.ok(paths.has(".claude/commands/map-architecture.md"));
@@ -38,9 +44,11 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   const orchJson = JSON.parse(files.find((item) => item.path === ".agent/agents/engineering-orchestrator/agent.json").content);
   assert.equal(orchJson.name, "engineering-orchestrator");
   assert.ok(orchJson.description.length > 0);
-  assert.deepEqual(orchJson.agents, ["knowledge-agent", "change-agent", "quality-agent"]);
+  assert.deepEqual(orchJson.agents, ["product-analyst", "system-architect", "change-agent", "test-engineer", "quality-agent", "knowledge-agent"]);
   const analystJson = JSON.parse(files.find((item) => item.path === ".agent/agents/product-analyst/agent.json").content);
-  assert.deepEqual(analystJson.skills, ["requirement-scoper"]);
+  assert.deepEqual(analystJson.skills, ["requirement-scoper", "aidlc-lifecycle-engine"]);
+  const architectJson = JSON.parse(files.find((item) => item.path === ".agent/agents/system-architect/agent.json").content);
+  assert.ok(architectJson.skills.includes("nfr-adr-governor"));
   assert.deepEqual(await validateRender(ides), []);
 });
 
@@ -49,11 +57,13 @@ test("Gemini commands pass arguments only to input-driven workflows", async () =
   const get = (name) => files.find((item) => item.path.endsWith(`/${name}.toml`)).content;
   assert.doesNotMatch(get("initialize-engineering-intelligence"), /\{\{args\}\}/);
   assert.doesNotMatch(get("map-architecture"), /\{\{args\}\}/);
+  assert.doesNotMatch(get("discover-codebase"), /\{\{args\}\}/);
   assert.match(get("engineering-intelligence"), /\{\{args\}\}/);
   assert.match(get("analyze-impact"), /\{\{args\}\}/);
   assert.match(get("sync-engineering-intelligence"), /\{\{args\}\}/);
   assert.match(get("review-engineering-change"), /\{\{args\}\}/);
   assert.match(get("scope-requirement"), /\{\{args\}\}/);
+  assert.match(get("create-project"), /\{\{args\}\}/);
 });
 
 test("antigravity-cli adapter writes agents to .agents/ (plural) matching CLI workspace path", async () => {

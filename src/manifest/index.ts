@@ -4,7 +4,7 @@ import path from "node:path";
 import type { InstallManifest } from "../types.js";
 
 export const MANIFEST_PATH = ".engineering-intelligence/install-manifest.json";
-export const TEMPLATE_VERSION = "2.0.0";
+export const TEMPLATE_VERSION = "3.0.0";
 
 export function hashContent(content: string): string {
   return createHash("sha256").update(content).digest("hex");

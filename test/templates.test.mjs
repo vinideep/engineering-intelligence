@@ -10,6 +10,7 @@ test("V2 canonical templates define graph, report, and read-only workflow contra
     "service-graph.json",
     "runtime-graph.json",
     "business-flow-graph.json",
+    "data-flow-graph.json",
     "architecture-map.md",
   ]) {
     assert.match(graph, new RegExp(artifact.replace(".", "\\.")));
@@ -25,4 +26,20 @@ test("V2 canonical templates define graph, report, and read-only workflow contra
   const scoping = await readTemplate("workflows", "scope-requirement");
   assert.match(scoping, /requirement-scoper/);
   assert.match(scoping, /19-requirements\.md/);
+  const aidlc = await readTemplate("skills", "aidlc-lifecycle-engine");
+  assert.match(aidlc, /Discovery/);
+  assert.match(aidlc, /Inception/);
+  assert.match(aidlc, /Construction/);
+  assert.match(aidlc, /Operations/);
+  assert.match(aidlc, /environmental backpressure/);
+  assert.match(aidlc, /cross-unit-discoveries\.md/);
+  assert.match(aidlc, /product-backlog\.md/);
+  assert.match(aidlc, /Definition of Ready/);
+  const engineering = await readTemplate("workflows", "engineering-intelligence");
+  assert.match(engineering, /standard Agile/);
+  assert.match(engineering, /AI-DLC/);
+  assert.match(engineering, /acceptance criteria/);
+  const nfrAdr = await readTemplate("skills", "nfr-adr-governor");
+  assert.match(nfrAdr, /ADR/);
+  assert.match(nfrAdr, /Superseded/);
 });

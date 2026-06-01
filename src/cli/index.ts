@@ -10,7 +10,7 @@ import { doctor } from "../validation/index.js";
 import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall" | "visualize";
+type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create";
 
 interface Options {
   command: Command;
@@ -36,6 +36,7 @@ Install engineering intelligence orchestration assets for AI coding IDEs.
 
 Usage:
   engineering-intelligence install [path] [--ide <id>...] [--yes] [--dry-run] [--force]
+  engineering-intelligence create [path] [--ide <id>...] [--yes]
   engineering-intelligence update [path] [--dry-run] [--force]
   engineering-intelligence doctor [path] [--json]
   engineering-intelligence uninstall [path] [--dry-run] [--force]
@@ -48,7 +49,7 @@ IDE ids: ${IDE_IDS.join(", ")}
 function parseArgs(args: string[]): Options {
   let command: Command = "install";
   const remaining = [...args];
-  if (remaining[0] && ["install", "update", "doctor", "uninstall", "visualize"].includes(remaining[0])) {
+  if (remaining[0] && ["install", "create", "update", "doctor", "uninstall", "visualize"].includes(remaining[0])) {
     command = remaining.shift() as Command;
   }
   if (remaining.includes("--help") || remaining.includes("-h")) {
@@ -114,7 +115,7 @@ function parseArgs(args: string[]): Options {
 }
 
 async function selectIdes(options: Options, readline: any): Promise<IdeId[]> {
-  if (options.command !== "install" || options.ides.length > 0) {
+  if ((options.command !== "install" && options.command !== "create") || options.ides.length > 0) {
     return options.ides;
   }
   if (options.yes || !readline) {
@@ -204,6 +205,22 @@ async function main(): Promise<void> {
     return;
   }
   const ides = await selectIdes(options, readline);
+  if (options.command === "create") {
+    await mkdir(options.root, { recursive: true });
+    const result = await install(options.root, ides, {
+      dryRun: options.dryRun,
+      force: options.force,
+      packageVersion: version,
+      promptOverwrite,
+    });
+    printResult(`Created project with ${ides.join(", ")}`, result, options.dryRun);
+    if (!options.dryRun && result.conflicts === 0) {
+      output.write("Project scaffolded. Open your AI IDE and run /create-project to complete setup.\n");
+    }
+    process.exitCode = result.conflicts > 0 ? 1 : 0;
+    if (readline) readline.close();
+    return;
+  }
   const result = await install(options.root, ides, {
     dryRun: options.dryRun,
     force: options.force,

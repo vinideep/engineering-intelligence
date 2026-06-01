@@ -1,7 +1,8 @@
-import { access, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { renderAdapters } from "../adapters/index.js";
 import { MANIFEST_PATH, TEMPLATE_VERSION, hashContent, readManifest, writeManifest } from "../manifest/index.js";
+import { exists } from "../templates.js";
 import { validateRender } from "../validation/index.js";
 import type {
   FileAction,
@@ -20,14 +21,6 @@ export interface MutationOptions {
   promptOverwrite?: (filePath: string) => Promise<boolean>;
 }
 
-async function exists(location: string): Promise<boolean> {
-  try {
-    await access(location);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 async function readMaybe(location: string): Promise<string | undefined> {
   try {

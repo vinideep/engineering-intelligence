@@ -30,6 +30,8 @@ Use this matrix to determine which artifact types need updating based on the cha
 | Refactor (no behavior change) | — | `coding-patterns.md` | affected maps | — | dependency-graph | — |
 | Test changes only | — | — | — | — | — | — |
 | Config/env changes | `09-infrastructure.md` | `project-constraints.md` | — | — | — | — |
+| Convention changed | `16-conventions.md` | `coding-patterns.md` | — | — | — | — |
+| Security concern detected | `20-security-assessment.md` | — | — | — | — | — |
 
 ## Procedure
 
@@ -62,6 +64,20 @@ Use this matrix to determine which artifact types need updating based on the cha
 
 8. **Update Impact Report** — Add a synchronization notes section to the original impact report recording what was synced.
 
+9. **Check Freshness** — After sync, update freshness metadata on all modified documents. If any document freshness score drops below 40, flag for full re-verification using `staleness-detector`.
+
+## Confidence Decay
+
+Confidence scores decrease over time without re-verification:
+
+| Changes Since Last Verification | Confidence Level |
+|---|---|
+| 0–9 changes | Maintains current confidence |
+| 10–24 changes | Drops from `verified` to `inferred` |
+| 25+ changes | Drops to `unknown` |
+
+During sync, check how many changes have occurred since each artifact was last verified. Apply decay rules and flag artifacts that have dropped confidence for re-verification.
+
 ## Rules
 
 - **Incremental only**: Update only artifacts identified by the impact report — never regenerate unrelated content
@@ -84,3 +100,4 @@ Use this matrix to determine which artifact types need updating based on the cha
 - Depends on: `change-detection-engine`, `impact-analysis-engine`, `graph-engine`
 - Used by: `engineering-intelligence-skill`, `sync-engineering-intelligence` workflow
 - Delegates to: `knowledge-sync-engine`, `memory-sync-engine`, `context-sync-engine`
+- Integrates with: `staleness-detector` (freshness checks), `convention-detector` (convention sync)

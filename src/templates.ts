@@ -1,6 +1,15 @@
-import { readdir, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+export async function exists(location: string): Promise<boolean> {
+  try {
+    await access(location);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export const SKILL_NAMES = [
   "initialize-intelligence-skill",
@@ -20,6 +29,21 @@ export const SKILL_NAMES = [
   "incremental-sync-engine",
   "engineering-change-review",
   "requirement-scoper",
+  "codebase-discovery-engine",
+  "convention-detector",
+  "ongoing-learning-engine",
+  "greenfield-architect",
+  "git-intelligence-engine",
+  "pr-intelligence-engine",
+  "staleness-detector",
+  "security-audit-engine",
+  "performance-analysis-engine",
+  "debugging-engine",
+  "aidlc-lifecycle-engine",
+  "environmental-backpressure-engine",
+  "nfr-adr-governor",
+  "mcp-security-governor",
+  "operations-readiness-engine",
 ] as const;
 
 export const AGENT_NAMES = [
@@ -28,6 +52,16 @@ export const AGENT_NAMES = [
   "quality-agent",
   "knowledge-agent",
   "product-analyst",
+  "system-architect",
+  "security-officer",
+  "database-administrator",
+  "test-engineer",
+  "adversary",
+  "performance-analyst",
+  "compliance-auditor",
+  "release-engineer",
+  "site-reliability-engineer",
+  "documentation-writer",
 ] as const;
 
 export const WORKFLOW_NAMES = [
@@ -38,6 +72,8 @@ export const WORKFLOW_NAMES = [
   "sync-engineering-intelligence",
   "review-engineering-change",
   "scope-requirement",
+  "discover-codebase",
+  "create-project",
 ] as const;
 
 function templateRoot(): string {
@@ -88,6 +124,7 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
     "service-graph.json",
     "runtime-graph.json",
     "business-flow-graph.json",
+    "data-flow-graph.json",
     "architecture-map.md",
   ]) {
     if (!graph.includes(artifact)) {
@@ -105,10 +142,31 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
     "sync-engineering-intelligence",
     "review-engineering-change",
     "scope-requirement",
+    "discover-codebase",
   ]) {
     const content = await readTemplate("workflows", workflow).catch(() => "");
     if (!content.toLowerCase().includes("not modify product code")) {
       errors.push(`${workflow} must state that it does not modify product code`);
+    }
+  }
+  const lifecycle = await readTemplate("skills", "aidlc-lifecycle-engine").catch(() => "");
+  for (const requiredContract of [
+    "Discovery",
+    "Inception",
+    "Construction",
+    "Operations",
+    "environmental backpressure",
+    "aidlc-state.md",
+    "cross-unit-discoveries.md",
+  ]) {
+    if (!lifecycle.includes(requiredContract)) {
+      errors.push(`aidlc-lifecycle-engine does not define required AI-DLC contract: ${requiredContract}`);
+    }
+  }
+  const nfrAdr = await readTemplate("skills", "nfr-adr-governor").catch(() => "");
+  for (const requiredContract of ["ADR", "Proposed", "Accepted", "Superseded", "NFR"]) {
+    if (!nfrAdr.includes(requiredContract)) {
+      errors.push(`nfr-adr-governor does not define required governance contract: ${requiredContract}`);
     }
   }
   return errors;

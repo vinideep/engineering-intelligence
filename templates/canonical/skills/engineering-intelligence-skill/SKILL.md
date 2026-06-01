@@ -34,6 +34,7 @@ Classify the incoming request before starting:
 
 Read these artifacts and identify relevant context:
 - `knowledge-base/` — architecture, APIs, runtime flow relevant to the change
+- `.engineering-intelligence/aidlc/` — active AI-DLC state, plan, audit, open questions, construction units
 - `.engineering-intelligence/memory/` — decisions, constraints, patterns that apply
 - `.engineering-intelligence/context/` — module map, critical paths, dangerous areas near the change
 - `.engineering-intelligence/graph/` — dependency and service relationships
@@ -75,14 +76,31 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
 
 ### 3. Implement the Change
 
+- Select the adaptive delivery mode inside the existing Engineering Intelligence workflow:
+  - Standard Agile delivery for normal feature, bugfix, update, and refactor work
+  - Adversarial delivery for auth, payment, public API, secrets, or compliance-sensitive work
+  - TDD delivery for high-reliability business rules and service contracts
+  - Design-first delivery for migrations, new architecture, and broad system boundaries
+  - Hypothesis debugging for unknown-cause defects
+- Update Agile artifacts when product behavior is in scope:
+  - `.engineering-intelligence/aidlc/agile/product-backlog.md`
+  - `.engineering-intelligence/aidlc/agile/sprint-plan.md`
+  - `.engineering-intelligence/aidlc/agile/acceptance-criteria.md`
+  - `.engineering-intelligence/aidlc/agile/definition-of-ready.md`
+  - `.engineering-intelligence/aidlc/agile/definition-of-done.md`
+- Update `.engineering-intelligence/aidlc/execution-plan.md` and `.engineering-intelligence/aidlc/aidlc-state.md`
+- Split broad changes into construction units and keep `.engineering-intelligence/aidlc/construction/cross-unit-discoveries.md` current
 - Edit only the files necessary for the request
 - Follow existing coding patterns from `.engineering-intelligence/memory/coding-patterns.md`
+- Read conventions from `knowledge-base/16-conventions.md` and `.engineering-intelligence/memory/coding-patterns.md` — match naming patterns, import style, error handling patterns, and code structure
+- If conventions document is missing or outdated, run `convention-detector` first
 - Respect architectural boundaries from `.engineering-intelligence/memory/architecture-decisions.md`
 - Consult `dangerous-areas.md` before modifying flagged code
 
 ### 4. Add/Update Tests
 
 - Add tests proportional to the change risk level
+- Map each acceptance criterion to at least one automated test, manual verification step, or explicitly recorded unavailable check
 - For `bugfix`: add a regression test reproducing the original issue
 - For `feature`: add unit tests and integration tests for the new behavior
 - For `architecture`/`security`: add boundary and negative-path tests
@@ -91,6 +109,8 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
 ### 5. Validate
 
 - Run linters, type checks, and test suites available in the project
+- Use environmental backpressure: analyze failed diagnostics, fix, and rerun the relevant command until it passes or a blocker is recorded
+- Write `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md` for non-trivial units
 - **Never claim validation passed unless it actually ran and passed**
 - Record partial or failed validation honestly
 
@@ -102,6 +122,8 @@ Use `incremental-sync-engine` to update only affected artifacts:
 - Context maps if module/service topology changed
 - Graph nodes/edges if dependencies or services changed
 - Event guidance if API/schema/auth contracts changed
+- AI-DLC lifecycle artifacts if state, plan, NFRs, ADRs, operations readiness, or unit discoveries changed
+- Agile artifacts if backlog, story status, acceptance criteria, Ready/Done gates, or retrospective learning changed
 
 ### 7. Record Change
 
@@ -151,6 +173,7 @@ Summarize to the user:
 - Affected systems and services
 - Synchronized intelligence artifacts
 - Unresolved risks or follow-ups
+- Final AI-DLC breadcrumb: `AI-DLC: <phase> -> <stage> -> <status>`
 
 ## Quality Gates
 
@@ -158,11 +181,17 @@ Summarize to the user:
 - [ ] All changed behavior has corresponding test coverage
 - [ ] Validation was actually executed (not just claimed)
 - [ ] Only affected intelligence artifacts were updated
+- [ ] AI-DLC state, execution plan, and unit artifacts are current for non-trivial work
+- [ ] Story meets Definition of Ready before implementation starts
+- [ ] Story meets Definition of Done before final report
+- [ ] Acceptance criteria are mapped to validation evidence
+- [ ] Environmental backpressure was used for validation failures
 - [ ] Change record references the correct impact report
 - [ ] High-risk changes went through review gate
+- [ ] Generated code follows detected project conventions (naming, imports, structure)
 
 ## Cross-References
 
 - Depends on: `initialize-intelligence-skill` (prerequisite), `change-detection-engine`, `impact-analysis-engine`, `graph-engine`
 - Uses during execution: `testing-intelligence-engine`, `incremental-sync-engine`, `change-history-engine`
-- Optional: `engineering-change-review` (for high-risk), `refactoring-planner` (for refactors)
+- Optional: `engineering-change-review` (for high-risk), `refactoring-planner` (for refactors), `convention-detector` (for convention compliance)

@@ -24,13 +24,14 @@ Act as a detailed Business Analyst and Technical Architect persona. Analyze the 
 
 2. **Formulate Scoping Questions** — Identify gaps, ambiguities, and edge cases. Ask the user 3 to 5 targeted questions covering:
    - **Business Value & Scope**: What are the limits of the MVP?
+   - **Agile Story Shape**: What user role, user goal, priority, dependencies, and release expectation apply?
    - **Technical Strategy**: Which specific database, caching, or third-party integrations are expected?
    - **Edge Cases**: How should errors, rate limits, or validation failures be handled?
    - **UI/UX (if applicable)**: What configuration or user feedback is expected?
 
 3. **Iterate with User** — Wait for user responses. Adjust assumptions based on their answers.
 
-4. **Generate Final Requirement Prompt** — Once requirements are clear, output a comprehensive requirements document to `knowledge-base/19-requirements.md` and formulate the finalized prompt for the development agent.
+4. **Generate Final Requirement Prompt** — Once requirements are clear, output a comprehensive requirements document to `knowledge-base/19-requirements.md`, update Agile artifacts under `.engineering-intelligence/aidlc/agile/`, and formulate the finalized prompt for the development agent.
 
 ## Output Format
 
@@ -47,10 +48,21 @@ The final requirements document `knowledge-base/19-requirements.md` must follow 
 - **System Boundaries & Dependencies**: <Files/modules affected based on graph mappings>
 - **Edge Cases & Failure Modes**: <Exactly how to handle failures, retries, limits>
 
-## 3. Iterated QA Log
+## 3. Agile Delivery Model
+- **Epic**: <epic or initiative>
+- **User Story**: As a <persona>, I want <capability>, so that <outcome>.
+- **Priority**: <P0/P1/P2 or project convention>
+- **Acceptance Criteria**:
+  - Given <context>, when <action>, then <observable result>.
+- **Definition of Ready**:
+  - <ready gate status>
+- **Definition of Done**:
+  - <done gate expectations>
+
+## 4. Iterated QA Log
 <Questions asked and answers received during scoping>
 
-## 4. Finalized Implementation Prompt
+## 5. Finalized Implementation Prompt
 Provide the exact prompt to pass to the coding agent to execute this change:
 ```text
 /engineering-intelligence <Fully detailed requirements and file scope here>
@@ -62,10 +74,12 @@ Provide the exact prompt to pass to the coding agent to execute this change:
 - **Do not modify product code** — this skill is strictly for scoping and analysis.
 - Do not make assumptions on ambiguities; always ask clarifying questions.
 - Base questions and plans on project graph mappings and existing memory files.
+- Keep Agile artifacts synchronized with the final requirement prompt.
 
 ## Quality Gates
 
 - [ ] Clear business goals and technical boundaries defined.
 - [ ] At least 3 scoping questions asked and logged.
+- [ ] User story, acceptance criteria, priority, dependencies, and Ready/Done gates are documented.
 - [ ] Finalized prompt maps exact files and modules.
 - [ ] Output does not contain any code modification.
