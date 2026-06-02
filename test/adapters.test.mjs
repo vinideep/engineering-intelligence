@@ -4,7 +4,7 @@ import { renderAdapters } from "../dist/adapters/index.js";
 import { validateRender } from "../dist/validation/index.js";
 
 test("all V2 IDE adapters render internally valid native destinations and workflows", async () => {
-  const ides = ["antigravity", "antigravity-cli", "codex", "claude-code", "cursor", "github-copilot", "gemini-cli", "generic"];
+  const ides = ["antigravity", "antigravity-cli", "codex", "claude-code", "cursor", "github-copilot", "gemini-cli", "commandcode", "generic"];
   const files = await renderAdapters(ides);
   const paths = new Set(files.map((item) => item.path));
   assert.ok(paths.has(".agent/workflows/initialize-engineering-intelligence.md"));
@@ -32,6 +32,11 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.ok(paths.has(".gemini/commands/initialize-engineering-intelligence.toml"));
   assert.ok(paths.has(".gemini/commands/sync-engineering-intelligence.toml"));
   assert.ok(paths.has(".gemini/commands/scope-requirement.toml"));
+  assert.ok(paths.has(".commandcode/skills/engineering-intelligence-skill/SKILL.md"));
+  assert.ok(paths.has(".commandcode/skills/aidlc-lifecycle-engine/SKILL.md"));
+  assert.ok(paths.has(".commandcode/commands/initialize-engineering-intelligence.md"));
+  assert.ok(paths.has(".commandcode/commands/engineering-intelligence.md"));
+  assert.ok(paths.has(".commandcode/commands/scope-requirement.md"));
   assert.match(files.find((item) => item.path === "AGENTS.md").content, /map-architecture/);
   // antigravity IDE uses .agent/ (singular)
   assert.ok(paths.has(".agent/agents/engineering-orchestrator/agent.json"));
@@ -50,6 +55,22 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   const architectJson = JSON.parse(files.find((item) => item.path === ".agent/agents/system-architect/agent.json").content);
   assert.ok(architectJson.skills.includes("nfr-adr-governor"));
   assert.deepEqual(await validateRender(ides), []);
+});
+
+test("CommandCode adapter writes native project skills and commands", async () => {
+  const files = await renderAdapters(["commandcode"]);
+  const paths = new Set(files.map((item) => item.path));
+  assert.ok(paths.has(".commandcode/skills/engineering-intelligence-skill/SKILL.md"));
+  assert.ok(paths.has(".commandcode/skills/requirement-scoper/SKILL.md"));
+  assert.ok(paths.has(".commandcode/skills/nfr-adr-governor/SKILL.md"));
+  assert.ok(paths.has(".commandcode/commands/engineering-intelligence.md"));
+  assert.ok(paths.has(".commandcode/commands/analyze-impact.md"));
+  assert.ok(paths.has(".commandcode/commands/map-architecture.md"));
+  const implementation = files.find((item) => item.path === ".commandcode/commands/engineering-intelligence.md").content;
+  const mapping = files.find((item) => item.path === ".commandcode/commands/map-architecture.md").content;
+  assert.match(implementation, /\$ARGUMENTS/);
+  assert.doesNotMatch(mapping, /\$ARGUMENTS/);
+  assert.deepEqual(await validateRender(["commandcode"]), []);
 });
 
 test("Gemini commands pass arguments only to input-driven workflows", async () => {

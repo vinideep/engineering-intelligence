@@ -15,6 +15,7 @@ The installer does **not** inspect the target source code, call an AI model, or 
 | Cursor | `.cursor/rules`, `.cursor/commands` | Native slash workflows |
 | GitHub Copilot | `.github/skills`, `.github/agents`, `.github/prompts`, managed instructions | Use supported skills/prompts or ask for the workflow in chat |
 | Gemini CLI | `.agents/skills`, `.gemini/commands`, managed `GEMINI.md` | Native slash workflows |
+| CommandCode | `.commandcode/skills`, `.commandcode/commands`, managed `AGENTS.md` | Use `/skills` or native slash commands in CommandCode terminal |
 | Generic | `.agents/skills`, managed `AGENTS.md` | Ask the agent to invoke the named workflow |
 
 ## Install
@@ -29,6 +30,7 @@ For repeatable or multi-IDE setup:
 
 ```bash
 npx engineering-intelligence install . --ide antigravity --ide codex --ide cursor --yes
+npx engineering-intelligence install . --ide commandcode --yes
 npx engineering-intelligence install ./my-project --ide claude-code,gemini-cli --dry-run
 ```
 
@@ -73,6 +75,8 @@ V2 also includes read-only-with-respect-to-product-code workflows:
 `/map-architecture` writes graph intelligence, `/analyze-impact` writes impact reports, `/sync-engineering-intelligence` updates intelligence artifacts, and `/review-engineering-change` writes findings. Only `/engineering-intelligence` is intended to implement product-code changes.
 
 Where a host does not expose native custom slash commands, mention the installed skill name or request the same workflow in chat.
+
+For CommandCode terminal projects, install with `--ide commandcode`. The installer writes project-level skills to `.commandcode/skills/` and workflow commands to `.commandcode/commands/`. CommandCode also discovers `.agents/skills/`, but the native `.commandcode/skills/` location has priority, so this adapter uses the native project-level path.
 
 The IDE agent, not this installer, creates and maintains:
 

@@ -248,6 +248,30 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
         block("GEMINI.md", sharedInstructions, ide),
       ];
     }
+    case "commandcode": {
+      const inputWorkflows = new Set<(typeof WORKFLOW_NAMES)[number]>([
+        "engineering-intelligence",
+        "analyze-impact",
+        "sync-engineering-intelligence",
+        "review-engineering-change",
+        "scope-requirement",
+        "create-project",
+      ]);
+      const commands = await Promise.all(
+        WORKFLOW_NAMES.map(async (name) => {
+          const workflow = await readTemplate("workflows", name);
+          const prompt = inputWorkflows.has(name)
+            ? `${workflow}\n\nUser supplied scope or request: $ARGUMENTS`
+            : workflow;
+          return file(`.commandcode/commands/${name}.md`, prompt, ide);
+        }),
+      );
+      return [
+        ...(await skillsAt(".commandcode/skills", ide)),
+        ...commands,
+        block("AGENTS.md", sharedInstructions, ide),
+      ];
+    }
   }
 }
 

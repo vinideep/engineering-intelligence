@@ -29,6 +29,18 @@ test("installs shared skills once for overlapping adapters", async () => {
   assert.match(await readable(root, ".gemini/commands/engineering-intelligence.toml"), /User supplied scope or request/);
 });
 
+test("installs CommandCode native project skills and commands", async () => {
+  const root = await project();
+  const result = await install(root, ["commandcode"], options);
+  assert.equal(result.conflicts, 0);
+  assert.match(await readable(root, ".commandcode/skills/engineering-intelligence-skill/SKILL.md"), /Engineering Intelligence Implementation/);
+  assert.match(await readable(root, ".commandcode/commands/engineering-intelligence.md"), /\$ARGUMENTS/);
+  assert.match(await readable(root, ".commandcode/commands/scope-requirement.md"), /\$ARGUMENTS/);
+  assert.doesNotMatch(await readable(root, ".commandcode/commands/map-architecture.md"), /\$ARGUMENTS/);
+  const manifest = JSON.parse(await readable(root, ".engineering-intelligence/install-manifest.json"));
+  assert.ok(manifest.adapters.includes("commandcode"));
+});
+
 test("managed instructions preserve existing user text and uninstall removes only managed content", async () => {
   const root = await project();
   await writeFile(path.join(root, "AGENTS.md"), "# Existing Rules\n\nKeep this.\n");
