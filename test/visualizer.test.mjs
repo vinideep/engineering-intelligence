@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { generateDashboardHTML } from "../dist/visualizer/index.js";
 
-test("generateDashboardHTML returns dashboard HTML content with key components", () => {
-  const html = generateDashboardHTML();
+test("generateDashboardHTML returns dashboard HTML content with key components", async () => {
+  const html = await generateDashboardHTML(process.cwd());
   
   // Basic structure
   assert.match(html, /<!DOCTYPE html>/i);

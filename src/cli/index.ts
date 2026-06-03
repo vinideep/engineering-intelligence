@@ -176,7 +176,7 @@ async function main(): Promise<void> {
     return;
   }
   if (options.command === "visualize") {
-    const html = generateDashboardHTML();
+    const html = await generateDashboardHTML(options.root);
     const outDir = path.join(options.root, ".engineering-intelligence");
     const outPath = path.join(outDir, "dashboard.html");
     await mkdir(outDir, { recursive: true });
