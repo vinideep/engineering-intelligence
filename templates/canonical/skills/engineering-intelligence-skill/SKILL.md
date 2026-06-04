@@ -32,14 +32,16 @@ Classify the incoming request before starting:
 
 ### 1. Pre-Flight: Read Intelligence
 
-Read these artifacts and identify relevant context:
-- `knowledge-base/` — architecture, APIs, runtime flow relevant to the change
-- `.engineering-intelligence/aidlc/` — active AI-DLC state, plan, audit, open questions, construction units
-- `.engineering-intelligence/memory/` — decisions, constraints, patterns that apply
-- `.engineering-intelligence/context/` — module map, critical paths, dangerous areas near the change
-- `.engineering-intelligence/graph/` — dependency and service relationships
+Use `context-budget-optimizer` before loading broad intelligence. Do not read all of `knowledge-base/` or all graph JSON by default. Build `.engineering-intelligence/context/context-manifest.md`, then load only relevant slices:
+- `knowledge-base/` — only H2 sections relevant to the changed modules, APIs, schemas, or risk areas
+- `.engineering-intelligence/aidlc/` — `aidlc-state.md`, active checkpoint, active unit, acceptance criteria, and execution-plan rows relevant to the request
+- `.engineering-intelligence/memory/` — only matching decisions, constraints, conventions, regression patterns, and ADR references
+- `.engineering-intelligence/context/` — module/service/runtime rows near the change scope
+- `.engineering-intelligence/graph/` — only relevant nodes/edges by graph proximity
 
 **If intelligence is missing or stale**: Run `initialize-intelligence-skill` first.
+
+Token rule: keep initial intelligence loading under 40% of the available context budget whenever possible. Lazy-load safety-gate evidence only when the trigger applies.
 
 #### Pre-Flight Freshness Gate
 
@@ -49,7 +51,9 @@ Before impact analysis or code edits:
 2. Run `staleness-detector` scoped to those modules and related knowledge/context/memory artifacts.
 3. If any freshness score is below `60`, run `incremental-sync-engine` for the stale artifacts before editing product code, or explicitly mark stale context in the impact report with the affected documents and scores.
 4. If any score is below `50`, implementation is blocked until incremental sync runs or the user explicitly accepts stale-context risk.
-5. Skip stale H2 sections that carry low confidence metadata unless they are refreshed or verified against source.
+5. Use the `staleness-detector` **Pre-Implementation Drift Trigger** decision: `Proceed`, `Sync before implementation`, or `Block implementation`.
+6. Carry that exact decision into the impact report's freshness-gate line.
+7. Skip stale H2 sections that carry low confidence metadata unless they are refreshed or verified against source.
 
 ### 2. Impact Analysis: Write Report
 
@@ -139,7 +143,12 @@ When TDD delivery mode is selected:
 - Use environmental backpressure: analyze failed diagnostics, fix, and rerun the relevant command until it passes or a blocker is recorded
 - Run `type-safety-engine` for typed projects or record why no type system applies
 - Run `api-backward-compatibility-engine` when API, event, webhook, SDK, route, or schema contracts changed
+- Run `api-snapshot-testing-engine` when API response behavior can be replayed or sampled
 - Run `database-migration-safety-engine` when schema, ORM model, migration, index, or data persistence contracts changed
+- Run `security-audit-engine` in targeted dependency-risk mode when package manifests add or upgrade dependencies; critical CVEs block completion
+- Run `environment-variable-auditor` when environment variable reads, validation schemas, deployment config, or CI secrets change
+- Run `adr-compliance-checker` when accepted ADRs or architecture decisions apply to the changed area
+- Run `llm-prompt-injection-guard` when user-controlled data reaches prompts, RAG, agent tools, LLM calls, or durable AI memory
 - Write `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md` for non-trivial units
 - **Never claim validation passed unless it actually ran and passed**
 - Record partial or failed validation honestly
@@ -199,8 +208,20 @@ Create `.changes/CHG-XXX-<summary>.md`:
 - Freshness gate: <passed|synced|stale risk accepted>
 - Type safety: <passed|failed|not applicable>
 - API compatibility: <passed|failed|not applicable>
+- API snapshots: <passed|failed|not applicable>
 - Migration safety: <passed|failed|not applicable>
+- Dependency security: <passed|failed|not applicable>
+- Environment variables: <passed|failed|not applicable>
+- ADR compliance: <passed|failed|not applicable>
+- LLM prompt injection: <passed|failed|not applicable>
 - Convention enforcement: <passed|findings>
+
+## Rollback
+- Code rollback: <git revert command or branch rollback>
+- Data rollback: <down migration / compensating operation / N/A with justification>
+- Feature flag rollback: <toggle / N/A with justification>
+- Infrastructure rollback: <IaC rollback / N/A with justification>
+- Irreversible steps requiring approval: <list or none>
 
 ## Related Reports
 - IMP-XXX: <link to impact report>
@@ -242,6 +263,12 @@ Summarize to the user:
 - [ ] Acceptance criteria are mapped to validation evidence
 - [ ] Acceptance Criteria Verification Matrix has no unmapped criteria unless recorded as open items
 - [ ] Type safety, API compatibility, and migration safety gates ran when applicable
+- [ ] API snapshot replay ran for changed API behavior when feasible
+- [ ] Dependency security ran for new or upgraded packages
+- [ ] Environment variable audit ran when config/env usage changed
+- [ ] ADR compliance checked applicable accepted decisions
+- [ ] LLM prompt injection guard ran for LLM/user-input paths
+- [ ] Medium-and-above risk changes include rollback instructions or explicit N/A justification
 - [ ] Environmental backpressure was used for validation failures
 - [ ] Change record references the correct impact report
 - [ ] High-risk changes went through review gate
@@ -249,6 +276,6 @@ Summarize to the user:
 
 ## Cross-References
 
-- Depends on: `initialize-intelligence-skill` (prerequisite), `change-detection-engine`, `impact-analysis-engine`, `graph-engine`, `staleness-detector`
-- Uses during execution: `testing-intelligence-engine`, `type-safety-engine`, `api-backward-compatibility-engine`, `database-migration-safety-engine`, `incremental-sync-engine`, `change-history-engine`
+- Depends on: `initialize-intelligence-skill` (prerequisite), `context-budget-optimizer`, `change-detection-engine`, `impact-analysis-engine`, `graph-engine`, `staleness-detector`
+- Uses during execution: `testing-intelligence-engine`, `api-snapshot-testing-engine`, `type-safety-engine`, `api-backward-compatibility-engine`, `database-migration-safety-engine`, `security-audit-engine`, `environment-variable-auditor`, `adr-compliance-checker`, `llm-prompt-injection-guard`, `incremental-sync-engine`, `change-history-engine`
 - Optional: `engineering-change-review` (for high-risk), `refactoring-planner` (for refactors), `convention-detector` (for convention compliance)

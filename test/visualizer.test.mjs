@@ -22,6 +22,15 @@ test("generateDashboardHTML returns dashboard HTML content with key components",
   assert.match(html, /knowledge-base-validator/);
   assert.match(html, /codebase-discovery-engine/);
   assert.match(html, /convention-detector/);
+  assert.match(html, /aidlc-lifecycle-engine/);
+  assert.match(html, /type-safety-engine/);
+  assert.match(html, /database-migration-safety-engine/);
+  assert.match(html, /api-backward-compatibility-engine/);
+  assert.match(html, /api-snapshot-testing-engine/);
+  assert.match(html, /adr-compliance-checker/);
+  assert.match(html, /environment-variable-auditor/);
+  assert.match(html, /llm-prompt-injection-guard/);
+  assert.match(html, /context-budget-optimizer/);
 
   // Workflow pipelines
   assert.match(html, /initialize-engineering-intelligence/);

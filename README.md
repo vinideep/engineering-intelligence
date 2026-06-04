@@ -78,6 +78,8 @@ Where a host does not expose native custom slash commands, mention the installed
 
 For CommandCode terminal projects, install with `--ide commandcode`. The installer writes project-level skills to `.commandcode/skills/` and workflow commands to `.commandcode/commands/`. CommandCode also discovers `.agents/skills/`, but the native `.commandcode/skills/` location has priority, so this adapter uses the native project-level path.
 
+For a step-by-step guide covering new projects, existing projects, CommandCode, daily workflows, safety gates, and maintenance, see [WORKFLOW_GUIDE.md](WORKFLOW_GUIDE.md).
+
 The IDE agent, not this installer, creates and maintains:
 
 ```text
@@ -88,6 +90,7 @@ knowledge-base/
 .engineering-intelligence/events/
 .engineering-intelligence/graph/
 .engineering-intelligence/reports/
+.engineering-intelligence/snapshots/
 .changes/
 ```
 
@@ -132,6 +135,8 @@ The default package installs only engineering-intelligence capabilities:
 - adaptive AI-DLC Discovery, Inception, Construction, and Operations lifecycle artifacts embedded into the existing workflows
 - Agile backlog, user stories, acceptance criteria, Definition of Ready, Definition of Done, sprint plan, and retrospective artifacts
 - delivery modes inside `/engineering-intelligence`: standard Agile, adversarial, TDD, design-first, and hypothesis debugging
+- safety gates for type checking, API compatibility, API snapshots, database migrations, dependencies, environment variables, ADR compliance, LLM prompt injection, rollback, and observability
+- context-budget optimization through ranked context manifests, section-level loading, graph slices, and lazy-loaded safety-gate evidence
 - specialist hats for product analysis, architecture, security, data, testing, adversarial validation, performance, compliance, release, SRE, and documentation
 - NFR and ADR governance, MCP security review, operations readiness, and environmental backpressure loops
 - impact and testing intelligence

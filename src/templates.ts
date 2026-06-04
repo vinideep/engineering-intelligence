@@ -47,6 +47,13 @@ export const SKILL_NAMES = [
   "type-safety-engine",
   "database-migration-safety-engine",
   "api-backward-compatibility-engine",
+  "api-snapshot-testing-engine",
+  "adr-compliance-checker",
+  "dead-code-detector",
+  "environment-variable-auditor",
+  "contract-test-generator",
+  "llm-prompt-injection-guard",
+  "context-budget-optimizer",
 ] as const;
 
 export const AGENT_NAMES = [
@@ -200,6 +207,36 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
   for (const requiredContract of ["additive", "deprecated", "breaking", "version bump"]) {
     if (!apiCompatibility.includes(requiredContract)) {
       errors.push(`api-backward-compatibility-engine does not define required API compatibility contract: ${requiredContract}`);
+    }
+  }
+  const snapshot = await readTemplate("skills", "api-snapshot-testing-engine").catch(() => "");
+  for (const requiredContract of [".engineering-intelligence/snapshots/", "pre-change", "post-change", "replay"]) {
+    if (!snapshot.includes(requiredContract)) {
+      errors.push(`api-snapshot-testing-engine does not define required snapshot contract: ${requiredContract}`);
+    }
+  }
+  const staleness = await readTemplate("skills", "staleness-detector").catch(() => "");
+  for (const requiredContract of ["Pre-Implementation Drift Trigger", "Proceed", "Sync before implementation", "Block implementation"]) {
+    if (!staleness.includes(requiredContract)) {
+      errors.push(`staleness-detector does not define required drift contract: ${requiredContract}`);
+    }
+  }
+  const convention = await readTemplate("skills", "convention-detector").catch(() => "");
+  for (const requiredContract of [">70%", "Convention Severity", "critical"]) {
+    if (!convention.includes(requiredContract)) {
+      errors.push(`convention-detector does not define required convention contract: ${requiredContract}`);
+    }
+  }
+  const memory = await readTemplate("skills", "memory-sync-engine").catch(() => "");
+  for (const requiredContract of ["regression-patterns.md", "Testing Intelligence Engine owns detection", "Memory Sync owns durable persistence"]) {
+    if (!memory.includes(requiredContract)) {
+      errors.push(`memory-sync-engine does not define required regression-pattern ownership contract: ${requiredContract}`);
+    }
+  }
+  const contextBudget = await readTemplate("skills", "context-budget-optimizer").catch(() => "");
+  for (const requiredContract of ["Token Budget", "Context Manifest", "Lazy Loading", "40%"]) {
+    if (!contextBudget.includes(requiredContract)) {
+      errors.push(`context-budget-optimizer does not define required token optimization contract: ${requiredContract}`);
     }
   }
   return errors;

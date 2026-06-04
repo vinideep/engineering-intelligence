@@ -67,6 +67,16 @@ Review completed engineering work for correctness, completeness, and alignment w
 | Change record | Does the CHG record accurately reflect the work? |
 | Impact report | Was the impact report referenced correctly? |
 
+### 6. Rollback Readiness
+
+| Check | What to Verify |
+|---|---|
+| Medium+ rollback | Medium, high, and critical risk changes include rollback instructions |
+| Data rollback | Migration rollback, compensating SQL, or irreversible approval is recorded |
+| Feature flags | Flag rollback is documented where applicable |
+| Infrastructure | IaC or deployment rollback is documented where applicable |
+| CHG alignment | CHG record rollback section matches operations readiness |
+
 ## Finding Severity Scale
 
 | Severity | Symbol | Meaning | Action Required |
@@ -80,7 +90,7 @@ Review completed engineering work for correctness, completeness, and alignment w
 ## Procedure
 
 1. **Read Context** — Load the impact report, implementation diff, and test results.
-2. **Review Each Dimension** — Walk through all five review dimensions above.
+2. **Review Each Dimension** — Walk through all six review dimensions above.
 3. **Score Findings** — Assign severity to each finding.
 4. **Check Intelligence** — Verify graph, knowledge, memory, and context were appropriately synced.
 5. **Write Report** — Generate the review report.
@@ -129,6 +139,11 @@ Write `.engineering-intelligence/reports/REV-XXX-<slug>.md`:
 
 ## Stale Intelligence Risks
 - <areas where docs may drift from code>
+
+## Rollback Readiness
+| Area | Status | Evidence |
+|---|---|---|
+| Code rollback | ✅/⚠️/❌ | <CHG or operations-readiness evidence> |
 ```
 
 ## Rules
@@ -141,7 +156,7 @@ Write `.engineering-intelligence/reports/REV-XXX-<slug>.md`:
 
 ## Quality Gates
 
-- [ ] All five review dimensions were evaluated
+- [ ] All six review dimensions were evaluated
 - [ ] Each finding has severity, location, and evidence
 - [ ] Test execution was verified (not assumed)
 - [ ] Intelligence sync status was checked

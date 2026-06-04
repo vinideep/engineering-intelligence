@@ -2,9 +2,11 @@
 
 ## Pre-Edit Requirements
 
-When `knowledge-base/` exists, consult the relevant documents, `.engineering-intelligence/context/`, and `.engineering-intelligence/graph/` before non-trivial project edits.
+When `knowledge-base/` exists, consult relevant slices of the documents, `.engineering-intelligence/context/`, and `.engineering-intelligence/graph/` before non-trivial project edits. Do not load entire intelligence directories by default.
 
 When `.engineering-intelligence/aidlc/` exists, also consult `aidlc-state.md`, `execution-plan.md`, `open-questions.md`, and the active construction unit before edits.
+
+Run `context-budget-optimizer` for non-trivial workflows. Create `.engineering-intelligence/context/context-manifest.md`, rank context by graph proximity, keep initial intelligence loading under 40% of available context budget when possible, and lazy-load gate-specific evidence only when needed.
 
 ## AI-DLC Operating Model
 
@@ -83,6 +85,7 @@ Use these as the canonical project-intelligence paths — never invent alternati
 - Back every material claim with a file path reference
 - Mark uncertainty explicitly — silence is worse than "unknown"
 - Use `**Not detected**` for absent features, not omission
+- Prefer file/section pointers over long pasted context. Load full files only when slices are insufficient.
 
 ## Safety And Governance
 

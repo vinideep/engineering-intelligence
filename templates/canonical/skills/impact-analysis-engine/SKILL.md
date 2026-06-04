@@ -41,9 +41,11 @@ Determine what can break before changing code. Produce a reusable impact report 
    - Query paths referencing changed schema fields from schema-to-query mapping
    - API clients or contract tests affected by additive, deprecated, or breaking API changes
 
-5. **Trace Transitive Impact** — Follow 2nd and 3rd order effects through the graph. Identify files that are indirectly affected by consumers of the directly affected modules. Walk the dependency chain until impact attenuates or reaches a service boundary.
+5. **Traverse Sensitive Data Paths** — Query `data-flow-graph.json` for sensitive-source to sensitive-sink reachability involving the changed scope. Sensitive data propagation to unencrypted channels, logs, analytics events, prompt/RAG memory, or unvalidated sinks escalates risk and becomes a security finding in the impact report.
 
-6. **Score Risk** — Assign risk based on:
+6. **Trace Transitive Impact** — Follow 2nd and 3rd order effects through the graph. Identify files that are indirectly affected by consumers of the directly affected modules. Walk the dependency chain until impact attenuates or reaches a service boundary.
+
+7. **Score Risk** — Assign risk based on:
 
 | Factor | Low | Medium | High | Critical |
 |---|---|---|---|---|
@@ -55,7 +57,7 @@ Determine what can break before changing code. Produce a reusable impact report 
 | **Change coupling** | None | Low (1-2 coupled files) | Medium (3-5 coupled files) | High (6+ coupled files) |
 | **Hot path** | Cold path | Normal | Critical path | Revenue/security/SLO path |
 
-7. **Identify Validation Needs** — Map impact to required validation:
+8. **Identify Validation Needs** — Map impact to required validation:
 
 | Impact Area | Validation Required |
 |---|---|
@@ -66,9 +68,9 @@ Determine what can break before changing code. Produce a reusable impact report 
 | UI change | Visual regression, accessibility |
 | Infrastructure | Deploy to staging, smoke test |
 
-8. **Map Intelligence Artifacts** — Determine which intelligence artifacts need synchronization after the change is implemented.
+9. **Map Intelligence Artifacts** — Determine which intelligence artifacts need synchronization after the change is implemented.
 
-> **Surprise Impact Detection**: Flag any dependency discovered during analysis that is NOT in the current graph — these are surprise impacts that should be added to the graph. Surprise impacts indicate missing edges or nodes and must be reported in the Unknowns section of the impact report.
+> **Surprise Impact Detection**: Flag any dependency discovered during analysis that is NOT in the current graph. Submit the edge to `graph-engine` incremental mode as an `inferred` edge with evidence so the graph learns from the surprise. Surprise impacts must also be reported in the Unknowns section of the impact report until the graph update is complete.
 
 ## Output Format
 
@@ -105,6 +107,7 @@ Write `.engineering-intelligence/reports/IMP-XXX-<slug>.md`:
 |---|---|---|
 | API <name> | additive | api-backward-compatibility-engine |
 | Table.column | schema-to-query impact | database-migration-safety-engine |
+| Sensitive data path | unencrypted sink | security-audit-engine |
 
 ## Risk Assessment
 - Overall risk: <level>
@@ -145,6 +148,8 @@ Write `.engineering-intelligence/reports/IMP-XXX-<slug>.md`:
 - [ ] Direct and indirect impact are separated
 - [ ] Type-level dependencies are traced for typed languages
 - [ ] API and schema/query impact are classified when relevant
+- [ ] Sensitive data path traversal was performed for data-flow changes
+- [ ] Surprise impacts were submitted to graph-engine incremental mode
 - [ ] Risk score is justified with evidence
 - [ ] Validation requirements are specific (not generic)
 - [ ] Report ends with the "did not modify product code" statement

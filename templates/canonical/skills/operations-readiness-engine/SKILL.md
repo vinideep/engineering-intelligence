@@ -8,6 +8,8 @@ version: 1.0.0
 
 Use this skill when a change affects deployment, infrastructure, runtime behavior, SLOs, data migrations, incident response, or production monitoring.
 
+For medium-and-above risk changes, use the rollback planning section even when the change is not deployment-bound. Rollback planning is a release safety gate, not only an infrastructure concern.
+
 ## Procedure
 
 1. Identify deployment target, environment variables, infrastructure files, CI/CD gates, and runtime services.

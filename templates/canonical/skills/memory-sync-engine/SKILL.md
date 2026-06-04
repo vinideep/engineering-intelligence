@@ -24,6 +24,10 @@ Maintain durable, long-lived engineering memory. Memory is for decisions and pat
 | `technology-decisions.md` | Stack choices, framework versions, deprecation timelines, migration plans | Dependency updates, technology migrations |
 | `regression-patterns.md` | Recurring bug categories and proven regression test templates | Bugfixes that reveal reusable failure patterns |
 
+## Regression Pattern Ownership
+
+Testing Intelligence Engine owns detection and proposal of regression patterns during bugfix validation. Memory Sync owns durable persistence to `.engineering-intelligence/memory/regression-patterns.md` after confirming the pattern is reusable and evidence-backed. Testing Intelligence must not directly persist durable memory unless it is explicitly running through Memory Sync.
+
 ## Staleness Detection Rules
 
 A memory entry may be stale if:

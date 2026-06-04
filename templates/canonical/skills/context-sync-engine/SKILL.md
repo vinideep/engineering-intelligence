@@ -84,14 +84,24 @@ Queue → Worker → Process → DB Write → Notify
 | stripe | 12.x | payments module | Medium — breaking changes |
 ```
 
+### `context-manifest.md` — Token Budget And Relevance Plan
+
+```markdown
+# Context Manifest
+
+| Rank | Artifact | Sections / Keys | Reason | Estimated Tokens | Load Mode |
+|---:|---|---|---|---:|---|
+```
+
 ## Procedure
 
-1. **Context Relevance Selection** — Before reading broad intelligence, rank knowledge and context documents by graph proximity to the change scope:
+1. **Context Relevance Selection** — Use `context-budget-optimizer` before reading broad intelligence. Rank knowledge and context documents by graph proximity to the change scope:
    - direct graph neighbors first
    - critical-path maps next
    - impacted API/schema/security docs next
    - broad background docs last
    Estimate token cost and load in relevance order until roughly 40% of the available context budget is consumed. Reserve the rest for implementation, tests, diagnostics, and user interaction. If critical docs cannot fit, escalate with the missing docs and reason.
+   Write the ranking to `.engineering-intelligence/context/context-manifest.md`.
 
 2. **Check Impact** — Review the impact report and graph updates. Identify which context maps are affected.
 
@@ -125,6 +135,7 @@ Queue → Worker → Process → DB Write → Notify
 
 - [ ] Each map is under 150 lines
 - [ ] Relevant docs were ranked by graph proximity before broad loading
+- [ ] `context-manifest.md` was updated for non-trivial work
 - [ ] Context budget was preserved or an escalation was recorded
 - [ ] Updated entries reference real, existing paths
 - [ ] Only impact-affected maps were modified

@@ -95,6 +95,14 @@ Identify security risks through systematic, evidence-backed analysis of dependen
 
 6. **Generate Assessment** — Write findings to `knowledge-base/20-security-assessment.md`.
 
+7. **Targeted Dependency-Risk Output** — During implementation runs triggered by new or upgraded packages, write a lighter unit artifact instead of conflating the result with a full audit:
+
+   ```text
+   .engineering-intelligence/aidlc/construction/<unit>/dependency-risk-summary.md
+   ```
+
+   This summary must include CVE, license, maintenance, and bundle impact findings for changed dependencies. Critical CVEs block completion.
+
 ## Output Format
 
 Write `knowledge-base/20-security-assessment.md`:
@@ -141,6 +149,18 @@ Write `knowledge-base/20-security-assessment.md`:
 
 ---
 *This security assessment did not modify product code.*
+```
+
+### Targeted Dependency Risk Summary
+
+```markdown
+# Dependency Risk Summary: <unit>
+
+| Package | Change | CVE Risk | License | Maintenance | Bundle Impact | Decision |
+|---|---|---|---|---|---|---|
+
+## Blocking Findings
+- <critical CVE or policy violation>
 ```
 
 ## Rules

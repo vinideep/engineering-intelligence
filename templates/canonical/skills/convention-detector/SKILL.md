@@ -121,6 +121,19 @@ This capability does not modify product code.
    - **Exceptions**: specific files or modules that deviate (and possible reasons)
    - **Confidence**: how certain the detection is (based on sample size)
 
+   ## Convention Severity
+
+   Classify violations with these blocking rules:
+
+   | Severity | Meaning | Completion Rule |
+   |---|---|---|
+   | `critical` | Violates architectural boundary, security convention, data access rule, public API shape, or framework lifecycle rule | Blocks completion |
+   | `major` | Breaks dominant project structure, error handling, logging, import style, or test pattern in a way that creates maintenance risk | Must fix or record review finding |
+   | `minor` | Local naming/order/style mismatch that is mechanically fixable | Auto-correct when safe |
+   | `exception` | Existing legacy or documented exception | Record but do not block |
+
+   A pattern must exceed `>70%` adherence to be treated as a convention. Structural means the violation changes file placement, layer ownership, dependency direction, API envelope, persistence access, or lifecycle hook usage rather than simple naming.
+
 10. **Write conventions document** — Generate `knowledge-base/16-conventions.md` following the output format below.
 
 11. **Enhance coding patterns memory** — Update `.engineering-intelligence/memory/coding-patterns.md` with durable conventions that are unlikely to change.
@@ -167,8 +180,8 @@ Sample size: <N files analyzed across M modules>
 
 ## Convention Violations
 
-| Convention | Violation | Location | Severity |
-|---|---|---|---|
+| Convention | Violation | Location | Severity | Blocks Completion | Recommended Action |
+|---|---|---|---|---|---|
 | ... | ... | ... | ... |
 ```
 
@@ -185,6 +198,7 @@ Add a `## Conventions` section with only durable patterns that pass the durabili
 - [ ] Git conventions are extracted from actual git history (not assumed)
 - [ ] Each convention has an adherence rate and evidence citation
 - [ ] Exceptions to conventions are listed (not hidden)
+- [ ] Convention violations include severity and blocking decision
 - [ ] `knowledge-base/16-conventions.md` exists and follows the output format
 - [ ] `coding-patterns.md` is enhanced with a Conventions section
 - [ ] Only patterns with >70% adherence are classified as conventions

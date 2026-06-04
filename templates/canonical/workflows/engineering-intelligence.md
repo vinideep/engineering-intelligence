@@ -14,7 +14,7 @@ Use the `engineering-intelligence-skill` capability for the user's accompanying 
 4. **Plan Agile + AI-DLC Work** — Update backlog, acceptance criteria, Definition of Ready, `.engineering-intelligence/aidlc/execution-plan.md`, and `aidlc-state.md`
 5. **Implement** — Make the requested code changes following established patterns
 6. **Test** — Add/update tests proportional to risk; execute and record results
-7. **Safety Gates** — Run freshness, type safety, API compatibility, migration safety, convention, acceptance-mapping, dependency-risk, and rollback gates when applicable
+7. **Safety Gates** — Run freshness, type safety, API compatibility, API snapshot replay, migration safety, convention, acceptance-mapping, dependency-risk, env-var, ADR compliance, LLM prompt-injection, and rollback gates when applicable
 8. **Validate** — Run available linters, type checks, test suites, scans, and architecture checks as environmental backpressure
 9. **Sync Intelligence** — Incrementally update only affected knowledge, memory, context, event, graph artifacts, and AI-DLC artifacts
 10. **Record Change** — Write `.changes/CHG-XXX-<summary>.md` referencing related reports and acceptance verification
@@ -29,6 +29,6 @@ Finish with:
 - Synchronized intelligence artifacts
 - Related reports (IMP-XXX, REV-XXX)
 - Agile artifacts updated (backlog, stories, acceptance criteria, Definition of Done)
-- Safety gates run (freshness, type, API, migration, acceptance mapping)
+- Safety gates run (freshness, type, API, snapshots, migration, dependency, env, ADR, LLM, acceptance mapping, rollback)
 - Unresolved risks or follow-ups
 - AI-DLC breadcrumb (`AI-DLC: <phase> -> <stage> -> <status>`)

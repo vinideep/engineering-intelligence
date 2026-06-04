@@ -74,27 +74,27 @@ const AGENT_METADATA: Record<
   },
   "change-agent": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".changes"],
-    skills: ["engineering-intelligence-skill", "aidlc-lifecycle-engine", "impact-analysis-engine", "change-detection-engine", "type-safety-engine", "api-backward-compatibility-engine"],
+    skills: ["engineering-intelligence-skill", "context-budget-optimizer", "aidlc-lifecycle-engine", "impact-analysis-engine", "change-detection-engine", "type-safety-engine", "api-backward-compatibility-engine", "api-snapshot-testing-engine", "environment-variable-auditor", "adr-compliance-checker", "llm-prompt-injection-guard"],
   },
   "quality-agent": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
-    skills: ["engineering-change-review", "knowledge-base-validator", "testing-intelligence-engine", "environmental-backpressure-engine"],
+    skills: ["engineering-change-review", "knowledge-base-validator", "testing-intelligence-engine", "environmental-backpressure-engine", "contract-test-generator", "adr-compliance-checker"],
   },
   "knowledge-agent": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/memory", ".changes"],
-    skills: ["knowledge-sync-engine", "memory-sync-engine", "context-sync-engine", "graph-engine", "change-history-engine"],
+    skills: ["knowledge-sync-engine", "memory-sync-engine", "context-sync-engine", "context-budget-optimizer", "graph-engine", "change-history-engine", "dead-code-detector"],
   },
   "product-analyst": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/graph"],
-    skills: ["requirement-scoper", "aidlc-lifecycle-engine"],
+    skills: ["requirement-scoper", "context-budget-optimizer", "aidlc-lifecycle-engine"],
   },
   "system-architect": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph", ".engineering-intelligence/memory"],
-    skills: ["aidlc-lifecycle-engine", "nfr-adr-governor", "architecture-review-engine", "graph-engine"],
+    skills: ["aidlc-lifecycle-engine", "nfr-adr-governor", "architecture-review-engine", "graph-engine", "adr-compliance-checker"],
   },
   "security-officer": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
-    skills: ["security-audit-engine", "mcp-security-governor", "nfr-adr-governor"],
+    skills: ["security-audit-engine", "mcp-security-governor", "nfr-adr-governor", "llm-prompt-injection-guard", "environment-variable-auditor"],
   },
   "database-administrator": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
@@ -102,7 +102,7 @@ const AGENT_METADATA: Record<
   },
   "test-engineer": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
-    skills: ["testing-intelligence-engine", "environmental-backpressure-engine", "type-safety-engine"],
+    skills: ["testing-intelligence-engine", "environmental-backpressure-engine", "type-safety-engine", "api-snapshot-testing-engine", "contract-test-generator"],
   },
   "adversary": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],

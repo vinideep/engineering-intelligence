@@ -4,7 +4,7 @@ import { readTemplate, SKILL_NAMES, AGENT_NAMES, WORKFLOW_NAMES } from "../templ
 
 interface SkillInfo {
   name: string;
-  category: "initialization" | "implementation" | "analysis" | "sync" | "review" | "planning" | "discovery" | "security";
+  category: "initialization" | "implementation" | "analysis" | "sync" | "review" | "planning" | "discovery" | "security" | "operations";
   description: string;
   usedBy: string[];
   dependsOn: string[];
@@ -200,6 +200,111 @@ const SKILL_CATALOG: Record<string, SkillInfo> = {
     usedBy: [],
     dependsOn: ["graph-engine", "change-detection-engine", "impact-analysis-engine"],
   },
+  "aidlc-lifecycle-engine": {
+    name: "AI-DLC Lifecycle",
+    category: "planning",
+    description: "Embeds Agile + AI-DLC state, checkpoints, units, and gates",
+    usedBy: ["engineering-intelligence-skill"],
+    dependsOn: [],
+  },
+  "environmental-backpressure-engine": {
+    name: "Environmental Backpressure",
+    category: "implementation",
+    description: "Uses local tools to self-correct validation failures",
+    usedBy: ["engineering-intelligence-skill", "testing-intelligence-engine"],
+    dependsOn: [],
+  },
+  "nfr-adr-governor": {
+    name: "NFR & ADR Governor",
+    category: "planning",
+    description: "Captures measurable NFRs and ADR lifecycle decisions",
+    usedBy: ["aidlc-lifecycle-engine"],
+    dependsOn: [],
+  },
+  "mcp-security-governor": {
+    name: "MCP Security Governor",
+    category: "security",
+    description: "Reviews MCP tools, permissions, schemas, and sandboxing",
+    usedBy: ["security-audit-engine"],
+    dependsOn: [],
+  },
+  "operations-readiness-engine": {
+    name: "Operations Readiness",
+    category: "operations",
+    description: "Builds rollback, observability, deployment, and runbook readiness",
+    usedBy: ["engineering-intelligence-skill"],
+    dependsOn: [],
+  },
+  "type-safety-engine": {
+    name: "Type Safety",
+    category: "implementation",
+    description: "Runs type checks and traces type-only dependencies",
+    usedBy: ["engineering-intelligence-skill", "impact-analysis-engine"],
+    dependsOn: [],
+  },
+  "database-migration-safety-engine": {
+    name: "Migration Safety",
+    category: "implementation",
+    description: "Checks migrations for rollback, locks, and destructive operations",
+    usedBy: ["engineering-intelligence-skill"],
+    dependsOn: [],
+  },
+  "api-backward-compatibility-engine": {
+    name: "API Compatibility",
+    category: "implementation",
+    description: "Classifies API changes and blocks unversioned breaking changes",
+    usedBy: ["engineering-intelligence-skill"],
+    dependsOn: [],
+  },
+  "api-snapshot-testing-engine": {
+    name: "API Snapshot Testing",
+    category: "implementation",
+    description: "Captures and replays API response snapshots",
+    usedBy: ["engineering-intelligence-skill", "testing-intelligence-engine"],
+    dependsOn: ["api-backward-compatibility-engine"],
+  },
+  "adr-compliance-checker": {
+    name: "ADR Compliance",
+    category: "review",
+    description: "Checks diffs against accepted ADRs and architecture decisions",
+    usedBy: ["engineering-change-review"],
+    dependsOn: ["nfr-adr-governor"],
+  },
+  "dead-code-detector": {
+    name: "Dead Code Detector",
+    category: "analysis",
+    description: "Finds unused exports, zombie dependencies, and stale modules",
+    usedBy: ["architecture-review-engine"],
+    dependsOn: ["git-intelligence-engine"],
+  },
+  "environment-variable-auditor": {
+    name: "Environment Variable Auditor",
+    category: "operations",
+    description: "Checks env var usage against examples, validation, CI, and deploy config",
+    usedBy: ["engineering-intelligence-skill"],
+    dependsOn: [],
+  },
+  "contract-test-generator": {
+    name: "Contract Test Generator",
+    category: "implementation",
+    description: "Generates service-boundary contract test plans and stubs",
+    usedBy: ["testing-intelligence-engine"],
+    dependsOn: ["graph-engine", "api-backward-compatibility-engine"],
+  },
+  "llm-prompt-injection-guard": {
+    name: "LLM Prompt Injection Guard",
+    category: "security",
+    description: "Finds unsafe user-input-to-LLM and durable-memory paths",
+    usedBy: ["security-audit-engine"],
+    dependsOn: [],
+  },
+  "context-budget-optimizer": {
+    name: "Context Budget Optimizer",
+    category: "planning",
+    description: "Ranks and slices context to reduce AI IDE token usage",
+    usedBy: ["engineering-intelligence-skill", "context-sync-engine"],
+    dependsOn: ["graph-engine"],
+  },
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -211,6 +316,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   planning: "#a855f7",
   discovery: "#14b8a6",
   security: "#f43f5e",
+  operations: "#0ea5e9",
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -222,6 +328,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   planning: "Planning",
   discovery: "Discovery",
   security: "Security",
+  operations: "Operations",
 };
 
 interface WorkflowStep {
