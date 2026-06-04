@@ -18,6 +18,7 @@ Use `.engineering-intelligence/aidlc/` as the canonical AI-DLC root:
 | `.engineering-intelligence/aidlc/audit.md` | Append-only chronological log of decisions, user answers, tool checks, and transitions |
 | `.engineering-intelligence/aidlc/open-questions.md` | Unresolved ambiguities and owner/status |
 | `.engineering-intelligence/aidlc/execution-plan.md` | Adaptive stage plan with mandatory/conditional/skipped stages |
+| `.engineering-intelligence/aidlc/checkpoints.md` | Resume checkpoints after major workflow steps |
 | `.engineering-intelligence/aidlc/discovery/vision.md` | Business objectives, personas, value, success metrics |
 | `.engineering-intelligence/aidlc/discovery/technical-environment.md` | Runtime, deployment, integrations, data stores, auth, constraints |
 | `.engineering-intelligence/aidlc/agile/product-backlog.md` | Epics, stories, priorities, dependencies, and status |
@@ -78,6 +79,16 @@ For brownfield systems, run reverse engineering and write:
 
 Then compile validated requirements, backlog updates, acceptance criteria, sprint plan, and an adaptive `execution-plan.md`.
 
+`execution-plan.md` must include a formal unit dependency graph:
+
+```markdown
+## Units Dependency Graph
+| Unit | Depends On | Can Run In Parallel | Files Owned | Conflict Risk |
+|---|---|---|---|---|
+```
+
+Units with no declared dependencies and no overlapping owned files may run in parallel. Conflicts discovered during parallel or sequential execution must be logged in `cross-unit-discoveries.md`.
+
 ### 2. Construction
 
 Execute per unit of work. Each unit may include:
@@ -115,6 +126,32 @@ Each stage must end with binary evidence:
 - Required tests, type checks, linters, scans, or build commands ran, failed, or were explicitly unavailable
 - Human approval is recorded before irreversible actions
 - Breadcrumb is updated in `aidlc-state.md`
+- Checkpoint is written after impact analysis, implementation, type/API/migration safety gates, validation, synchronization, and change record
+
+## Checkpoint And Resume
+
+Write `.engineering-intelligence/aidlc/checkpoints.md` and update `aidlc-state.md` after each major step:
+
+| Checkpoint | Meaning | Resume Action |
+|---|---|---|
+| `impact-analysis-complete` | Impact report exists | Resume at implementation planning |
+| `implementation-complete` | Code edits are done | Resume at validation |
+| `safety-gates-complete` | Type/API/migration gates passed or blocked | Resume at testing/backpressure |
+| `tests-passing` | Required validation passed | Resume at sync |
+| `sync-complete` | Intelligence artifacts updated | Resume at change record |
+| `change-record-complete` | CHG record exists | Resume at final report |
+
+On re-invocation, detect the latest checkpoint and continue from the next step instead of restarting, unless the user asks for a fresh run.
+
+## Dry-Run Mode
+
+If the user asks for dry run, preview, or plan-only execution:
+- Generate the impact report
+- Select delivery mode
+- Show files likely to change and why
+- Run safe current-state checks such as type/lint/test discovery
+- Do not edit product code
+- Write a pre-flight report under `.engineering-intelligence/reports/`
 
 ## Environmental Backpressure
 
@@ -136,6 +173,8 @@ AI-DLC: <phase> -> <stage> -> <status>
 - [ ] Brownfield reverse engineering exists before broad changes
 - [ ] Requirements and execution plan are durable files
 - [ ] Construction is split into explicit units
+- [ ] Unit dependency graph exists in `execution-plan.md`
 - [ ] Cross-unit discoveries are loaded and updated
+- [ ] Checkpoints are written and resume is supported
 - [ ] Validation uses environmental backpressure
 - [ ] Operations readiness is addressed when deployment or production behavior changes

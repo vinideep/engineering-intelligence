@@ -14,7 +14,8 @@ Use this skill when a change affects deployment, infrastructure, runtime behavio
 2. Define release strategy: normal deploy, canary, blue/green, feature flag, or manual rollout.
 3. Define rollback plan and data recovery constraints.
 4. Define observability: metrics, traces, logs, dashboards, alerts, and ownership.
-5. Confirm production readiness with objective gates.
+5. Inject or flag observability gaps for new functions, endpoints, jobs, service interactions, and business events.
+6. Confirm production readiness with objective gates.
 
 ## Outputs
 
@@ -34,16 +35,24 @@ Write `.engineering-intelligence/aidlc/operations/operations-readiness.md`:
 | Signal | Source | Threshold | Owner | Runbook |
 |---|---|---|---|---|
 
+## Observability Injection
+| New / Changed Path | Entry Log | Exit Log | Trace Span | Error Metric | Business Event | Status |
+|---|---|---|---|---|---|---|
+
 ## Rollback
-- Code rollback:
-- Data rollback:
-- Configuration rollback:
+- Code rollback: `git revert <commit>` or <branch rollback sequence>
+- Data rollback: <down migration / compensating SQL / irreversible approval>
+- Feature flag rollback: <toggle and expected effect>
+- Infrastructure rollback: <IaC rollback sequence>
+- External dependency rollback: <vendor/config rollback>
 
 ## Readiness Gates
 - [ ] Build passes
 - [ ] Tests pass
 - [ ] Migrations are backward compatible or downtime is approved
 - [ ] Alerts/runbooks exist for changed failure modes
+- [ ] Rollback planner covers code, data, feature flag, and infrastructure rollback for medium+ risk
+- [ ] New endpoints/functions/services have logging, tracing, metrics, and business-event coverage or explicit gaps
 - [ ] Secrets and environment variables are documented securely
 ```
 
@@ -52,3 +61,5 @@ Write `.engineering-intelligence/aidlc/operations/operations-readiness.md`:
 - Never execute production deployment without explicit user approval.
 - Mark unknown production constraints in `open-questions.md`.
 - For database changes, require backward-compatible migration planning unless downtime is approved.
+- Medium-and-above risk changes require rollback procedures in both `operations-readiness.md` and the CHG record.
+- Irreversible steps require explicit human approval.

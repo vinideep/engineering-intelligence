@@ -22,6 +22,7 @@ Maintain durable, long-lived engineering memory. Memory is for decisions and pat
 | `coding-patterns.md` | Recurring conventions, idioms, naming rules, file organization | Refactors that establish new patterns, convention changes |
 | `project-constraints.md` | Performance budgets, compatibility requirements, SLA targets, regulatory | Infrastructure changes, new compliance requirements |
 | `technology-decisions.md` | Stack choices, framework versions, deprecation timelines, migration plans | Dependency updates, technology migrations |
+| `regression-patterns.md` | Recurring bug categories and proven regression test templates | Bugfixes that reveal reusable failure patterns |
 
 ## Staleness Detection Rules
 
@@ -58,12 +59,25 @@ A memory entry may be stale if:
    - Is this a decision or just an implementation detail?
    - Is this captured better elsewhere (knowledge-base, context)?
 
+5. **Memory Pruning Audit** — During initialization, major refactors, or explicit sync:
+   - Flag entries where referenced code no longer exists
+   - Flag entries superseded for more than six months
+   - Flag patterns contradicted by current `convention-detector` output
+   - Flag decisions that conflict with accepted ADRs
+   - Propose retirement with evidence; do not delete historical decisions silently
+
+6. **Regression Pattern Update** — For bugfixes:
+   - Classify the bug category (pagination boundary, null/empty collection, race condition, permission bypass, retry/idempotency, schema drift, API contract mismatch, etc.)
+   - Match against `.engineering-intelligence/memory/regression-patterns.md`
+   - Add or update a reusable regression test template when the pattern is durable
+
 ## Rules
 
 - **Durable only**: Do not store transient implementation notes or unverified assumptions
 - **Evidence required**: Every entry must cite source evidence
 - **Leave unchanged when appropriate**: Most changes do NOT affect durable memory — it's correct to update nothing
 - **Status tracking**: Mark superseded decisions as `Superseded` rather than deleting them — history matters
+- **Pruning with evidence**: Retire or deprecate stale memory only with evidence and status updates
 - **No product code**: Memory synchronization never modifies product code
 
 ## Quality Gates
@@ -73,6 +87,8 @@ A memory entry may be stale if:
 - [ ] New entries are truly durable (not transient implementation details)
 - [ ] All entries have evidence citations
 - [ ] Superseded entries are marked, not deleted
+- [ ] Memory pruning audit was run for initialization and major refactors
+- [ ] Regression patterns were checked for bugfixes
 
 ## Cross-References
 

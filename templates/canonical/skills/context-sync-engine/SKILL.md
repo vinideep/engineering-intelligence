@@ -86,27 +86,36 @@ Queue → Worker → Process → DB Write → Notify
 
 ## Procedure
 
-1. **Check Impact** — Review the impact report and graph updates. Identify which context maps are affected.
+1. **Context Relevance Selection** — Before reading broad intelligence, rank knowledge and context documents by graph proximity to the change scope:
+   - direct graph neighbors first
+   - critical-path maps next
+   - impacted API/schema/security docs next
+   - broad background docs last
+   Estimate token cost and load in relevance order until roughly 40% of the available context budget is consumed. Reserve the rest for implementation, tests, diagnostics, and user interaction. If critical docs cannot fit, escalate with the missing docs and reason.
 
-2. **Update Affected Maps** — For each affected map:
+2. **Check Impact** — Review the impact report and graph updates. Identify which context maps are affected.
+
+3. **Update Affected Maps** — For each affected map:
    - Update specific entries, not the entire map
    - Add new entries for new modules/services/paths
    - Remove entries for deleted modules/services
    - Update paths and descriptions for renamed elements
 
-3. **Preserve Conciseness** — Each map should be:
+4. **Preserve Conciseness** — Each map should be:
    - Under 150 lines
    - Table-formatted where possible
    - Navigational (paths and quick descriptions), not explanatory
    - Optimized for AI agent context windows
 
-4. **Verify Accuracy** — Cross-check updated maps against:
+5. **Verify Accuracy** — Cross-check updated maps against:
    - Current `.engineering-intelligence/graph/` data
    - Actual file system paths (do they still exist?)
 
 ## Rules
 
 - Keep context concise and navigational — not a knowledge-base duplicate
+- Load context by relevance, not by directory order
+- Keep initial intelligence loading under 40% of the available context budget when possible
 - Use tables over prose wherever possible
 - Update only affected maps from the impact report
 - Do not regenerate unrelated context
@@ -115,6 +124,8 @@ Queue → Worker → Process → DB Write → Notify
 ## Quality Gates
 
 - [ ] Each map is under 150 lines
+- [ ] Relevant docs were ranked by graph proximity before broad loading
+- [ ] Context budget was preserved or an escalation was recorded
 - [ ] Updated entries reference real, existing paths
 - [ ] Only impact-affected maps were modified
 - [ ] Table format used where appropriate

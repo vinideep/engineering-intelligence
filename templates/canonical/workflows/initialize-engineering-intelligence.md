@@ -30,8 +30,9 @@ Analyzes this repository thoroughly without changing product code. Produces a co
 4. **Generate Memory** — Extract durable decisions and patterns
 5. **Generate Context** — Create concise AI navigation maps
 6. **Build Graphs** — Generate evidence-backed architecture graphs
-7. **Initialize AI-DLC + Agile** — Create `aidlc-state.md`, `audit.md`, `open-questions.md`, `execution-plan.md`, Agile delivery artifacts, and `construction/cross-unit-discoveries.md`
-8. **Record** — Write initialization change record
+7. **Initialize AI-DLC + Agile** — Create `aidlc-state.md`, `audit.md`, `open-questions.md`, `execution-plan.md`, `checkpoints.md`, Agile delivery artifacts, and `construction/cross-unit-discoveries.md`
+8. **Audit Memory** — Run memory pruning audit and initialize `.engineering-intelligence/memory/regression-patterns.md`
+9. **Record** — Write initialization change record
 
 ## Important
 

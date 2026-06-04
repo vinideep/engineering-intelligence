@@ -34,6 +34,9 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.ok(paths.has(".gemini/commands/scope-requirement.toml"));
   assert.ok(paths.has(".commandcode/skills/engineering-intelligence-skill/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/aidlc-lifecycle-engine/SKILL.md"));
+  assert.ok(paths.has(".commandcode/skills/type-safety-engine/SKILL.md"));
+  assert.ok(paths.has(".commandcode/skills/database-migration-safety-engine/SKILL.md"));
+  assert.ok(paths.has(".commandcode/skills/api-backward-compatibility-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/commands/initialize-engineering-intelligence.md"));
   assert.ok(paths.has(".commandcode/commands/engineering-intelligence.md"));
   assert.ok(paths.has(".commandcode/commands/scope-requirement.md"));
@@ -54,6 +57,9 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.deepEqual(analystJson.skills, ["requirement-scoper", "aidlc-lifecycle-engine"]);
   const architectJson = JSON.parse(files.find((item) => item.path === ".agent/agents/system-architect/agent.json").content);
   assert.ok(architectJson.skills.includes("nfr-adr-governor"));
+  const changeJson = JSON.parse(files.find((item) => item.path === ".agent/agents/change-agent/agent.json").content);
+  assert.ok(changeJson.skills.includes("type-safety-engine"));
+  assert.ok(changeJson.skills.includes("api-backward-compatibility-engine"));
   assert.deepEqual(await validateRender(ides), []);
 });
 
@@ -63,6 +69,9 @@ test("CommandCode adapter writes native project skills and commands", async () =
   assert.ok(paths.has(".commandcode/skills/engineering-intelligence-skill/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/requirement-scoper/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/nfr-adr-governor/SKILL.md"));
+  assert.ok(paths.has(".commandcode/skills/type-safety-engine/SKILL.md"));
+  assert.ok(paths.has(".commandcode/skills/database-migration-safety-engine/SKILL.md"));
+  assert.ok(paths.has(".commandcode/skills/api-backward-compatibility-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/commands/engineering-intelligence.md"));
   assert.ok(paths.has(".commandcode/commands/analyze-impact.md"));
   assert.ok(paths.has(".commandcode/commands/map-architecture.md"));

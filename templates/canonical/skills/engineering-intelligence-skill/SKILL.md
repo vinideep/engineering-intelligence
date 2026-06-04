@@ -41,6 +41,16 @@ Read these artifacts and identify relevant context:
 
 **If intelligence is missing or stale**: Run `initialize-intelligence-skill` first.
 
+#### Pre-Flight Freshness Gate
+
+Before impact analysis or code edits:
+
+1. Resolve the likely changed modules from the request, graph proximity, or `change-detection-engine`.
+2. Run `staleness-detector` scoped to those modules and related knowledge/context/memory artifacts.
+3. If any freshness score is below `60`, run `incremental-sync-engine` for the stale artifacts before editing product code, or explicitly mark stale context in the impact report with the affected documents and scores.
+4. If any score is below `50`, implementation is blocked until incremental sync runs or the user explicitly accepts stale-context risk.
+5. Skip stale H2 sections that carry low confidence metadata unless they are refreshed or verified against source.
+
 ### 2. Impact Analysis: Write Report
 
 Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>.md`:
@@ -55,6 +65,7 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
 
 ## Analysis
 - Mode: <proposal|diff>
+- Freshness gate: <passed|synced|stale risk accepted> with scores
 - Graph inputs consulted: <list>
 - Directly affected: <files, modules, services>
 - Indirectly affected: <downstream consumers, dependent services>
@@ -62,6 +73,10 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
 
 ## Validation Requirements
 - <test types needed>
+- Type safety: <required|not applicable>
+- API compatibility: <required|not applicable>
+- Migration safety: <required|not applicable>
+- Acceptance mapping: required
 - <manual verification needed>
 
 ## Intelligence Artifacts Affected
@@ -94,8 +109,20 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
 - Follow existing coding patterns from `.engineering-intelligence/memory/coding-patterns.md`
 - Read conventions from `knowledge-base/16-conventions.md` and `.engineering-intelligence/memory/coding-patterns.md` — match naming patterns, import style, error handling patterns, and code structure
 - If conventions document is missing or outdated, run `convention-detector` first
+- After generating or modifying each file, compare it against `coding-patterns.md` for naming, import order, error handling, logging, folder structure, test style, and framework idioms. Auto-correct minor violations. Structural convention violations become review findings and block completion when critical.
 - Respect architectural boundaries from `.engineering-intelligence/memory/architecture-decisions.md`
 - Consult `dangerous-areas.md` before modifying flagged code
+
+#### Strict TDD Red-Green Gate
+
+When TDD delivery mode is selected:
+
+1. Add or update the required tests first.
+2. Run the new/targeted tests before implementation code changes.
+3. Confirm they fail for the expected reason.
+4. Save failing output in `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md`.
+5. Only then implement production code.
+6. If this sequence is skipped, mark the construction unit blocked unless the user explicitly approves non-TDD execution.
 
 ### 4. Add/Update Tests
 
@@ -110,9 +137,26 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
 
 - Run linters, type checks, and test suites available in the project
 - Use environmental backpressure: analyze failed diagnostics, fix, and rerun the relevant command until it passes or a blocker is recorded
+- Run `type-safety-engine` for typed projects or record why no type system applies
+- Run `api-backward-compatibility-engine` when API, event, webhook, SDK, route, or schema contracts changed
+- Run `database-migration-safety-engine` when schema, ORM model, migration, index, or data persistence contracts changed
 - Write `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md` for non-trivial units
 - **Never claim validation passed unless it actually ran and passed**
 - Record partial or failed validation honestly
+
+#### Acceptance Criteria Verification Matrix
+
+Before Definition of Done can pass, map every criterion from `.engineering-intelligence/aidlc/agile/acceptance-criteria.md` to evidence:
+
+```markdown
+## Acceptance Criteria Verification Matrix
+| Criterion | Evidence Type | Evidence | Result | Open Item |
+|---|---|---|---|---|
+| Given..., when..., then... | automated test | `test/file.test.ts` / command result | pass | — |
+| ... | manual verification | <steps required> | pending | <owner/reason> |
+```
+
+Missing mappings block the Done gate and must be copied into the CHG record as open items.
 
 ### 6. Incremental Sync
 
@@ -148,6 +192,16 @@ Create `.changes/CHG-XXX-<summary>.md`:
 - <tests added/modified>
 - <test results: passed/failed/skipped>
 
+## Acceptance Criteria Verification
+<copy the Acceptance Criteria Verification Matrix, including open items>
+
+## Safety Gates
+- Freshness gate: <passed|synced|stale risk accepted>
+- Type safety: <passed|failed|not applicable>
+- API compatibility: <passed|failed|not applicable>
+- Migration safety: <passed|failed|not applicable>
+- Convention enforcement: <passed|findings>
+
 ## Related Reports
 - IMP-XXX: <link to impact report>
 - REV-XXX: <link to review report, if applicable>
@@ -178,6 +232,7 @@ Summarize to the user:
 ## Quality Gates
 
 - [ ] Impact report written before any code edit
+- [ ] Pre-Flight Freshness Gate passed, synced stale artifacts, or stale risk was explicit in the impact report
 - [ ] All changed behavior has corresponding test coverage
 - [ ] Validation was actually executed (not just claimed)
 - [ ] Only affected intelligence artifacts were updated
@@ -185,6 +240,8 @@ Summarize to the user:
 - [ ] Story meets Definition of Ready before implementation starts
 - [ ] Story meets Definition of Done before final report
 - [ ] Acceptance criteria are mapped to validation evidence
+- [ ] Acceptance Criteria Verification Matrix has no unmapped criteria unless recorded as open items
+- [ ] Type safety, API compatibility, and migration safety gates ran when applicable
 - [ ] Environmental backpressure was used for validation failures
 - [ ] Change record references the correct impact report
 - [ ] High-risk changes went through review gate
@@ -192,6 +249,6 @@ Summarize to the user:
 
 ## Cross-References
 
-- Depends on: `initialize-intelligence-skill` (prerequisite), `change-detection-engine`, `impact-analysis-engine`, `graph-engine`
-- Uses during execution: `testing-intelligence-engine`, `incremental-sync-engine`, `change-history-engine`
+- Depends on: `initialize-intelligence-skill` (prerequisite), `change-detection-engine`, `impact-analysis-engine`, `graph-engine`, `staleness-detector`
+- Uses during execution: `testing-intelligence-engine`, `type-safety-engine`, `api-backward-compatibility-engine`, `database-migration-safety-engine`, `incremental-sync-engine`, `change-history-engine`
 - Optional: `engineering-change-review` (for high-risk), `refactoring-planner` (for refactors), `convention-detector` (for convention compliance)

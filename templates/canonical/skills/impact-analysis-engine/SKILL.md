@@ -23,9 +23,12 @@ Determine what can break before changing code. Produce a reusable impact report 
 3. **Trace Direct Impact** — Identify:
    - Files directly modified or proposed for modification
    - Functions, classes, types, and interfaces changed
+   - TypeScript interfaces, type aliases, enums, declaration files, Python annotations, Pydantic/dataclass models, and other typed contracts changed
    - API contracts affected (routes, request/response shapes)
    - Database schemas or migrations affected
    - Configuration changes
+
+   For typed languages, invoke `type-safety-engine` in dependency-tracing mode. Add type-only dependencies as `imports-type` edges in `dependency-graph.json` and include them in direct impact when the changed symbol is a shared type or annotation.
 
 4. **Trace Indirect Impact** — Using graph intelligence, identify:
    - Downstream consumers of changed modules (from dependency-graph)
@@ -35,6 +38,8 @@ Determine what can break before changing code. Produce a reusable impact report 
    - Data pipelines affected (from data-flow-graph)
    - Test suites covering affected code
    - Cross-reference with git change coupling data from `git-intelligence-engine` for hidden dependencies
+   - Query paths referencing changed schema fields from schema-to-query mapping
+   - API clients or contract tests affected by additive, deprecated, or breaking API changes
 
 5. **Trace Transitive Impact** — Follow 2nd and 3rd order effects through the graph. Identify files that are indirectly affected by consumers of the directly affected modules. Walk the dependency chain until impact attenuates or reaches a service boundary.
 
@@ -48,6 +53,7 @@ Determine what can break before changing code. Produce a reusable impact report 
 | **API contract** | None | Additive | Deprecated | Breaking |
 | **Test coverage** | Well-tested | Partial | Sparse | None |
 | **Change coupling** | None | Low (1-2 coupled files) | Medium (3-5 coupled files) | High (6+ coupled files) |
+| **Hot path** | Cold path | Normal | Critical path | Revenue/security/SLO path |
 
 7. **Identify Validation Needs** — Map impact to required validation:
 
@@ -83,15 +89,22 @@ Write `.engineering-intelligence/reports/IMP-XXX-<slug>.md`:
 - Missing: <graphs not available>
 
 ## Direct Impact
-| File/Module | Change Type | Risk |
-|---|---|---|
-| path/to/file.ts | Modified function `handleAuth` | high |
+| File/Module | Change Type | Dependency Type | Risk |
+|---|---|---|---|
+| path/to/file.ts | Modified function `handleAuth` | runtime call | high |
+| path/to/types.ts | Modified interface `User` | imports-type | high |
 
 ## Indirect Impact
 | Affected Area | Relationship | Confidence |
 |---|---|---|
 | UserService | Imports changed module | verified |
 | /api/users endpoint | Calls modified handler | inferred |
+
+## Contract And Data Impact
+| Surface | Classification | Required Gate |
+|---|---|---|
+| API <name> | additive | api-backward-compatibility-engine |
+| Table.column | schema-to-query impact | database-migration-safety-engine |
 
 ## Risk Assessment
 - Overall risk: <level>
@@ -130,13 +143,16 @@ Write `.engineering-intelligence/reports/IMP-XXX-<slug>.md`:
 - [ ] Scope is explicitly stated (not assumed)
 - [ ] Graph inputs are listed (consulted, refreshed, or missing)
 - [ ] Direct and indirect impact are separated
+- [ ] Type-level dependencies are traced for typed languages
+- [ ] API and schema/query impact are classified when relevant
 - [ ] Risk score is justified with evidence
 - [ ] Validation requirements are specific (not generic)
 - [ ] Report ends with the "did not modify product code" statement
 
 ## Cross-References
 
-- Depends on: `change-detection-engine`, `graph-engine`, `git-intelligence-engine`
+- Depends on: `change-detection-engine`, `graph-engine`, `git-intelligence-engine`, `type-safety-engine`
 - Consults: `data-flow-graph.json` (for data pipeline impact)
+- Consults: `api-backward-compatibility-engine`, `database-migration-safety-engine` when contracts or schemas change
 - Used by: `engineering-intelligence-skill`, `incremental-sync-engine`, `analyze-impact` workflow
 - Consumed by: `engineering-change-review`, `testing-intelligence-engine`

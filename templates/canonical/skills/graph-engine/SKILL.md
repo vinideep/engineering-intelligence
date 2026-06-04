@@ -70,6 +70,8 @@ Each JSON graph uses this envelope:
 | `configures` | Configuration dependency |
 | `implicit-dependency` | Shared database tables, shared config |
 | `event-coupling` | Event-driven coupling |
+| `imports-type` | Type-only or annotation-level dependency between interfaces, aliases, declarations, schemas, or annotations |
+| `co-change` | Git history coupling above confidence threshold |
 
 ### 2. `service-graph.json` — Service Communication Topology
 
@@ -102,6 +104,7 @@ Each JSON graph uses this envelope:
 | `service-layer` | Business logic service |
 | `repository` | Data access layer |
 | `background` | Background job or worker |
+| `function` | Function or method on a critical path |
 
 | Edge Relation | Description |
 |---|---|
@@ -136,6 +139,8 @@ Each JSON graph uses this envelope:
 | `store` | Persistence |
 | `sink` | Data output/consumer |
 | `validator` | Validation step |
+| `sensitive-source` | PII, token, payment, health, credential, or regulated data origin |
+| `sensitive-sink` | Sink that persists, transmits, logs, or exports sensitive data |
 
 | Edge Relation | Description |
 |---|---|
@@ -163,9 +168,13 @@ Derive Mermaid diagrams from the JSON graphs. Include:
 2. Build all five graphs from scratch
 3. Assign `verified` confidence to edges backed by explicit code evidence
 4. Assign `inferred` confidence to edges derived from patterns or naming conventions
-5. Integrate git change coupling data from `git-intelligence-engine` as `inferred` edges — files that frequently change together suggest hidden dependencies
-6. Mark unresolvable relationships as `unknown` and add to `unknowns` array
-7. Generate Mermaid diagrams in `architecture-map.md`
+5. Integrate git change coupling data from `git-intelligence-engine` as `co-change` edges when coupling strength is above `0.7`, confidence is `inferred`, and evidence cites commit ranges or reports
+6. Build `imports-type` edges from type checker/compiler API evidence when typed languages are detected
+7. Build function-level call graph nodes for critical paths in `runtime-graph.json`
+8. Annotate runtime edges with `metadata.hotness` derived from `critical-paths.md`, test coverage frequency, and git co-change strength
+9. Classify sensitive data nodes in `data-flow-graph.json` with `metadata.sensitivity` (`pii`, `token`, `payment`, `credential`, `health`, `regulated`, `none`) and track propagation to sinks
+10. Mark unresolvable relationships as `unknown` and add to `unknowns` array
+11. Generate Mermaid diagrams in `architecture-map.md`
 
 ### Incremental Mode (post-change update)
 
@@ -173,8 +182,9 @@ Derive Mermaid diagrams from the JSON graphs. Include:
 2. Identify affected nodes and edges across all graphs
 3. Update, add, or remove only affected nodes and edges
 4. Preserve stable node IDs — only change an ID if the represented element was renamed
-5. Re-derive affected sections of `architecture-map.md`
-6. Require full remapping only when structural impact cannot be bounded
+5. Update `imports-type`, `co-change`, function call, hotness, and sensitive data annotations where affected
+6. Re-derive affected sections of `architecture-map.md`
+7. Require full remapping only when structural impact cannot be bounded
 
 ## Rules
 
@@ -184,6 +194,8 @@ Derive Mermaid diagrams from the JSON graphs. Include:
 - Derive Mermaid diagrams in `architecture-map.md` from the JSON graph content — never hand-author diagrams that contradict the JSON
 - For ordinary changes, update only impacted nodes, edges, maps, and connected context documents
 - Rebuild all graphs on initialization, explicit mapping request, or when structural impact cannot be bounded
+- Do not add `co-change` edges below `0.7` coupling strength
+- Sensitive data propagation to unencrypted channels, logs, or unvalidated sinks must become a security finding in the impact report
 
 ## Quality Gates
 
@@ -192,6 +204,11 @@ Derive Mermaid diagrams from the JSON graphs. Include:
 - [ ] No `unknown` relationships are left out of the `unknowns` array
 - [ ] `architecture-map.md` Mermaid diagrams are syntactically valid
 - [ ] Node IDs are stable across incremental updates
+- [ ] Type dependencies are represented as `imports-type` where applicable
+- [ ] Co-change edges above `0.7` are represented or explicitly unavailable
+- [ ] Runtime critical paths include function-level nodes where detectable
+- [ ] Sensitive data nodes and propagation edges are annotated in `data-flow-graph.json`
+- [ ] Hot path edges include `metadata.hotness` when evidence exists
 
 ## Cross-References
 

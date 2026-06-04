@@ -38,7 +38,11 @@ Systematically audit every significant claim in `knowledge-base/*.md` against ac
    - Distribution across statuses
    - Overall document confidence: High (>90% ✅), Medium (70-90% ✅), Low (<70% ✅)
 
-5. **Write Report** — Generate `knowledge-base/15-validation-report.md`
+5. **Cross-Document Consistency Check** — Extract key claims from all knowledge documents and compare claims across documents for contradictions, such as different framework versions, conflicting ownership, incompatible API signatures, or mismatched data model descriptions.
+
+6. **Auto-Heal Unsupported Claims** — During explicit synchronization workflows only, re-extract the smallest affected section for unsupported or stale claims, update that section with fresh evidence citations, and record the heal. Escalate claims requiring product judgment instead of guessing.
+
+7. **Write Report** — Generate `knowledge-base/15-validation-report.md`
 
 ## Output Format
 
@@ -75,6 +79,16 @@ Scope: <documents validated>
 
 - <areas where code has diverged from docs>
 
+## Cross-Document Contradictions
+
+| Claim A | Document A | Claim B | Document B | Suggested Canonical Resolution |
+|---|---|---|---|---|
+
+## Auto-Heal Actions
+
+| Document | Section | Action | Evidence | Result |
+|---|---|---|---|---|
+
 ## Recommended Actions
 
 - <specific documents needing update>
@@ -83,8 +97,8 @@ Scope: <documents validated>
 
 ## Rules
 
-- Do NOT silently rewrite knowledge documents during validation
-- Update knowledge documents only as part of an explicit synchronization workflow
+- Do NOT silently rewrite knowledge documents during read-only validation
+- Auto-heal unsupported claims only as part of an explicit synchronization workflow and record every edit
 - Report honestly — a low-confidence score is valuable information
 - Flag areas where you lack sufficient context to validate
 
@@ -94,6 +108,8 @@ Scope: <documents validated>
 - [ ] Each finding has an evidence path or explicit "no evidence found"
 - [ ] Summary table has accurate counts
 - [ ] Stale documentation risks are identified
+- [ ] Cross-document contradictions are listed or explicitly absent
+- [ ] Auto-heal actions are recorded when synchronization mode is active
 - [ ] Recommended actions are actionable
 
 ## Cross-References

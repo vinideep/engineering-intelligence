@@ -45,7 +45,7 @@ For every engineering change, follow this sequence:
 | 1 | Write impact report before editing | `.engineering-intelligence/reports/IMP-XXX-*.md` |
 | 2 | Update AI-DLC plan/state when the change is non-trivial | `.engineering-intelligence/aidlc/execution-plan.md`, `aidlc-state.md` |
 | 3 | Implement code changes and tests | Modified source and test files |
-| 4 | Validate honestly with environmental backpressure — report unrun checks | Test results, lint results, build/test summary |
+| 4 | Validate honestly with environmental backpressure and safety gates — report unrun checks | Test results, lint/type/API/migration results, build/test summary |
 | 5 | Incrementally update affected intelligence and graph artifacts | Updated knowledge/memory/context/graph/aidlc |
 | 6 | Record completed work | `.changes/CHG-XXX-*.md` |
 
@@ -90,3 +90,7 @@ Use these as the canonical project-intelligence paths — never invent alternati
 - Create ADRs only when real alternatives were considered; accepted ADRs are immutable except supersession links.
 - Require explicit human approval before destructive actions, production deployments, merges, irreversible migrations, or broad permission grants.
 - For MCP or external tool execution, prefer tool-level permissions, schema pinning, sandboxed execution, and raw-parameter approval for destructive operations.
+- Run the pre-flight freshness gate before implementation; stale scoped context below 50 blocks work unless explicitly accepted by the user.
+- Map every acceptance criterion to automated test, manual verification, or open item before Definition of Done can pass.
+- Run type safety, API compatibility, and database migration safety gates when applicable.
+- Medium-and-above risk changes require rollback instructions and operations readiness.

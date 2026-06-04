@@ -13,6 +13,8 @@ Determine the minimum sufficient test coverage for a change based on risk assess
 - Impact report (`.engineering-intelligence/reports/IMP-XXX-*.md`)
 - Existing test patterns in the repository
 - Change classification (feature, bugfix, refactor, etc.)
+- Coverage reports when available (`coverage-final.json`, `coverage.xml`, `lcov.info`, `go test -cover`, pytest coverage output)
+- Agile acceptance criteria from `.engineering-intelligence/aidlc/agile/acceptance-criteria.md`
 
 ## Risk-Based Test Selection Matrix
 
@@ -29,11 +31,18 @@ Determine the minimum sufficient test coverage for a change based on risk assess
    - Identify test framework(s) in use (Jest, Mocha, pytest, Go testing, etc.)
    - Locate test directories and naming patterns
    - Map tests to source files (by convention or configuration)
-   - Identify untested critical paths
+   - Parse real coverage reports where available:
+     - Jest/Vitest/Istanbul JSON (`coverage-final.json`)
+     - LCOV (`lcov.info`)
+     - pytest `coverage.xml`
+     - Go `go test -cover` output
+   - Map uncovered lines to modules and critical paths
 
 2. **Map Change to Tests** — Using the impact report:
    - List source files/functions changed
    - Find existing tests covering those files
+   - Build a source-line to test-file map from coverage where possible
+   - Run or recommend targeted impacted tests first, then broader validation
    - Identify tests that should exist but don't (coverage gaps)
 
 3. **Determine Required Tests** — Using the risk matrix above:
@@ -56,6 +65,15 @@ Determine the minimum sufficient test coverage for a change based on risk assess
    - Negative-path and permission tests for security changes
    - Data migration and rollback tests for schema changes
 
+   **For API/service integration changes**:
+   - Generate integration test stubs from `knowledge-base/04-api-documentation.md` and `service-graph.json`
+   - Cover happy path, auth failure, downstream timeout, and validation error
+   - Match existing test framework, describe/it nesting, mock setup, assertion library, and factory style
+
+   **For complex validators or combinatorial logic**:
+   - Recommend property-based tests (`fast-check`, `hypothesis`, `proptest`, or project equivalent)
+   - Include seed examples and rationale
+
 4. **Identify Coverage Gaps** — Report:
    - Critical paths with no test coverage
    - Changed behavior with no corresponding test
@@ -65,6 +83,10 @@ Determine the minimum sufficient test coverage for a change based on risk assess
    - Test files to create or modify
    - Test cases to write (describe what, not write the test code)
    - Validation commands to run
+
+6. **Verify Acceptance Criteria** — Produce an Acceptance Criteria Verification Matrix mapping every criterion to automated tests, manual verification, or an unavailable check. Missing mappings block Definition of Done.
+
+7. **Record Regression Patterns** — For bugfixes, compare against `.engineering-intelligence/memory/regression-patterns.md`. Reuse matching templates or add a new durable pattern when a bug category is likely to recur.
 
 ## Output
 
@@ -99,6 +121,14 @@ Only update when documenting project-wide testing posture:
 ## Coverage Gaps
 - <critical untested areas>
 
+## Evidence-Based Coverage
+| Source File | Changed Lines | Covering Tests | Uncovered Lines |
+|---|---|---|---|
+
+## Acceptance Criteria Verification Matrix
+| Criterion | Covering Test / Manual Check | Result |
+|---|---|---|
+
 ## Running Tests
 - All tests: `<command>`
 - Specific suite: `<command>`
@@ -110,6 +140,9 @@ Only update when documenting project-wide testing posture:
 - Recommend tests proportional to risk — don't mandate full-suite runs for low-risk changes
 - Always note when validation was not actually run (only recommended)
 - Never claim test coverage without checking existing tests
+- Prefer real coverage reports over proximity estimates when reports exist
+- Target impacted tests first, then run broader suites according to risk
+- Missing acceptance-criteria mappings block Definition of Done
 - Record test results honestly, including failures
 
 ## Quality Gates
@@ -117,7 +150,10 @@ Only update when documenting project-wide testing posture:
 - [ ] Impact report was consulted for risk level
 - [ ] Test recommendations match the risk level
 - [ ] Existing test coverage was checked before recommending new tests
+- [ ] Coverage reports were parsed when available
+- [ ] Impacted tests were identified separately from full-suite validation
 - [ ] Coverage gaps in critical paths are flagged
+- [ ] Acceptance criteria are mapped to validation evidence
 
 ## Cross-References
 

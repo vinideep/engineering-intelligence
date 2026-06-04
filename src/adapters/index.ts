@@ -74,7 +74,7 @@ const AGENT_METADATA: Record<
   },
   "change-agent": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".changes"],
-    skills: ["engineering-intelligence-skill", "aidlc-lifecycle-engine", "impact-analysis-engine", "change-detection-engine"],
+    skills: ["engineering-intelligence-skill", "aidlc-lifecycle-engine", "impact-analysis-engine", "change-detection-engine", "type-safety-engine", "api-backward-compatibility-engine"],
   },
   "quality-agent": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
@@ -98,11 +98,11 @@ const AGENT_METADATA: Record<
   },
   "database-administrator": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
-    skills: ["nfr-adr-governor", "impact-analysis-engine"],
+    skills: ["nfr-adr-governor", "impact-analysis-engine", "database-migration-safety-engine"],
   },
   "test-engineer": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
-    skills: ["testing-intelligence-engine", "environmental-backpressure-engine"],
+    skills: ["testing-intelligence-engine", "environmental-backpressure-engine", "type-safety-engine"],
   },
   "adversary": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
@@ -118,7 +118,7 @@ const AGENT_METADATA: Record<
   },
   "release-engineer": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".changes"],
-    skills: ["git-intelligence-engine", "pr-intelligence-engine", "operations-readiness-engine"],
+    skills: ["git-intelligence-engine", "pr-intelligence-engine", "operations-readiness-engine", "api-backward-compatibility-engine", "database-migration-safety-engine"],
   },
   "site-reliability-engineer": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],

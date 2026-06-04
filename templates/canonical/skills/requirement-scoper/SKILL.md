@@ -21,6 +21,13 @@ Act as a detailed Business Analyst and Technical Architect persona. Analyze the 
    - Identify domain logic in `knowledge-base/` matching the request category
    - Query dependency/service graphs to locate related modules and boundaries
    - Read architecture memory to understand tech constraints and guidelines
+   - Scan relevant modules for implicit invariants and dominant implementation constraints before asking questions:
+     - retry strategies, timeout values, rate limits, pagination defaults
+     - locking/idempotency patterns
+     - validation style and error codes
+     - logging/tracing conventions
+     - framework patterns used in 80% or more of similar code
+   - Surface confirmed dominant patterns as constraints in the requirements document.
 
 2. **Formulate Scoping Questions** — Identify gaps, ambiguities, and edge cases. Ask the user 3 to 5 targeted questions covering:
    - **Business Value & Scope**: What are the limits of the MVP?
@@ -47,6 +54,7 @@ The final requirements document `knowledge-base/19-requirements.md` must follow 
 - **Logic & Configuration**: <Exact details on implementation strategy, libraries, config parameters>
 - **System Boundaries & Dependencies**: <Files/modules affected based on graph mappings>
 - **Edge Cases & Failure Modes**: <Exactly how to handle failures, retries, limits>
+- **Implicit Codebase Constraints**: <Dominant existing patterns discovered from relevant modules, with evidence paths>
 
 ## 3. Agile Delivery Model
 - **Epic**: <epic or initiative>
@@ -81,5 +89,6 @@ Provide the exact prompt to pass to the coding agent to execute this change:
 - [ ] Clear business goals and technical boundaries defined.
 - [ ] At least 3 scoping questions asked and logged.
 - [ ] User story, acceptance criteria, priority, dependencies, and Ready/Done gates are documented.
+- [ ] Implicit codebase constraints were mined and cited before questions were finalized.
 - [ ] Finalized prompt maps exact files and modules.
 - [ ] Output does not contain any code modification.

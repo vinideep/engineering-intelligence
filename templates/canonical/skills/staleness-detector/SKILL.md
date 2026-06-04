@@ -96,6 +96,15 @@ This capability does not modify product code.
    - If no freshness comment exists, add it after the document title (first `#` heading)
    - Never modify document content — only metadata comments
 
+   Also add section-level confidence metadata to each H2 section when evidence can be resolved:
+
+   ```markdown
+   ## Authentication Flow
+   <!-- section-confidence: level=high, score=91, verified_at=2026-06-04T10:00:00Z, evidence=src/auth/middleware.ts -->
+   ```
+
+   Agents must prefer high/medium confidence sections and skip low-confidence sections unless they verify the section against source first.
+
 6. **Determine sync actions** — Based on freshness scores, determine required actions:
 
    | Condition | Action |
@@ -161,6 +170,14 @@ This capability does not modify product code.
    - The list of changed source files
    - The staleness reason (file modified, file deleted, file moved, age)
 
+9. **Pre-Implementation Drift Trigger** — When invoked by `engineering-intelligence-skill`, return a blocking drift decision:
+
+   | Condition | Decision |
+   |---|---|
+   | All scoped artifacts >= 60 | Proceed |
+   | Any scoped artifact 50-59 | Sync before implementation or mark stale risk in impact report |
+   | Any scoped artifact < 50 | Block implementation until incremental sync or explicit user risk acceptance |
+
 ## Quality Gates
 
 - [ ] All knowledge base, memory, and context documents are inventoried
@@ -169,10 +186,12 @@ This capability does not modify product code.
 - [ ] Freshness scores follow the defined calculation formula
 - [ ] Score interpretation matches the defined status table
 - [ ] Freshness metadata is injected without modifying document content
+- [ ] Section-level confidence metadata is added for H2 sections where evidence can be resolved
 - [ ] FRESHNESS-report.md exists at `.engineering-intelligence/reports/FRESHNESS-report.md`
 - [ ] Structural changes (deleted/moved files) are detected and reported
 - [ ] Documents below threshold are queued for incremental sync
 - [ ] Module-level aggregation is included in the report
+- [ ] Pre-implementation drift decision is returned when scoped to a planned change
 
 ## Cross-References
 

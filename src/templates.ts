@@ -44,6 +44,9 @@ export const SKILL_NAMES = [
   "nfr-adr-governor",
   "mcp-security-governor",
   "operations-readiness-engine",
+  "type-safety-engine",
+  "database-migration-safety-engine",
+  "api-backward-compatibility-engine",
 ] as const;
 
 export const AGENT_NAMES = [
@@ -167,6 +170,36 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
   for (const requiredContract of ["ADR", "Proposed", "Accepted", "Superseded", "NFR"]) {
     if (!nfrAdr.includes(requiredContract)) {
       errors.push(`nfr-adr-governor does not define required governance contract: ${requiredContract}`);
+    }
+  }
+  const implementation = await readTemplate("skills", "engineering-intelligence-skill").catch(() => "");
+  for (const requiredContract of [
+    "Pre-Flight Freshness Gate",
+    "Acceptance Criteria Verification Matrix",
+    "type-safety-engine",
+    "database-migration-safety-engine",
+    "api-backward-compatibility-engine",
+  ]) {
+    if (!implementation.includes(requiredContract)) {
+      errors.push(`engineering-intelligence-skill does not define required accuracy gate: ${requiredContract}`);
+    }
+  }
+  const typeSafety = await readTemplate("skills", "type-safety-engine").catch(() => "");
+  for (const requiredContract of ["tsc --listFilesOnly", "mypy --show-column-numbers", "Type Error Map"]) {
+    if (!typeSafety.includes(requiredContract)) {
+      errors.push(`type-safety-engine does not define required type safety contract: ${requiredContract}`);
+    }
+  }
+  const migrationSafety = await readTemplate("skills", "database-migration-safety-engine").catch(() => "");
+  for (const requiredContract of ["down migration", "CONCURRENTLY", "explicit approval"]) {
+    if (!migrationSafety.includes(requiredContract)) {
+      errors.push(`database-migration-safety-engine does not define required migration safety contract: ${requiredContract}`);
+    }
+  }
+  const apiCompatibility = await readTemplate("skills", "api-backward-compatibility-engine").catch(() => "");
+  for (const requiredContract of ["additive", "deprecated", "breaking", "version bump"]) {
+    if (!apiCompatibility.includes(requiredContract)) {
+      errors.push(`api-backward-compatibility-engine does not define required API compatibility contract: ${requiredContract}`);
     }
   }
   return errors;

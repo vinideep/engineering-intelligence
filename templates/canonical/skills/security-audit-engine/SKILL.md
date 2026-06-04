@@ -32,7 +32,12 @@ Identify security risks through systematic, evidence-backed analysis of dependen
    - Check version against known CVE databases (cite CVE IDs)
    - Flag dependencies with no updates in >12 months (abandonment risk)
    - Identify transitive dependencies with known vulnerabilities
+   - Check license compatibility against the project license
+   - Check maintenance health (days since last release/commit when available)
+   - For frontend packages, estimate bundle size impact or require a bundle-size check
    - Note severity: critical, high, medium, low
+
+   Trigger this targeted dependency risk review whenever manifests add a new package. Critical CVEs block completion before commit. Unknown license or maintenance data must be recorded as risk, not ignored.
 
 2. **Auth/Authz Pattern Review** — Analyze authentication and authorization:
 
@@ -104,9 +109,9 @@ Write `knowledge-base/20-security-assessment.md`:
 - Overall risk: low | medium | high | critical
 
 ## Dependency Vulnerabilities
-| Dependency | Version | CVE | Severity | Fix Available |
-|---|---|---|---|---|
-| lodash | 4.17.15 | CVE-2020-8203 | High | Yes (4.17.21) |
+| Dependency | Version | CVE | Severity | Fix Available | License | Maintenance | Bundle Impact |
+|---|---|---|---|---|---|---|---|
+| lodash | 4.17.15 | CVE-2020-8203 | High | Yes (4.17.21) | MIT | maintained | n/a |
 
 ## Auth/Authz Assessment
 - Mechanism: <description>
@@ -149,6 +154,8 @@ Write `knowledge-base/20-security-assessment.md`:
 ## Quality Gates
 
 - [ ] All dependency vulnerabilities cite CVE IDs and affected versions
+- [ ] New package additions include CVE, license, maintenance, and bundle-size risk where applicable
+- [ ] Critical CVEs block completion
 - [ ] Auth/authz review covers both authentication and authorization
 - [ ] Secrets scan does not expose actual secret values in the report
 - [ ] OWASP Top 10 items each have a status with evidence or rationale
