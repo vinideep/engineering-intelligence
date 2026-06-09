@@ -305,6 +305,20 @@ const SKILL_CATALOG: Record<string, SkillInfo> = {
     usedBy: ["engineering-intelligence-skill", "context-sync-engine"],
     dependsOn: ["graph-engine"],
   },
+  "backlog-decomposition-engine": {
+    name: "Backlog Decomposition Engine",
+    category: "planning",
+    description: "Decomposes initiatives into an Epic → Feature → Ticket backlog with per-feature approval gates",
+    usedBy: ["engineering-intelligence-skill"],
+    dependsOn: ["graph-engine", "impact-analysis-engine", "issue-tracker-sync-engine"],
+  },
+  "issue-tracker-sync-engine": {
+    name: "Issue Tracker Sync Engine",
+    category: "operations",
+    description: "Mirrors the local backlog to GitHub Issues while keeping markdown as the source of truth",
+    usedBy: ["backlog-decomposition-engine"],
+    dependsOn: [],
+  },
 };
 
 const CATEGORY_COLORS: Record<string, string> = {

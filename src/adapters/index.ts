@@ -12,6 +12,8 @@ const INPUT_WORKFLOWS = new Set<(typeof WORKFLOW_NAMES)[number]>([
   "review-engineering-change",
   "scope-requirement",
   "create-project",
+  "decompose-backlog",
+  "deliver-backlog",
 ]);
 
 // Slash-command argument hints surfaced by hosts that render a command picker
@@ -23,6 +25,8 @@ const WORKFLOW_ARGUMENT_HINTS: Partial<Record<(typeof WORKFLOW_NAMES)[number], s
   "review-engineering-change": "<scope, e.g. the current working-tree diff>",
   "scope-requirement": "<requirement to scope>",
   "create-project": "<new project description>",
+  "decompose-backlog": "<initiative or epic-sized request to decompose>",
+  "deliver-backlog": "<optional FEAT-XXX or EPIC-XXX to deliver>",
 };
 
 const sharedInstructions = `# Engineering Intelligence OS
@@ -31,6 +35,7 @@ This repository uses installed engineering intelligence workflows.
 
 - For initial understanding and documentation, invoke \`initialize-engineering-intelligence\` or ask the agent to initialize engineering intelligence.
 - For implementation work, invoke \`engineering-intelligence\` with the request or ask the agent to apply the engineering intelligence workflow. This workflow embeds AI-DLC and Agile delivery modes internally.
+- For epic-sized initiatives, invoke \`decompose-backlog\` to autonomously create an Epic → Feature → Ticket backlog under \`.engineering-intelligence/aidlc/agile/backlog/\`, then \`deliver-backlog\` to implement it feature by feature. Each feature requires human approval before implementation; the local backlog is the source of truth and can optionally be mirrored to GitHub Issues.
 - For architecture mapping, impact analysis, synchronization, or review, invoke \`map-architecture\`, \`analyze-impact\`, \`sync-engineering-intelligence\`, or \`review-engineering-change\`; these workflows do not modify product code.
 - Canonical generated outputs live in \`knowledge-base/\`, \`.engineering-intelligence/aidlc/\`, \`.engineering-intelligence/memory/\`, \`.engineering-intelligence/context/\`, \`.engineering-intelligence/events/\`, \`.engineering-intelligence/graph/\`, \`.engineering-intelligence/reports/\`, and \`.changes/\`.
 - Before non-trivial edits, write an impact report; after edits, validate and incrementally synchronize only affected intelligence and graph artifacts.
@@ -135,7 +140,7 @@ const AGENT_METADATA: Record<
   },
   "product-analyst": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/graph"],
-    skills: ["requirement-scoper", "context-budget-optimizer", "aidlc-lifecycle-engine"],
+    skills: ["requirement-scoper", "backlog-decomposition-engine", "context-budget-optimizer", "aidlc-lifecycle-engine"],
   },
   "system-architect": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph", ".engineering-intelligence/memory"],
@@ -167,7 +172,7 @@ const AGENT_METADATA: Record<
   },
   "release-engineer": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".changes"],
-    skills: ["git-intelligence-engine", "pr-intelligence-engine", "operations-readiness-engine", "api-backward-compatibility-engine", "database-migration-safety-engine"],
+    skills: ["git-intelligence-engine", "pr-intelligence-engine", "issue-tracker-sync-engine", "operations-readiness-engine", "api-backward-compatibility-engine", "database-migration-safety-engine"],
   },
   "site-reliability-engineer": {
     context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
@@ -269,6 +274,8 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
         "scope-requirement": "Scope requirements and create a technical requirement prompt without modifying product code.",
         "discover-codebase": "Autonomously discover and map codebase architecture and patterns.",
         "create-project": "Create and bootstrap a new project with full AI-driven development lifecycle setup.",
+        "decompose-backlog": "Autonomously decompose an initiative into an epic, feature, and ticket backlog without modifying product code.",
+        "deliver-backlog": "Deliver a decomposed backlog feature by feature with a human approval gate before each feature.",
       };
       const commands = await Promise.all(
         WORKFLOW_NAMES.map(async (name) => {

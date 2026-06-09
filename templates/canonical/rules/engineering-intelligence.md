@@ -25,7 +25,8 @@ Maintain these Agile artifacts when product work is in scope:
 
 | Path | Purpose |
 |---|---|
-| `.engineering-intelligence/aidlc/agile/product-backlog.md` | Epics, stories, priorities, dependencies, status |
+| `.engineering-intelligence/aidlc/agile/product-backlog.md` | High-level epics, priorities, dependencies, status |
+| `.engineering-intelligence/aidlc/agile/backlog/` | Hierarchical Epic → Feature → Ticket backlog with stable IDs, dependency graph, and per-feature approval gates |
 | `.engineering-intelligence/aidlc/agile/sprint-plan.md` | Sprint goal, selected stories, risks, commitments |
 | `.engineering-intelligence/aidlc/agile/acceptance-criteria.md` | Story-level acceptance criteria mapped to tests |
 | `.engineering-intelligence/aidlc/agile/definition-of-ready.md` | Gate before construction starts |
@@ -37,6 +38,18 @@ End AI-DLC-enabled workflow responses with:
 ```text
 AI-DLC: <phase> -> <stage> -> <status>
 ```
+
+## Backlog Decomposition And Delivery
+
+For epic-sized initiatives, decompose before implementing:
+
+| Step | Workflow | Action |
+|---|---|---|
+| 1 | `decompose-backlog` | Autonomously create the Epic → Feature → Ticket hierarchy under `.engineering-intelligence/aidlc/agile/backlog/` with stable IDs, dependency graph, and execution order. Plans only; does not modify product code. |
+| 2 | (human) | Approve each feature. Implementation of a feature must not begin until `Approval: approved` is recorded in its feature file and `aidlc/audit.md`. |
+| 3 | `deliver-backlog` | Implement an approved feature's tickets one at a time via `engineering-intelligence`, rolling up ticket → feature → epic status. Re-enter the approval gate for every feature. |
+
+Optionally mirror the backlog to GitHub Issues with `issue-tracker-sync-engine`; the local markdown backlog remains the source of truth.
 
 ## Engineering Change Protocol
 
@@ -61,8 +74,9 @@ These workflows analyze and report but do **not** modify product code:
 | `analyze-impact` | Write impact report for a proposal or diff | `.engineering-intelligence/reports/IMP-XXX-*.md` |
 | `sync-engineering-intelligence` | Synchronize intelligence for a change | Updated knowledge/memory/context/graph |
 | `review-engineering-change` | Write review findings | `.engineering-intelligence/reports/REV-XXX-*.md` |
+| `decompose-backlog` | Create the Epic → Feature → Ticket backlog | `.engineering-intelligence/aidlc/agile/backlog/` |
 
-Only the `engineering-intelligence` implementation workflow is intended to modify product code.
+The `engineering-intelligence` and `deliver-backlog` workflows are the only workflows intended to modify product code; `deliver-backlog` does so one approved feature at a time.
 
 ## Canonical Paths
 

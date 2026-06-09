@@ -72,7 +72,23 @@ V2 also includes read-only-with-respect-to-product-code workflows:
 /review-engineering-change Review the current working-tree diff
 ```
 
-`/map-architecture` writes graph intelligence, `/analyze-impact` writes impact reports, `/sync-engineering-intelligence` updates intelligence artifacts, and `/review-engineering-change` writes findings. Only `/engineering-intelligence` is intended to implement product-code changes.
+`/map-architecture` writes graph intelligence, `/analyze-impact` writes impact reports, `/sync-engineering-intelligence` updates intelligence artifacts, and `/review-engineering-change` writes findings. `/engineering-intelligence` and `/deliver-backlog` are the workflows intended to implement product-code changes.
+
+### Autonomous Epic → Feature → Ticket Backlog
+
+For epic-sized initiatives, the toolkit can autonomously decompose work into a durable, hierarchical backlog and then deliver it feature by feature behind a human approval gate:
+
+```text
+/decompose-backlog Build a self-serve billing portal with invoices, payment methods, and dunning
+/deliver-backlog
+/deliver-backlog FEAT-002
+```
+
+`/decompose-backlog` runs the `backlog-decomposition-engine` to create epics, features, and tickets with stable IDs (`EPIC-XXX`, `FEAT-XXX`, `TKT-XXX`), a dependency graph, and an execution order under `.engineering-intelligence/aidlc/agile/backlog/`. It plans only and does not modify product code. Every feature is created with `Approval: pending`.
+
+`/deliver-backlog` selects the next ready feature, **requires a human to approve it**, then implements its tickets one at a time through the engineering-intelligence pipeline, rolling up ticket → feature → epic status. Each subsequent feature re-enters the approval gate.
+
+The local markdown backlog is the source of truth. When the target repo has a GitHub remote, `issue-tracker-sync-engine` can mirror the backlog to GitHub Issues (epics, features, and tickets as linked issues), keeping local artifacts authoritative.
 
 Where a host does not expose native custom slash commands, mention the installed skill name or request the same workflow in chat.
 
@@ -96,7 +112,7 @@ knowledge-base/
 
 Graph intelligence includes `dependency-graph.json`, `service-graph.json`, `runtime-graph.json`, `business-flow-graph.json`, and a Mermaid-backed `architecture-map.md`. Impact and review results are stored as `IMP-XXX-*.md` and `REV-XXX-*.md` reports.
 
-Agile + AI-DLC lifecycle state is stored under `.engineering-intelligence/aidlc/`, including `aidlc-state.md`, `audit.md`, `open-questions.md`, `execution-plan.md`, `discovery/`, `agile/`, `inception/`, `construction/`, and `operations/`.
+Agile + AI-DLC lifecycle state is stored under `.engineering-intelligence/aidlc/`, including `aidlc-state.md`, `audit.md`, `open-questions.md`, `execution-plan.md`, `discovery/`, `agile/`, `inception/`, `construction/`, and `operations/`. The hierarchical backlog lives under `.engineering-intelligence/aidlc/agile/backlog/` as `backlog-index.md`, `epics/`, `features/`, `tickets/`, `dependency-graph.md`, and an optional `sync/tracker-sync-map.md`.
 
 The installer reserves only `.engineering-intelligence/install-manifest.json` for safe lifecycle management.
 
@@ -134,6 +150,7 @@ The default package installs only engineering-intelligence capabilities:
 - initialization, knowledge extraction, and validation
 - adaptive AI-DLC Discovery, Inception, Construction, and Operations lifecycle artifacts embedded into the existing workflows
 - Agile backlog, user stories, acceptance criteria, Definition of Ready, Definition of Done, sprint plan, and retrospective artifacts
+- autonomous Epic → Feature → Ticket backlog decomposition with stable IDs, dependency graph, per-feature approval gates, and optional GitHub Issues sync
 - delivery modes inside `/engineering-intelligence`: standard Agile, adversarial, TDD, design-first, and hypothesis debugging
 - safety gates for type checking, API compatibility, API snapshots, database migrations, dependencies, environment variables, ADR compliance, LLM prompt injection, rollback, and observability
 - context-budget optimization through ranked context manifests, section-level loading, graph slices, and lazy-loaded safety-gate evidence

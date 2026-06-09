@@ -54,6 +54,8 @@ export const SKILL_NAMES = [
   "contract-test-generator",
   "llm-prompt-injection-guard",
   "context-budget-optimizer",
+  "backlog-decomposition-engine",
+  "issue-tracker-sync-engine",
 ] as const;
 
 export const AGENT_NAMES = [
@@ -84,6 +86,8 @@ export const WORKFLOW_NAMES = [
   "scope-requirement",
   "discover-codebase",
   "create-project",
+  "decompose-backlog",
+  "deliver-backlog",
 ] as const;
 
 function templateRoot(): string {
@@ -153,10 +157,37 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
     "review-engineering-change",
     "scope-requirement",
     "discover-codebase",
+    "decompose-backlog",
   ]) {
     const content = await readTemplate("workflows", workflow).catch(() => "");
     if (!content.toLowerCase().includes("not modify product code")) {
       errors.push(`${workflow} must state that it does not modify product code`);
+    }
+  }
+  const backlog = await readTemplate("skills", "backlog-decomposition-engine").catch(() => "");
+  for (const requiredContract of [
+    ".engineering-intelligence/aidlc/agile/backlog/",
+    "EPIC-",
+    "FEAT-",
+    "TKT-",
+    "Approval: pending",
+    "dependency-graph.md",
+    "backlog-index.md",
+  ]) {
+    if (!backlog.includes(requiredContract)) {
+      errors.push(`backlog-decomposition-engine does not define required backlog contract: ${requiredContract}`);
+    }
+  }
+  const trackerSync = await readTemplate("skills", "issue-tracker-sync-engine").catch(() => "");
+  for (const requiredContract of ["source of truth", "tracker-sync-map.md", "idempotent", "github"]) {
+    if (!trackerSync.includes(requiredContract)) {
+      errors.push(`issue-tracker-sync-engine does not define required sync contract: ${requiredContract}`);
+    }
+  }
+  const deliverBacklog = await readTemplate("workflows", "deliver-backlog").catch(() => "");
+  for (const requiredContract of ["Approval", "approved", "feature"]) {
+    if (!deliverBacklog.includes(requiredContract)) {
+      errors.push(`deliver-backlog does not define required approval-gate contract: ${requiredContract}`);
     }
   }
   const lifecycle = await readTemplate("skills", "aidlc-lifecycle-engine").catch(() => "");

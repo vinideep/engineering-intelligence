@@ -21,7 +21,8 @@ Use `.engineering-intelligence/aidlc/` as the canonical AI-DLC root:
 | `.engineering-intelligence/aidlc/checkpoints.md` | Resume checkpoints after major workflow steps |
 | `.engineering-intelligence/aidlc/discovery/vision.md` | Business objectives, personas, value, success metrics |
 | `.engineering-intelligence/aidlc/discovery/technical-environment.md` | Runtime, deployment, integrations, data stores, auth, constraints |
-| `.engineering-intelligence/aidlc/agile/product-backlog.md` | Epics, stories, priorities, dependencies, and status |
+| `.engineering-intelligence/aidlc/agile/product-backlog.md` | High-level epics, priorities, dependencies, and status |
+| `.engineering-intelligence/aidlc/agile/backlog/` | Hierarchical Epic → Feature → Ticket backlog with stable IDs, dependency graph, and per-feature approval gates, owned by `backlog-decomposition-engine` |
 | `.engineering-intelligence/aidlc/agile/sprint-plan.md` | Active sprint goal, selected stories, capacity, risks, and commitments |
 | `.engineering-intelligence/aidlc/agile/acceptance-criteria.md` | Story-level acceptance criteria expressed as executable validation targets |
 | `.engineering-intelligence/aidlc/agile/definition-of-ready.md` | Readiness checklist before construction |
@@ -42,8 +43,9 @@ Map Agile to AI-DLC this way:
 | Agile Concept | AI-DLC Phase | Artifact |
 |---|---|---|
 | Product vision | Discovery | `discovery/vision.md` |
-| Product backlog | Discovery / Inception | `agile/product-backlog.md` |
-| User stories | Inception | `inception/requirements.md`, `agile/product-backlog.md` |
+| Product backlog | Discovery / Inception | `agile/product-backlog.md`, `agile/backlog/` |
+| Epic → Feature → Ticket breakdown | Inception | `agile/backlog/` via `backlog-decomposition-engine` |
+| User stories | Inception | `inception/requirements.md`, `agile/backlog/features/` |
 | Acceptance criteria | Inception / Construction | `agile/acceptance-criteria.md`, tests |
 | Sprint planning | Inception | `agile/sprint-plan.md`, `execution-plan.md` |
 | Development | Construction | `construction/<unit>/` |

@@ -138,6 +138,45 @@ test("Claude Code commands pass $ARGUMENTS and argument-hint only to input-drive
   assert.deepEqual(await validateRender(["claude-code"]), []);
 });
 
+test("backlog decomposition and delivery ship as skills and commands for Claude Code", async () => {
+  const files = await renderAdapters(["claude-code"]);
+  const paths = new Set(files.map((item) => item.path));
+
+  // New skills are installed.
+  assert.ok(paths.has(".claude/skills/backlog-decomposition-engine/SKILL.md"));
+  assert.ok(paths.has(".claude/skills/issue-tracker-sync-engine/SKILL.md"));
+
+  // New workflows are installed as slash commands.
+  assert.ok(paths.has(".claude/commands/decompose-backlog.md"));
+  assert.ok(paths.has(".claude/commands/deliver-backlog.md"));
+
+  const get = (name) => files.find((item) => item.path === `.claude/commands/${name}.md`).content;
+
+  // decompose-backlog is request-driven (forwards arguments) and is read-only.
+  assert.match(get("decompose-backlog"), /\$ARGUMENTS/);
+  assert.match(get("decompose-backlog"), /argument-hint:/);
+  assert.match(get("decompose-backlog"), /not modify product code/);
+
+  // deliver-backlog accepts an optional feature/epic id and enforces the approval gate.
+  assert.match(get("deliver-backlog"), /\$ARGUMENTS/);
+  assert.match(get("deliver-backlog"), /Approval/);
+
+  // The decomposition skill defines the three-level hierarchy and approval gate.
+  const skill = files.find(
+    (item) => item.path === ".claude/skills/backlog-decomposition-engine/SKILL.md",
+  ).content;
+  for (const marker of ["EPIC-", "FEAT-", "TKT-", "Approval: pending", "backlog-index.md"]) {
+    assert.match(skill, new RegExp(marker.replace(/[-]/g, "\\$&")));
+  }
+
+  // The managed CLAUDE.md block advertises the new workflows.
+  const claudeBlock = files.find((item) => item.path === "CLAUDE.md").content;
+  assert.match(claudeBlock, /decompose-backlog/);
+  assert.match(claudeBlock, /deliver-backlog/);
+
+  assert.deepEqual(await validateRender(["claude-code"]), []);
+});
+
 test("antigravity-cli adapter writes agents to .agents/ (plural) matching CLI workspace path", async () => {
   const files = await renderAdapters(["antigravity-cli"]);
   const paths = new Set(files.map((item) => item.path));

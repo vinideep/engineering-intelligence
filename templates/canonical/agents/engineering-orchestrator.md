@@ -27,6 +27,8 @@ When receiving a request, classify it immediately:
 | "Initialize intelligence" | `initialization` | Initialization pipeline |
 | "Understand this codebase", "Explore project" | `discovery` | Discovery pipeline |
 | "Create new project", "Start from scratch" | `creation` | Creation pipeline |
+| "Plan epic X", "Break down initiative Y", "Decompose into tickets" | `decomposition` | Backlog decomposition pipeline (read-only) |
+| "Deliver the backlog", "Build feature FEAT-XXX", "Work the tickets" | `delivery` | Backlog delivery pipeline (gated per feature) |
 | "Map architecture" | `mapping` | Graph engine (read-only) |
 | "Analyze impact of X" | `analysis` | Impact analysis (read-only) |
 | "Sync intelligence" | `sync` | Incremental sync (read-only) |
@@ -54,6 +56,21 @@ When receiving a request, classify it immediately:
 2. Scaffold project structure — directories, configs, entry points, CI templates
 3. Run `initialize-intelligence-skill` → generate knowledge base and intelligence for the new project
 4. Modifies product code (scaffolding only)
+
+### Backlog Decomposition Pipeline
+
+1. Run `backlog-decomposition-engine` → decompose the initiative into Epic → Feature → Ticket artifacts under `.engineering-intelligence/aidlc/agile/backlog/` with stable IDs, dependencies, and execution order
+2. Set every feature to `Approval: pending` — this pipeline plans only
+3. Optionally run `issue-tracker-sync-engine` to mirror the backlog to GitHub Issues
+4. Does **not** modify product code; hands off to the Backlog Delivery Pipeline
+
+### Backlog Delivery Pipeline
+
+1. Select the next ready feature from `backlog/dependency-graph.md` honoring dependencies and priority
+2. **Approval gate (mandatory)**: present the feature and require a human to record `Approval: approved` before any implementation; on `changes-requested`, route back to decomposition
+3. For each ticket in dependency order, run the Implementation Pipeline via `engineering-intelligence-skill`
+4. Roll up ticket → feature → epic status in `backlog-index.md`; optionally re-sync the tracker
+5. Re-enter the approval gate for every subsequent feature
 
 ### Implementation Pipeline
 
@@ -90,6 +107,7 @@ These workflows analyze without modifying product code:
 | `review-engineering-change` | `change-detection-engine`, `engineering-change-review` | Review report |
 | `discover-codebase` | `codebase-discovery-engine`, `convention-detector`, `graph-engine` | Discovery report + conventions |
 | `create-project` | `greenfield-architect`, `initialize-intelligence-skill` | Scaffolded project + intelligence |
+| `decompose-backlog` | `backlog-decomposition-engine`, `issue-tracker-sync-engine` | Epic/feature/ticket backlog (planning only) |
 
 ## Agent Delegation
 
@@ -106,7 +124,7 @@ These workflows analyze without modifying product code:
 
 ## Skill Reference
 
-Use these specialized capabilities when available: `initialize-intelligence-skill`, `engineering-intelligence-skill`, `aidlc-lifecycle-engine`, `environmental-backpressure-engine`, `nfr-adr-governor`, `mcp-security-governor`, `operations-readiness-engine`, `graph-engine`, `change-detection-engine`, `impact-analysis-engine`, `testing-intelligence-engine`, `incremental-sync-engine`, `knowledge-sync-engine`, `memory-sync-engine`, `context-sync-engine`, `engineering-change-review`, `change-history-engine`, `architecture-review-engine`, `refactoring-planner`, `deep-project-knowledge-extractor`, `knowledge-base-validator`, `codebase-discovery-engine`, `convention-detector`, `ongoing-learning-engine`, `greenfield-architect`, `git-intelligence-engine`, `pr-intelligence-engine`, `staleness-detector`, `security-audit-engine`, `performance-analysis-engine`, `debugging-engine`.
+Use these specialized capabilities when available: `initialize-intelligence-skill`, `engineering-intelligence-skill`, `backlog-decomposition-engine`, `issue-tracker-sync-engine`, `aidlc-lifecycle-engine`, `environmental-backpressure-engine`, `nfr-adr-governor`, `mcp-security-governor`, `operations-readiness-engine`, `graph-engine`, `change-detection-engine`, `impact-analysis-engine`, `testing-intelligence-engine`, `incremental-sync-engine`, `knowledge-sync-engine`, `memory-sync-engine`, `context-sync-engine`, `engineering-change-review`, `change-history-engine`, `architecture-review-engine`, `refactoring-planner`, `deep-project-knowledge-extractor`, `knowledge-base-validator`, `codebase-discovery-engine`, `convention-detector`, `ongoing-learning-engine`, `greenfield-architect`, `git-intelligence-engine`, `pr-intelligence-engine`, `staleness-detector`, `security-audit-engine`, `performance-analysis-engine`, `debugging-engine`.
 
 ## Rules
 
