@@ -107,6 +107,37 @@ test("Gemini commands pass arguments only to input-driven workflows", async () =
   assert.match(get("create-project"), /\{\{args\}\}/);
 });
 
+test("Claude Code commands pass $ARGUMENTS and argument-hint only to input-driven workflows", async () => {
+  const files = await renderAdapters(["claude-code"]);
+  const get = (name) =>
+    files.find((item) => item.path === `.claude/commands/${name}.md`).content;
+
+  // Request-driven workflows must forward the user's input and advertise a hint.
+  const implementation = get("engineering-intelligence");
+  assert.match(implementation, /\$ARGUMENTS/);
+  assert.match(implementation, /argument-hint: <implementation request>/);
+  for (const name of [
+    "analyze-impact",
+    "sync-engineering-intelligence",
+    "review-engineering-change",
+    "scope-requirement",
+    "create-project",
+  ]) {
+    assert.match(get(name), /\$ARGUMENTS/, `${name} should forward arguments`);
+    assert.match(get(name), /^---\n[\s\S]*argument-hint:/, `${name} should declare an argument hint`);
+  }
+
+  // Non-input workflows stay verbatim with no placeholder injected.
+  for (const name of ["initialize-engineering-intelligence", "map-architecture", "discover-codebase"]) {
+    assert.doesNotMatch(get(name), /\$ARGUMENTS/, `${name} should not inject arguments`);
+    assert.doesNotMatch(get(name), /argument-hint:/, `${name} should not declare an argument hint`);
+  }
+
+  // Frontmatter stays well-formed: existing description is preserved alongside the hint.
+  assert.match(implementation, /^---\ndescription: [\s\S]*\nargument-hint: <implementation request>\n---\n/);
+  assert.deepEqual(await validateRender(["claude-code"]), []);
+});
+
 test("antigravity-cli adapter writes agents to .agents/ (plural) matching CLI workspace path", async () => {
   const files = await renderAdapters(["antigravity-cli"]);
   const paths = new Set(files.map((item) => item.path));
