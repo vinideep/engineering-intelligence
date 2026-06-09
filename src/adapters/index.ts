@@ -3,6 +3,28 @@ import { IDE_IDS, type IdeId, type RenderedFile } from "../types.js";
 
 const BLOCK_ID = "engineering-intelligence";
 
+// Workflows that act on a user-supplied request and therefore receive the
+// host's argument placeholder when rendered as a native slash command.
+const INPUT_WORKFLOWS = new Set<(typeof WORKFLOW_NAMES)[number]>([
+  "engineering-intelligence",
+  "analyze-impact",
+  "sync-engineering-intelligence",
+  "review-engineering-change",
+  "scope-requirement",
+  "create-project",
+]);
+
+// Slash-command argument hints surfaced by hosts that render a command picker
+// (e.g. Claude Code reads `argument-hint` from command frontmatter).
+const WORKFLOW_ARGUMENT_HINTS: Partial<Record<(typeof WORKFLOW_NAMES)[number], string>> = {
+  "engineering-intelligence": "<implementation request>",
+  "analyze-impact": "<intended change or diff to analyze>",
+  "sync-engineering-intelligence": "<scope, e.g. the current working-tree diff>",
+  "review-engineering-change": "<scope, e.g. the current working-tree diff>",
+  "scope-requirement": "<requirement to scope>",
+  "create-project": "<new project description>",
+};
+
 const sharedInstructions = `# Engineering Intelligence OS
 
 This repository uses installed engineering intelligence workflows.
@@ -45,6 +67,33 @@ async function agentsAt(directory: string, owner: IdeId): Promise<RenderedFile[]
     AGENT_NAMES.map(async (name) =>
       file(`${directory}/${name}.md`, await readTemplate("agents", name), owner),
     ),
+  );
+}
+
+// Insert an `argument-hint` key into a workflow's existing YAML frontmatter,
+// or create frontmatter if the template has none. Used for hosts that read
+// command frontmatter to drive their slash-command UX.
+function withArgumentHint(content: string, hint: string): string {
+  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!match) {
+    return `---\nargument-hint: ${hint}\n---\n\n${content}`;
+  }
+  return `---\n${match[1]}\nargument-hint: ${hint}\n---\n${match[2]}`;
+}
+
+// Render workflows as Claude Code slash commands. Request-driven workflows get
+// an `argument-hint` and the `$ARGUMENTS` placeholder so the user's input is
+// passed through (e.g. `/engineering-intelligence Add rate limiting`).
+async function claudeCommandsAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
+  return Promise.all(
+    WORKFLOW_NAMES.map(async (name) => {
+      const workflow = await readTemplate("workflows", name);
+      if (!INPUT_WORKFLOWS.has(name)) {
+        return file(`${directory}/${name}.md`, workflow, owner);
+      }
+      const hinted = withArgumentHint(workflow, WORKFLOW_ARGUMENT_HINTS[name] ?? "<request>");
+      return file(`${directory}/${name}.md`, `${hinted}\n\nUser supplied scope or request: $ARGUMENTS`, owner);
+    }),
   );
 }
 
@@ -185,7 +234,7 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
       return [
         ...(await skillsAt(".claude/skills", ide)),
         ...(await agentsAt(".claude/agents", ide)),
-        ...(await workflowsAt(".claude/commands", ide)),
+        ...(await claudeCommandsAt(".claude/commands", ide)),
         block("CLAUDE.md", sharedInstructions, ide),
       ];
     case "cursor": {
@@ -221,18 +270,10 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
         "discover-codebase": "Autonomously discover and map codebase architecture and patterns.",
         "create-project": "Create and bootstrap a new project with full AI-driven development lifecycle setup.",
       };
-      const inputWorkflows = new Set<(typeof WORKFLOW_NAMES)[number]>([
-        "engineering-intelligence",
-        "analyze-impact",
-        "sync-engineering-intelligence",
-        "review-engineering-change",
-        "scope-requirement",
-        "create-project",
-      ]);
       const commands = await Promise.all(
         WORKFLOW_NAMES.map(async (name) => {
           const workflow = await readTemplate("workflows", name);
-          const prompt = inputWorkflows.has(name)
+          const prompt = INPUT_WORKFLOWS.has(name)
             ? `${workflow}\n\nUser supplied scope or request: {{args}}`
             : workflow;
           return file(
@@ -249,18 +290,10 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
       ];
     }
     case "commandcode": {
-      const inputWorkflows = new Set<(typeof WORKFLOW_NAMES)[number]>([
-        "engineering-intelligence",
-        "analyze-impact",
-        "sync-engineering-intelligence",
-        "review-engineering-change",
-        "scope-requirement",
-        "create-project",
-      ]);
       const commands = await Promise.all(
         WORKFLOW_NAMES.map(async (name) => {
           const workflow = await readTemplate("workflows", name);
-          const prompt = inputWorkflows.has(name)
+          const prompt = INPUT_WORKFLOWS.has(name)
             ? `${workflow}\n\nUser supplied scope or request: $ARGUMENTS`
             : workflow;
           return file(`.commandcode/commands/${name}.md`, prompt, ide);
