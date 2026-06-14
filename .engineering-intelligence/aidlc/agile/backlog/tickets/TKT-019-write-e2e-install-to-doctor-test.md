@@ -6,7 +6,7 @@
 - Estimate: M
 - Risk: low
 - Depends On: none
-- Files Likely Affected: test/e2e.test.mjs (new)
+- Files Likely Affected: test/e2e.test.mjs
 
 ## Acceptance Criteria
 - Given the compiled `dist/` directory, when the E2E test runs, it creates a real temp directory, calls `install(tmpDir, ["claude-code"])`, asserts that `.claude/commands/decompose-backlog.md` exists on disk, calls `doctor(tmpDir)`, and asserts the result contains no errors. Cleans up after itself. Completes in under 10 s.

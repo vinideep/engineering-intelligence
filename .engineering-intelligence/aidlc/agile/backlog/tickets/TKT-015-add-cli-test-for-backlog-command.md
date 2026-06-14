@@ -6,7 +6,7 @@
 - Estimate: S
 - Risk: low
 - Depends On: TKT-014
-- Files Likely Affected: test/installer.test.mjs (or new test file)
+- Files Likely Affected: test/installer.test.mjs
 
 ## Acceptance Criteria
 - Given a temp directory with backlog-index.md, when the backlog command runs via the CLI entry point, then stdout contains the expected IDs and status values. `--json` output parses as valid JSON.
