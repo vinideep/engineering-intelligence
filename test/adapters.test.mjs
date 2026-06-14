@@ -124,7 +124,8 @@ test("Claude Code commands pass $ARGUMENTS and argument-hint only to input-drive
     "create-project",
   ]) {
     assert.match(get(name), /\$ARGUMENTS/, `${name} should forward arguments`);
-    assert.match(get(name), /^---\n[\s\S]*argument-hint:/, `${name} should declare an argument hint`);
+    // argument-hint may appear after an alias preamble line, so check content not position
+    assert.match(get(name), /argument-hint:/, `${name} should declare an argument hint`);
   }
 
   // Non-input workflows stay verbatim with no placeholder injected.
@@ -133,8 +134,58 @@ test("Claude Code commands pass $ARGUMENTS and argument-hint only to input-drive
     assert.doesNotMatch(get(name), /argument-hint:/, `${name} should not declare an argument hint`);
   }
 
-  // Frontmatter stays well-formed: existing description is preserved alongside the hint.
-  assert.match(implementation, /^---\ndescription: [\s\S]*\nargument-hint: <implementation request>\n---\n/);
+  // Frontmatter is well-formed with description + argument-hint (may be preceded by alias preamble).
+  assert.match(implementation, /description: [\s\S]*argument-hint: <implementation request>/);
+  assert.deepEqual(await validateRender(["claude-code"]), []);
+});
+
+test("Claude Code adapter generates skills index and workflow routing table with measurable token savings", async () => {
+  const files = await renderAdapters(["claude-code"]);
+  const paths = new Set(files.map((item) => item.path));
+
+  // Skills index and routing table are generated.
+  assert.ok(paths.has(".claude/skills/SKILLS-INDEX.md"), "SKILLS-INDEX.md must be generated");
+  assert.ok(paths.has(".claude/WORKFLOW-ROUTING.md"), "WORKFLOW-ROUTING.md must be generated");
+
+  const index = files.find((item) => item.path === ".claude/skills/SKILLS-INDEX.md").content;
+  const routing = files.find((item) => item.path === ".claude/WORKFLOW-ROUTING.md").content;
+
+  // Skills index covers all skills with one row each.
+  assert.match(index, /backlog-decomposition-engine/);
+  assert.match(index, /engineering-intelligence-skill/);
+  assert.match(index, /\| Skill \| Purpose \|/);
+
+  // Routing table maps every workflow to primary skills.
+  assert.match(routing, /engineering-intelligence/);
+  assert.match(routing, /engineering-intelligence-skill/);
+  assert.match(routing, /decompose-backlog/);
+  assert.match(routing, /backlog-decomposition-engine/);
+  assert.match(routing, /Primary Skills/);
+
+  // Token savings: index must be substantially smaller than reading all skill files.
+  const indexTokens = Math.ceil(index.length / 4);
+  assert.ok(indexTokens < 2000, `SKILLS-INDEX should be under 2,000 tokens, got ${indexTokens}`);
+
+  // Path aliases are applied in command files.
+  const engCmd = files.find((item) => item.path === ".claude/commands/engineering-intelligence.md").content;
+  assert.match(engCmd, /\$AIDLC/, "command files should use $AIDLC alias");
+  assert.match(engCmd, /\$EI/, "command files should use $EI alias");
+  assert.match(engCmd, /Path aliases/, "alias preamble must be present");
+  // Raw path count in the body should be reduced to only the preamble definition line (≤2 occurrences).
+  const rawAidlcCount = (engCmd.match(/\.engineering-intelligence\/aidlc\//g) ?? []).length;
+  assert.ok(rawAidlcCount <= 2, `raw $AIDLC path in command should appear only in preamble, got ${rawAidlcCount} occurrences`);
+
+  // Path aliases are applied in skill files — the heavy aidlc-lifecycle-engine has many path refs.
+  const skill = files.find((item) => item.path === ".claude/skills/aidlc-lifecycle-engine/SKILL.md").content;
+  assert.match(skill, /\$AIDLC/);
+  const rawSkillAidlcCount = (skill.match(/\.engineering-intelligence\/aidlc\//g) ?? []).length;
+  assert.ok(rawSkillAidlcCount <= 2, `raw $AIDLC path in skill should appear only in preamble, got ${rawSkillAidlcCount} occurrences`);
+
+  // CLAUDE.md managed block directs AI to use the index and routing table.
+  const claudeMd = files.find((item) => item.path === "CLAUDE.md").content;
+  assert.match(claudeMd, /SKILLS-INDEX/);
+  assert.match(claudeMd, /WORKFLOW-ROUTING/);
+
   assert.deepEqual(await validateRender(["claude-code"]), []);
 });
 

@@ -20,12 +20,14 @@ export async function validateRender(ides: IdeId[]): Promise<string[]> {
     }
   }
   const allContent = rendered.map((item) => item.content).join("\n");
-  for (const requiredPath of [
-    ".engineering-intelligence/aidlc/",
-    ".engineering-intelligence/graph/",
-    ".engineering-intelligence/reports/",
-  ]) {
-    if (!allContent.includes(requiredPath)) {
+  // Path aliases ($AIDLC, $EIG, $EIR) are the compressed forms of these paths in claude-code
+  // rendered files; accept either the full path or its alias as proof the path is described.
+  for (const [requiredPath, alias] of [
+    [".engineering-intelligence/aidlc/", "$AIDLC"],
+    [".engineering-intelligence/graph/", "$EIG"],
+    [".engineering-intelligence/reports/", "$EIR"],
+  ] as [string, string][]) {
+    if (!allContent.includes(requiredPath) && !allContent.includes(alias)) {
       errors.push(`Rendered templates do not describe required runtime path: ${requiredPath}`);
     }
   }

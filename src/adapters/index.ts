@@ -1,4 +1,9 @@
 import { AGENT_NAMES, SKILL_NAMES, WORKFLOW_NAMES, readTemplate } from "../templates.js";
+import {
+  generateSkillsIndex,
+  generateWorkflowRouting,
+  withPathOptimizations,
+} from "../token-optimizer.js";
 import { IDE_IDS, type IdeId, type RenderedFile } from "../types.js";
 
 const BLOCK_ID = "engineering-intelligence";
@@ -41,6 +46,28 @@ This repository uses installed engineering intelligence workflows.
 - Before non-trivial edits, write an impact report; after edits, validate and incrementally synchronize only affected intelligence and graph artifacts.
 - AI-DLC work must preserve durable state in \`.engineering-intelligence/aidlc/aidlc-state.md\`, maintain Agile artifacts, use environmental backpressure, and end with an \`AI-DLC: <phase> -> <stage> -> <status>\` breadcrumb.
 - Base documentation claims on repository evidence and identify unknowns explicitly.
+`;
+
+/**
+ * Claude Code-specific instructions appended after the shared block.
+ * Directs the AI to the token-saving index and routing table before loading
+ * individual skill files. This is the CacheAligner pattern: a stable prefix
+ * that makes every invocation start from the same routing context.
+ */
+const claudeCodeInstructions = `
+## Token-Efficient Skill Loading (Claude Code)
+
+Before loading individual skill files, read these two compact routing artifacts:
+
+1. \`.claude/skills/SKILLS-INDEX.md\` — one-line description of all 44 skills (~1,500 tokens)
+2. \`.claude/WORKFLOW-ROUTING.md\` — pre-computed primary/optional skill map per command (~400 tokens)
+
+Then load only the specific \`SKILL.md\` files listed as **primary** for the active workflow.
+Load **optional** skills only when the request explicitly requires that capability.
+
+Path aliases used in skill and command files (expand before writing file paths):
+- \`$AIDLC\` = \`.engineering-intelligence/aidlc/\`
+- \`$EI\` = \`.engineering-intelligence/\`
 `;
 
 function file(path: string, content: string, owner: IdeId): RenderedFile {
@@ -89,16 +116,34 @@ function withArgumentHint(content: string, hint: string): string {
 // Render workflows as Claude Code slash commands. Request-driven workflows get
 // an `argument-hint` and the `$ARGUMENTS` placeholder so the user's input is
 // passed through (e.g. `/engineering-intelligence Add rate limiting`).
+// Path aliases are applied to all commands to reduce token usage.
 async function claudeCommandsAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
   return Promise.all(
     WORKFLOW_NAMES.map(async (name) => {
       const workflow = await readTemplate("workflows", name);
       if (!INPUT_WORKFLOWS.has(name)) {
-        return file(`${directory}/${name}.md`, workflow, owner);
+        return file(`${directory}/${name}.md`, withPathOptimizations(workflow), owner);
       }
       const hinted = withArgumentHint(workflow, WORKFLOW_ARGUMENT_HINTS[name] ?? "<request>");
-      return file(`${directory}/${name}.md`, `${hinted}\n\nUser supplied scope or request: $ARGUMENTS`, owner);
+      return file(
+        `${directory}/${name}.md`,
+        withPathOptimizations(`${hinted}\n\nUser supplied scope or request: $ARGUMENTS`),
+        owner,
+      );
     }),
+  );
+}
+
+// Render skill files for Claude Code with path aliases applied.
+async function optimizedSkillsAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
+  return Promise.all(
+    SKILL_NAMES.map(async (name) =>
+      file(
+        `${directory}/${name}/SKILL.md`,
+        withPathOptimizations(await readTemplate("skills", name)),
+        owner,
+      ),
+    ),
   );
 }
 
@@ -235,13 +280,20 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
       return [...(await skillsAt(".agents/skills", ide)), block("AGENTS.md", sharedInstructions, ide)];
     case "generic":
       return [...(await skillsAt(".agents/skills", ide)), block("AGENTS.md", sharedInstructions, ide)];
-    case "claude-code":
+    case "claude-code": {
+      const [skillsIndex, workflowRouting] = await Promise.all([
+        generateSkillsIndex(SKILL_NAMES),
+        Promise.resolve(generateWorkflowRouting()),
+      ]);
       return [
-        ...(await skillsAt(".claude/skills", ide)),
+        ...(await optimizedSkillsAt(".claude/skills", ide)),
         ...(await agentsAt(".claude/agents", ide)),
         ...(await claudeCommandsAt(".claude/commands", ide)),
-        block("CLAUDE.md", sharedInstructions, ide),
+        file(".claude/skills/SKILLS-INDEX.md", skillsIndex, ide),
+        file(".claude/WORKFLOW-ROUTING.md", workflowRouting, ide),
+        block("CLAUDE.md", sharedInstructions + claudeCodeInstructions, ide),
       ];
+    }
     case "cursor": {
       const rule = `---\ndescription: Engineering Intelligence orchestration and synchronization rules\nalwaysApply: true\n---\n\n${await readTemplate("rules", "engineering-intelligence")}`;
       return [
