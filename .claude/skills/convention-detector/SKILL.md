@@ -3,7 +3,6 @@
 ---
 name: convention-detector
 description: Detects and codifies project conventions by analyzing naming patterns, import organization, code structure, API patterns, test patterns, git conventions, and architecture patterns. Produces a conventions document and enhances coding-patterns memory.
-version: 3.0.0
 ---
 
 # Convention Detector

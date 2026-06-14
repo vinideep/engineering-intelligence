@@ -3,7 +3,6 @@
 ---
 name: ongoing-learning-engine
 description: Handles post-initialization continuous learning by detecting uncertainty, logging learning events, triggering targeted re-discovery, updating memory with newly learned patterns, tracking knowledge freshness scores, and enforcing staleness detection rules.
-version: 3.0.0
 ---
 
 # Ongoing Learning Engine

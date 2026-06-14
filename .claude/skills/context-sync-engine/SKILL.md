@@ -3,7 +3,6 @@
 ---
 name: context-sync-engine
 description: Maintains compact AI navigation context when modules, services, dependencies, runtime paths, or risk areas change. Use after significant implementation changes.
-version: 3.0.0
 ---
 
 # Context Synchronization

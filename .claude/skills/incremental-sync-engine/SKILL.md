@@ -3,7 +3,6 @@
 ---
 name: incremental-sync-engine
 description: Synchronizes only intelligence artifacts affected by a completed change or identified diff, including knowledge, memory, context, events, graphs, and reports. Use for explicit synchronization or after implementation.
-version: 3.0.0
 ---
 
 # Incremental Sync Engine

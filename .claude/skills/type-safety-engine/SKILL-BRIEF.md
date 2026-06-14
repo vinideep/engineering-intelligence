@@ -1,7 +1,6 @@
 ---
 name: type-safety-engine
 description: Validates generated code against the project type system, traces type-level dependencies, and loops on compiler errors until clean or blocked.
-version: 1.0.0
 ---
 
 # Type Safety Engine

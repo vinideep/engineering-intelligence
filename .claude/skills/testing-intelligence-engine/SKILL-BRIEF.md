@@ -1,7 +1,6 @@
 ---
 name: testing-intelligence-engine
 description: Determines risk-based testing needs for engineering changes and identifies coverage gaps in critical runtime flows. Use during implementation and validation.
-version: 3.0.0
 ---
 
 # Testing Intelligence Engine

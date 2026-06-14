@@ -1,7 +1,6 @@
 ---
 name: engineering-change-review
 description: Reviews engineering changes for correctness, test coverage, architecture alignment, graph consistency, and documentation accuracy. Use after implementation to validate quality before completion.
-version: 3.0.0
 ---
 
 # Engineering Change Review

@@ -3,7 +3,6 @@
 ---
 name: refactoring-planner
 description: Plans safe refactors by identifying dependencies, migration steps, validation needs, compatibility risk, and rollback strategy. Use before non-trivial refactors.
-version: 3.0.0
 ---
 
 # Refactoring Planner

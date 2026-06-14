@@ -3,7 +3,6 @@
 ---
 name: staleness-detector
 description: Compares knowledge-base document timestamps against related source file modification times, scores each document 0-100 for freshness, triggers incremental sync when freshness drops below threshold, and adds freshness metadata to document headers.
-version: 3.0.0
 ---
 
 # Staleness Detector
@@ -89,12 +88,11 @@ This capability does not modify product code.
 5. **Add freshness metadata** — Inject or update a frontmatter block at the top of each knowledge document:
 
    ```markdown
-   <!-- freshness: score=75, status=aging, last_checked=2024-01-20T14:30:00Z -->
-   <!-- stale_sources: src/auth/middleware.ts (modified 5 days after doc update) -->
+
    ```
 
    Rules for metadata injection:
-   - If a `<!-- freshness: -->` comment already exists, update it in place
+   - If a `` comment already exists, update it in place
    - If no freshness comment exists, add it after the document title (first `#` heading)
    - Never modify document content — only metadata comments
 
@@ -102,7 +100,7 @@ This capability does not modify product code.
 
    ```markdown
    ## Authentication Flow
-   <!-- section-confidence: level=high, score=91, verified_at=2026-06-04T10:00:00Z, evidence=src/auth/middleware.ts -->
+
    ```
 
    Agents must prefer high/medium confidence sections and skip low-confidence sections unless they verify the section against source first.

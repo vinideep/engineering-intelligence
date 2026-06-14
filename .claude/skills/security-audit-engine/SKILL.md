@@ -3,7 +3,6 @@
 ---
 name: security-audit-engine
 description: Performs evidence-based security audits covering dependency vulnerabilities, auth/authz patterns, secrets detection, OWASP Top 10 compliance, and input validation. Use during initialization, before releases, or when security-sensitive changes are detected.
-version: 3.0.0
 ---
 
 # Security Audit Engine

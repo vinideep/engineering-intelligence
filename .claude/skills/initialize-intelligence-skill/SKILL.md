@@ -3,7 +3,6 @@
 ---
 name: initialize-intelligence-skill
 description: Initializes project engineering intelligence by analyzing repository evidence and generating knowledge, context, memory, event guidance, architecture graphs, and an initialization change record. Invoke when onboarding a repository or when asked to initialize engineering intelligence.
-version: 3.0.0
 ---
 
 # Initialize Engineering Intelligence

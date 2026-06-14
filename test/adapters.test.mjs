@@ -263,6 +263,24 @@ test("Claude Code adapter generates SKILL-BRIEF.md for every skill, substantiall
   assert.match(claudeMd, /Tier 3/);
 });
 
+test("SmartCrusher strips version from frontmatter and preserves semantic content", async () => {
+  const files = await renderAdapters(["claude-code"]);
+
+  // version: must be stripped from all rendered skill and brief files.
+  for (const f of files.filter((item) => item.path.includes(".claude/skills/") && (item.path.endsWith("SKILL.md") || item.path.endsWith("SKILL-BRIEF.md")))) {
+    assert.doesNotMatch(f.content, /^version:/m, `${f.path} must not contain version: key`);
+  }
+
+  // Semantic content must be preserved: description is still in frontmatter.
+  const skill = files.find((item) => item.path === ".claude/skills/engineering-intelligence-skill/SKILL.md");
+  assert.match(skill.content, /description:/, "description field must survive SmartCrush");
+  assert.match(skill.content, /name:/, "name field must survive SmartCrush");
+
+  // Workflows (commands) also must not have version: (they never had it, but no regression).
+  const cmd = files.find((item) => item.path === ".claude/commands/engineering-intelligence.md");
+  assert.doesNotMatch(cmd.content, /^version:/m, "commands must not contain version: key");
+});
+
 test("KV-cache pinned files appear before all other claude-code rendered files", async () => {
   const files = await renderAdapters(["claude-code"]);
   const claudeFiles = files.filter((item) => item.path.startsWith(".claude/") || item.path === "CLAUDE.md");

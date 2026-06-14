@@ -1,7 +1,6 @@
 ---
 name: staleness-detector
 description: Compares knowledge-base document timestamps against related source file modification times, scores each document 0-100 for freshness, triggers incremental sync when freshness drops below threshold, and adds freshness metadata to document headers.
-version: 3.0.0
 ---
 
 # Staleness Detector

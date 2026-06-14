@@ -1,7 +1,6 @@
 ---
 name: database-migration-safety-engine
 description: Reviews database migrations for backward compatibility, rollback coverage, locks, destructive operations, and production-dangerous changes.
-version: 1.0.0
 ---
 
 # Database Migration Safety Engine

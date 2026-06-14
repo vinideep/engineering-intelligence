@@ -3,7 +3,6 @@
 ---
 name: git-intelligence-engine
 description: Extracts structural intelligence from git history — hotspot analysis, ownership mapping, change coupling, velocity tracking, and drift detection. Feeds graph intelligence and impact analysis with git-derived edges.
-version: 3.0.0
 ---
 
 # Git Intelligence Engine

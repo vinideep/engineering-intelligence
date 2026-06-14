@@ -249,11 +249,38 @@ export async function generateAllSkillBriefs(
   const entries = await Promise.all(
     skillNames.map(async (name) => {
       const full = await readTemplate("skills", name).catch(() => "");
-      const brief = generateSkillBrief(full, name);
+      const brief = smartCrush(generateSkillBrief(full, name));
       return [name, applyPathAliases(brief)] as const;
     }),
   );
   return new Map(entries);
+}
+
+// --- SmartCrusher (Technique 5) -----------------------------------------------
+
+/**
+ * Phase 1 structural compression — zero semantic risk.
+ *
+ * Rules applied:
+ * - Strip `version:` from YAML frontmatter — installer metadata, irrelevant to the AI
+ * - Remove HTML/markdown comments <!-- ... -->
+ * - Strip trailing whitespace per line
+ * - Collapse 3+ consecutive blank lines to 2
+ *
+ * Phase 1 saving: ~330t per full install (version stripping from skills + briefs) + ~76t structural.
+ *
+ * Phase 2 (deferred — requires behavioral regression tests before landing):
+ * - Convert verbose bullet lists to keyword-dense tables
+ * - Remove filler phrases ("Please note that", "Make sure to", "It is important to")
+ * - Collapse repeated boilerplate sections across files into a single shared definition
+ */
+export function smartCrush(content: string): string {
+  return content
+    .replace(/^(---\n(?:(?!---)[^\n]*\n)*)version:[^\n]*\n/m, "$1")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/[ \t]+$/gm, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trimEnd() + "\n";
 }
 
 // --- Token savings estimator (used in tests) ---------------------------------

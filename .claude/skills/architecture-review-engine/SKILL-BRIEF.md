@@ -1,7 +1,6 @@
 ---
 name: architecture-review-engine
 description: Reviews architecture decisions, dependency health, structural quality, and identifies architectural smells. Use during refactoring planning or periodic architecture assessment.
-version: 3.0.0
 ---
 
 # Architecture Review Engine

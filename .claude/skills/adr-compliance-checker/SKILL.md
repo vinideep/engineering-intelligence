@@ -3,7 +3,6 @@
 ---
 name: adr-compliance-checker
 description: Checks implementation diffs against accepted ADRs and durable architecture decisions.
-version: 1.0.0
 ---
 
 # ADR Compliance Checker

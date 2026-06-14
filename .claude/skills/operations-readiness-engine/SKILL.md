@@ -3,7 +3,6 @@
 ---
 name: operations-readiness-engine
 description: Produces deployment, observability, rollback, and runbook readiness artifacts for production-bound AI-DLC changes.
-version: 1.0.0
 ---
 
 # Operations Readiness Engine

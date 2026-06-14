@@ -3,7 +3,6 @@
 ---
 name: change-history-engine
 description: Records validated engineering work, impacted systems, tests, synchronized documentation, and outstanding risks. Use after initialization and completed engineering changes.
-version: 3.0.0
 ---
 
 # Change History Engine

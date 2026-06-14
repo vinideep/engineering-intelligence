@@ -3,7 +3,6 @@
 ---
 name: performance-analysis-engine
 description: Identifies performance issues through static analysis of database query patterns, frontend bundle size, render performance, API response patterns, and caching opportunities. Use during initialization, before releases, or when performance-sensitive changes are detected.
-version: 3.0.0
 ---
 
 # Performance Analysis Engine

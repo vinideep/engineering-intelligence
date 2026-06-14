@@ -3,6 +3,7 @@ import {
   generateAllSkillBriefs,
   generateSkillsIndex,
   generateWorkflowRouting,
+  smartCrush,
   withPathOptimizations,
 } from "../token-optimizer.js";
 import { IDE_IDS, type IdeId, type RenderedFile } from "../types.js";
@@ -129,7 +130,7 @@ function withArgumentHint(content: string, hint: string): string {
 async function claudeCommandsAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
   return Promise.all(
     WORKFLOW_NAMES.map(async (name) => {
-      const workflow = await readTemplate("workflows", name);
+      const workflow = smartCrush(await readTemplate("workflows", name));
       if (!INPUT_WORKFLOWS.has(name)) {
         return file(`${directory}/${name}.md`, withPathOptimizations(workflow), owner);
       }
@@ -143,13 +144,13 @@ async function claudeCommandsAt(directory: string, owner: IdeId): Promise<Render
   );
 }
 
-// Render skill files for Claude Code with path aliases applied.
+// Render skill files for Claude Code: SmartCrush + path aliases applied.
 async function optimizedSkillsAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
   return Promise.all(
     SKILL_NAMES.map(async (name) =>
       file(
         `${directory}/${name}/SKILL.md`,
-        withPathOptimizations(await readTemplate("skills", name)),
+        withPathOptimizations(smartCrush(await readTemplate("skills", name))),
         owner,
       ),
     ),

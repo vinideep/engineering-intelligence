@@ -1,7 +1,6 @@
 ---
 name: aidlc-lifecycle-engine
 description: Runs the adaptive AI-DLC lifecycle with Discovery, Inception, Construction, Operations, durable artifacts, hatted agents, and objective completion gates.
-version: 1.0.0
 ---
 
 # AI-DLC Lifecycle Engine

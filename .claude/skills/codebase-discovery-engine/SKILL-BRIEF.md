@@ -1,7 +1,6 @@
 ---
 name: codebase-discovery-engine
 description: Autonomously explores and deeply understands a codebase before asking any questions. Scans repo structure, identifies tech stack with confidence scores, builds architecture hypotheses, maps entry points, detects conventions, analyzes git history, and produces a structured discovery report. Invoke when onboarding to a new repository or when deep understanding is required.
-version: 3.0.0
 ---
 
 # Codebase Discovery Engine

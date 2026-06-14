@@ -3,7 +3,6 @@
 ---
 name: contract-test-generator
 description: Generates consumer-driven contract test stubs for service boundaries based on API contracts and service graph topology.
-version: 1.0.0
 ---
 
 # Contract Test Generator

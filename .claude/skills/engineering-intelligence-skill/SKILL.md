@@ -3,7 +3,6 @@
 ---
 name: engineering-intelligence-skill
 description: Executes engineering changes with impact analysis, implementation, tests, validation, and incremental synchronization of project intelligence. Use for feature, bugfix, update, refactor, architecture, infrastructure, or security requests.
-version: 3.0.0
 ---
 
 # Engineering Intelligence Implementation

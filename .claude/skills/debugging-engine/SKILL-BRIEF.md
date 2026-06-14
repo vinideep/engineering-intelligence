@@ -1,7 +1,6 @@
 ---
 name: debugging-engine
 description: Performs structured root cause analysis using graph intelligence, log correlation, error propagation tracing, and reproduction step generation. Produces evidence-backed debug reports with fix suggestions and impact analysis.
-version: 3.0.0
 ---
 
 # Debugging Engine

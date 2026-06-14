@@ -3,7 +3,6 @@
 ---
 name: change-detection-engine
 description: Determines analysis scope from a proposed engineering change, working-tree diff, commit range, or explicit changed files. Use before impact analysis, synchronization, or review.
-version: 3.0.0
 ---
 
 # Change Detection Engine

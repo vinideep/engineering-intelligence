@@ -3,7 +3,6 @@
 ---
 name: knowledge-sync-engine
 description: Incrementally synchronizes the project knowledge base after code changes, updating only documents affected by verified behavior changes. Use after implementation or architectural decisions.
-version: 3.0.0
 ---
 
 # Knowledge Synchronization

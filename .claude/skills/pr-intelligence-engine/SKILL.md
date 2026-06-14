@@ -3,7 +3,6 @@
 ---
 name: pr-intelligence-engine
 description: Generates intelligent PR descriptions, reviewer suggestions, impact summaries, and split recommendations from change records and git intelligence. Use before submitting or reviewing pull requests.
-version: 3.0.0
 ---
 
 # PR Intelligence Engine

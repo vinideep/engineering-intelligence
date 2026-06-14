@@ -3,7 +3,6 @@
 ---
 name: environment-variable-auditor
 description: Audits environment variable usage against examples, validation schemas, CI secrets, and deployment configuration.
-version: 1.0.0
 ---
 
 # Environment Variable Auditor

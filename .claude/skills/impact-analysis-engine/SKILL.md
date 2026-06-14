@@ -3,7 +3,6 @@
 ---
 name: impact-analysis-engine
 description: Determines direct and indirect impact of a proposed or implemented change across modules, APIs, schemas, runtime flows, infrastructure, integrations, and tests. Use before implementation and during synchronization.
-version: 3.0.0
 ---
 
 # Impact Analysis Engine

@@ -1,7 +1,6 @@
 ---
 name: context-budget-optimizer
 description: Minimizes AI IDE token usage by ranking, slicing, summarizing, and lazy-loading project intelligence while preserving required gates and output quality.
-version: 1.0.0
 ---
 
 # Context Budget Optimizer

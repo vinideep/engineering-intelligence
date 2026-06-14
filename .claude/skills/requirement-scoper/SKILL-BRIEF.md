@@ -1,7 +1,6 @@
 ---
 name: requirement-scoper
 description: Iteratively scopes product requirements by acting as a detailed business and technical analyst, asking clarifying questions, and generating a finalized requirement prompt.
-version: 1.0.0
 ---
 
 # Requirement Scoper

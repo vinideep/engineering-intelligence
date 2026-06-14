@@ -3,7 +3,6 @@
 ---
 name: mcp-security-governor
 description: Reviews MCP tools and external execution surfaces for scoped authorization, schema integrity, sandboxing, and human approval gates.
-version: 1.0.0
 ---
 
 # MCP Security Governor

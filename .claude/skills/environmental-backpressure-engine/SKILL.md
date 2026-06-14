@@ -3,7 +3,6 @@
 ---
 name: environmental-backpressure-engine
 description: Drives compiler, linter, type-check, test, security, and architecture feedback loops until objective validation passes or blockers are recorded.
-version: 1.0.0
 ---
 
 # Environmental Backpressure Engine

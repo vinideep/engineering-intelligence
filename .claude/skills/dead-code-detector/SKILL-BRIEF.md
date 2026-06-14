@@ -1,7 +1,6 @@
 ---
 name: dead-code-detector
 description: Detects unused exports, unreachable code paths, zombie dependencies, and stale modules by combining static analysis with git history.
-version: 1.0.0
 ---
 
 # Dead Code Detector

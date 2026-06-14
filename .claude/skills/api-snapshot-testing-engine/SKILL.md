@@ -3,7 +3,6 @@
 ---
 name: api-snapshot-testing-engine
 description: Captures pre-change API request/response snapshots, replays them post-change, and flags semantic response regressions.
-version: 1.0.0
 ---
 
 # API Snapshot Testing Engine

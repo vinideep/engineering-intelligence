@@ -1,7 +1,6 @@
 ---
 name: memory-sync-engine
 description: Maintains durable engineering memory after architecture, business rule, constraint, convention, or technology decisions change. Use only for long-lived knowledge.
-version: 3.0.0
 ---
 
 # Memory Synchronization

@@ -1,7 +1,6 @@
 ---
 name: graph-engine
 description: Builds and maintains evidence-backed JSON architecture graphs and Mermaid architecture maps representing project dependencies, services, runtime flows, and business processes.
-version: 3.0.0
 ---
 
 # Graph Engine

@@ -3,7 +3,6 @@
 ---
 name: backlog-decomposition-engine
 description: Autonomously decomposes a high-level initiative into a durable Epic to Feature to Ticket backlog with stable IDs, acceptance criteria, dependencies, execution order, and a per-feature human approval gate. Use to plan large product work before implementation.
-version: 1.0.0
 ---
 
 # Backlog Decomposition Engine

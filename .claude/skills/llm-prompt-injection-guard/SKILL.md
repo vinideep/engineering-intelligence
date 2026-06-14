@@ -3,7 +3,6 @@
 ---
 name: llm-prompt-injection-guard
 description: Detects user-input-to-LLM prompt injection paths, unsafe RAG ingestion, unvalidated LLM outputs, and poisoned AI memory/documentation flows.
-version: 1.0.0
 ---
 
 # LLM Prompt Injection Guard

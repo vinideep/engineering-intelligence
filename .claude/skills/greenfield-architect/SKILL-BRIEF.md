@@ -1,7 +1,6 @@
 ---
 name: greenfield-architect
 description: Interview-based skill for new greenfield projects. Conducts a structured requirements interview (7-12 questions), generates architecture recommendations with tech stack selection, and scaffolds a complete project with pre-filled knowledge base, memory, context, configuration, CI/CD, and environment setup.
-version: 3.0.0
 ---
 
 # Greenfield Architect

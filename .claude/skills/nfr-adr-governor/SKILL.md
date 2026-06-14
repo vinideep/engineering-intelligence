@@ -3,7 +3,6 @@
 ---
 name: nfr-adr-governor
 description: Captures non-functional requirements, maps them to architectural patterns, and governs ADR lifecycle states.
-version: 1.0.0
 ---
 
 # NFR And ADR Governor
