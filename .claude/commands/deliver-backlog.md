@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 description: Drive delivery of a decomposed backlog feature by feature, enforcing a human approval gate before implementing each feature, then implementing its tickets through the engineering intelligence pipeline.
 argument-hint: <optional FEAT-XXX or EPIC-XXX to deliver>
@@ -9,7 +11,7 @@ Execute a backlog produced by `decompose-backlog`. This workflow **does** modify
 
 ## Input
 
-Optional scope: a feature ID (`FEAT-XXX`) or epic ID (`EPIC-XXX`) to deliver. With no scope, select the next ready feature from the execution order in `.engineering-intelligence/aidlc/agile/backlog/dependency-graph.md`.
+Optional scope: a feature ID (`FEAT-XXX`) or epic ID (`EPIC-XXX`) to deliver. With no scope, select the next ready feature from the execution order in `$AIDLCagile/backlog/dependency-graph.md`.
 
 ## Pipeline
 

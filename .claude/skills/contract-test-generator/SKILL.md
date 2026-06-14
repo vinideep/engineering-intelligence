@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: contract-test-generator
 description: Generates consumer-driven contract test stubs for service boundaries based on API contracts and service graph topology.
@@ -23,7 +25,7 @@ Use this skill when service boundaries, API clients, webhooks, events, GraphQL s
 
 ## Output
 
-Write `.engineering-intelligence/aidlc/construction/<unit>/contract-test-plan.md`:
+Write `$AIDLCconstruction/<unit>/contract-test-plan.md`:
 
 ```markdown
 # Contract Test Plan: <unit>

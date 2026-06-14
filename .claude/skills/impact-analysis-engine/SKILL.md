@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: impact-analysis-engine
 description: Determines direct and indirect impact of a proposed or implemented change across modules, APIs, schemas, runtime flows, infrastructure, integrations, and tests. Use before implementation and during synchronization.
@@ -11,14 +13,14 @@ Determine what can break before changing code. Produce a reusable impact report 
 ## Inputs
 
 - Change scope from `change-detection-engine` (proposal description, diff, commit range, or file list)
-- Graph intelligence from `.engineering-intelligence/graph/` (when available)
-- Project intelligence from `knowledge-base/` and `.engineering-intelligence/`
+- Graph intelligence from `$EIgraph/` (when available)
+- Project intelligence from `knowledge-base/` and `$EI`
 
 ## Procedure
 
 1. **Resolve Scope** — Accept the change scope. If ambiguous, ask for clarification — never assume.
 
-2. **Consult Graphs** — Read `.engineering-intelligence/graph/` for dependency, service, runtime, and business-flow relationships. If graphs are missing or stale for the assessed scope, invoke `graph-engine` to establish or refresh the necessary graph context.
+2. **Consult Graphs** — Read `$EIgraph/` for dependency, service, runtime, and business-flow relationships. If graphs are missing or stale for the assessed scope, invoke `graph-engine` to establish or refresh the necessary graph context.
 
 3. **Trace Direct Impact** — Identify:
    - Files directly modified or proposed for modification
@@ -74,7 +76,7 @@ Determine what can break before changing code. Produce a reusable impact report 
 
 ## Output Format
 
-Write `.engineering-intelligence/reports/IMP-XXX-<slug>.md`:
+Write `$EIreports/IMP-XXX-<slug>.md`:
 
 ```markdown
 # IMP-XXX: <descriptive title>
@@ -121,7 +123,7 @@ Write `.engineering-intelligence/reports/IMP-XXX-<slug>.md`:
 | Artifact | Reason |
 |---|---|
 | knowledge-base/04-api-documentation.md | API contract changed |
-| .engineering-intelligence/graph/service-graph.json | New service dependency |
+| $EIgraph/service-graph.json | New service dependency |
 
 ## Evidence
 - <file path citations>

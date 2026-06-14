@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: knowledge-sync-engine
 description: Incrementally synchronizes the project knowledge base after code changes, updating only documents affected by verified behavior changes. Use after implementation or architectural decisions.
@@ -10,7 +12,7 @@ Update only the knowledge-base documents affected by a verified behavior change.
 
 ## Inputs
 
-- Persisted impact report (`.engineering-intelligence/reports/IMP-XXX-*.md`)
+- Persisted impact report (`$EIreports/IMP-XXX-*.md`)
 - Actual diff or change record showing what changed
 - Current `knowledge-base/` documents
 

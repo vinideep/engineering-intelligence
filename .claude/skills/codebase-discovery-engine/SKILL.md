@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: codebase-discovery-engine
 description: Autonomously explores and deeply understands a codebase before asking any questions. Scans repo structure, identifies tech stack with confidence scores, builds architecture hypotheses, maps entry points, detects conventions, analyzes git history, and produces a structured discovery report. Invoke when onboarding to a new repository or when deep understanding is required.
@@ -18,7 +20,7 @@ This capability does not modify product code.
 
 ## Outputs
 
-- `.engineering-intelligence/reports/DISCOVERY-report.md` — structured discovery findings with per-area confidence scores
+- `$EIreports/DISCOVERY-report.md` — structured discovery findings with per-area confidence scores
 - Feeds directly into `initialize-intelligence-skill` for knowledge base generation
 
 ---
@@ -273,7 +275,7 @@ After Phases 1 and 2, ask ONLY questions that cannot be answered from code evide
 
 ## Phase 4: Confidence Report
 
-Generate `.engineering-intelligence/reports/DISCOVERY-report.md` with this structure:
+Generate `$EIreports/DISCOVERY-report.md` with this structure:
 
 ```markdown
 # Codebase Discovery Report
@@ -412,7 +414,7 @@ Scope: <full repo | specific scope>
 - [ ] No findings are stated without evidence citations
 - [ ] Clarification questions number between 5 and 10
 - [ ] No question asks about something discoverable from code
-- [ ] DISCOVERY-report.md exists at `.engineering-intelligence/reports/DISCOVERY-report.md`
+- [ ] DISCOVERY-report.md exists at `$EIreports/DISCOVERY-report.md`
 - [ ] Per-area confidence summary covers all major areas
 - [ ] Git history analysis includes hotspots and change velocity
 - [ ] Monorepo detection was performed (even if result is "not a monorepo")
@@ -423,6 +425,6 @@ Scope: <full repo | specific scope>
 - Used by: `initialize-intelligence-skill`, `engineering-orchestrator`
 - Consumed by: all sync engines, `convention-detector`, `ongoing-learning-engine`
 - Depends on: git history access, file system read access
-- Feeds into: `knowledge-base/00-project-overview.md`, `.engineering-intelligence/memory/technology-decisions.md`
+- Feeds into: `knowledge-base/00-project-overview.md`, `$EImemory/technology-decisions.md`
 
 This capability does not modify product code.

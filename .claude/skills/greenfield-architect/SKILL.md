@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: greenfield-architect
 description: Interview-based skill for new greenfield projects. Conducts a structured requirements interview (7-12 questions), generates architecture recommendations with tech stack selection, and scaffolds a complete project with pre-filled knowledge base, memory, context, configuration, CI/CD, and environment setup.
@@ -110,7 +112,7 @@ project-root/
 ├── .github/
 │   └── workflows/
 ├── knowledge-base/             # Pre-filled engineering intelligence
-├── .engineering-intelligence/
+├── $EI
 │   ├── memory/
 │   ├── context/
 │   ├── events/

@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 description: Initialize evidence-based engineering intelligence for the current project.
 ---
@@ -15,11 +17,11 @@ Analyzes this repository thoroughly without changing product code. Produces a co
 | Category | Path | Content |
 |---|---|---|
 | Knowledge Base | `knowledge-base/` | 16 evidence-backed documents (00-15) |
-| Memory | `.engineering-intelligence/memory/` | 5 durable decision/pattern documents |
-| Context | `.engineering-intelligence/context/` | 6 compact navigation maps |
-| Events | `.engineering-intelligence/events/` | 5 change-event guidance documents |
-| Graphs | `.engineering-intelligence/graph/` | 4 JSON graphs + architecture-map.md |
-| AI-DLC + Agile | `.engineering-intelligence/aidlc/` | Lifecycle state, audit, discovery placeholders, open questions, Agile backlog/sprint/DoR/DoD, cross-unit discovery log |
+| Memory | `$EImemory/` | 5 durable decision/pattern documents |
+| Context | `$EIcontext/` | 6 compact navigation maps |
+| Events | `$EIevents/` | 5 change-event guidance documents |
+| Graphs | `$EIgraph/` | 4 JSON graphs + architecture-map.md |
+| AI-DLC + Agile | `$AIDLC` | Lifecycle state, audit, discovery placeholders, open questions, Agile backlog/sprint/DoR/DoD, cross-unit discovery log |
 | History | `.changes/CHG-000-initialization.md` | Initialization record |
 
 ## Execution Steps
@@ -31,7 +33,7 @@ Analyzes this repository thoroughly without changing product code. Produces a co
 5. **Generate Context** — Create concise AI navigation maps
 6. **Build Graphs** — Generate evidence-backed architecture graphs
 7. **Initialize AI-DLC + Agile** — Create `aidlc-state.md`, `audit.md`, `open-questions.md`, `execution-plan.md`, `checkpoints.md`, Agile delivery artifacts, and `construction/cross-unit-discoveries.md`
-8. **Audit Memory** — Run memory pruning audit and initialize `.engineering-intelligence/memory/regression-patterns.md`
+8. **Audit Memory** — Run memory pruning audit and initialize `$EImemory/regression-patterns.md`
 9. **Record** — Write initialization change record
 
 ## Important

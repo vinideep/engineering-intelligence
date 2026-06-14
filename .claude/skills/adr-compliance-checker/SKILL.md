@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: adr-compliance-checker
 description: Checks implementation diffs against accepted ADRs and durable architecture decisions.
@@ -10,7 +12,7 @@ Use this skill when a change touches architecture boundaries, service communicat
 
 ## Procedure
 
-1. Read accepted ADRs from `.engineering-intelligence/aidlc/construction/**/decision-records/` and `.engineering-intelligence/memory/architecture-decisions.md`.
+1. Read accepted ADRs from `$AIDLCconstruction/**/decision-records/` and `$EImemory/architecture-decisions.md`.
 2. Extract binding rules, such as dependency direction, allowed protocols, persistence ownership, eventing patterns, or security controls.
 3. Compare the implementation diff against each applicable rule.
 4. Produce findings using the same severity model as `engineering-change-review`.
@@ -18,7 +20,7 @@ Use this skill when a change touches architecture boundaries, service communicat
 
 ## Output
 
-Write `.engineering-intelligence/reports/ADR-COMPLIANCE-<slug>.md`:
+Write `$EIreports/ADR-COMPLIANCE-<slug>.md`:
 
 ```markdown
 # ADR Compliance: <summary>

@@ -2,14 +2,16 @@
  * Lossless token optimization for rendered toolkit files.
  *
  * Techniques used:
- * 1. Path aliasing — dictionary substitution of repeated long path strings (saves ~3,266 tokens)
- * 2. Skills index — compact 1-line-per-skill routing table (saves ~10,000t vs reading full skills)
+ * 1. Path aliasing — dictionary substitution of repeated long path strings (saves ~955t)
+ * 2. Skills index — compact 1-line-per-skill routing table (saves ~10,000t vs reading all skills)
  * 3. Workflow routing — pre-computed primary/optional skill map per command (saves ~2,000t)
+ * 4. Tiered skill format — SKILL-BRIEF.md (~150t) read upfront; SKILL.md loaded at execution time
+ * 5. KV-cache pinning — routing artifacts sort first so they form a stable context prefix
  *
- * Inspired by Headroom's ContentRouter + CacheAligner patterns:
- * - The routing table is the CacheAligner equivalent: stable prefix that benefits from KV-cache hits
- * - The skills index is the relevance-ranking layer: AI routes to the right 2-3 skills, not all 44
- * - Full SKILL.md files are preserved as the CCR (compressed content retrieval) fallback
+ * Inspired by Headroom's ContentRouter + CacheAligner + CCR patterns:
+ * - Routing table = CacheAligner: stable prefix, KV-cache hits across all invocations
+ * - Skills index = ContentRouter: relevance ranking, route to the right 2-3 skills
+ * - SKILL-BRIEF.md = CCR tier 2: understand without executing; SKILL.md = CCR tier 3 retrieval
  */
 
 import { WORKFLOW_NAMES, readTemplate } from "./templates.js";
@@ -140,9 +142,9 @@ export function generateWorkflowRouting(): string {
     "# Workflow Routing Table",
     "",
     "> **Read this before loading any skill files.**",
-    "> Load **primary** skills in the listed order before executing a workflow.",
+    "> For each primary skill: load `SKILL-BRIEF.md` to understand it (~150t), then `SKILL.md` to execute.",
     "> Load **optional** skills only when the request explicitly requires that capability.",
-    "> Full skill content is in `.claude/skills/<name>/SKILL.md` (load when executing).",
+    "> Skill files are in `.claude/skills/<name>/` (SKILL-BRIEF.md and SKILL.md).",
     "",
     "| Command | Primary Skills — load first | Optional Skills — load if needed |",
     "|---|---|---|",
@@ -179,14 +181,79 @@ export async function generateSkillsIndex(
     "# Skills Index",
     "",
     "> **Token-saving routing layer.** Read this index first.",
-    "> Identify the 1-3 skills relevant to the request, then load only those full `SKILL.md` files.",
-    "> Full skill files are at `.claude/skills/<name>/SKILL.md`.",
+    "> Identify the 1-3 skills relevant to the request.",
+    "> Tiered loading: `SKILL-BRIEF.md` (~150t) → understand the skill. `SKILL.md` → execute the procedure.",
+    "> Both files live at `.claude/skills/<name>/`.",
     "",
     "| Skill | Purpose |",
     "|---|---|",
     ...rows,
     "",
   ].join("\n");
+}
+
+// --- Tiered skill briefs (CCR tier 2) ----------------------------------------
+
+/**
+ * Extract a compact brief from a full SKILL.md.
+ *
+ * The brief is the CCR tier-2 layer: ~150 tokens vs ~1,200 for the full skill.
+ * AI reads the brief to understand what the skill does and confirm it's relevant;
+ * reads the full SKILL.md only at execution time (CCR tier-3 retrieval).
+ *
+ * Extraction rules:
+ * - Frontmatter preserved (name, description, version)
+ * - Title + first body paragraph (overview sentence)
+ * - First 6 non-empty lines of the `## Inputs` section (mode table or bullet list)
+ * - Hard loading notice enforcing tier-3 retrieval before execution
+ */
+export function generateSkillBrief(content: string, name: string): string {
+  const fmMatch = content.match(/^---\n([\s\S]*?)\n---\n/);
+  const frontmatter = fmMatch ? fmMatch[1] : "";
+  const body = fmMatch ? content.slice(fmMatch[0].length) : content;
+
+  // Title (first `# Heading` line in body, which may be preceded by a newline)
+  const titleMatch = body.match(/^[\n]*(# [^\n]+)/m);
+  const title = titleMatch ? titleMatch[1].replace(/^# /, "") : name;
+
+  // First paragraph: text between the title and the next section heading or blank+heading
+  const afterTitle = titleMatch
+    ? body.slice(body.indexOf(titleMatch[1]) + titleMatch[1].length).replace(/^\n+/, "")
+    : body.replace(/^\n+/, "");
+  const firstParaMatch = afterTitle.match(/^([^#\n][^\n]*(?:\n(?![\n#])[^\n]*)*)/);
+  const overview = firstParaMatch ? firstParaMatch[1].trim() : "";
+
+  // Inputs section — first 6 non-empty lines (handles both table and bullet formats)
+  const inputsMatch = body.match(/## Inputs?\n\n?([\s\S]*?)(?=\n## |\n# |$)/i);
+  const inputLines = inputsMatch
+    ? inputsMatch[1].split("\n").filter((l) => l.trim()).slice(0, 6)
+    : [];
+
+  const parts: string[] = [];
+  if (frontmatter) parts.push(`---\n${frontmatter}\n---`, "");
+  parts.push(`# ${title}`, "");
+  if (overview) parts.push(overview, "");
+  if (inputLines.length > 0) parts.push("## Inputs", "", ...inputLines, "");
+  parts.push("> **Load `SKILL.md` from this directory before executing this skill's procedure.**");
+
+  return parts.join("\n") + "\n";
+}
+
+/**
+ * Generate SKILL-BRIEF.md content for every skill, applying path aliases.
+ * Returns a map of skill name → brief content (with aliases applied).
+ */
+export async function generateAllSkillBriefs(
+  skillNames: ReadonlyArray<string>,
+): Promise<Map<string, string>> {
+  const entries = await Promise.all(
+    skillNames.map(async (name) => {
+      const full = await readTemplate("skills", name).catch(() => "");
+      const brief = generateSkillBrief(full, name);
+      return [name, applyPathAliases(brief)] as const;
+    }),
+  );
+  return new Map(entries);
 }
 
 // --- Token savings estimator (used in tests) ---------------------------------

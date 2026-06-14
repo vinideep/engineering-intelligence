@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: environmental-backpressure-engine
 description: Drives compiler, linter, type-check, test, security, and architecture feedback loops until objective validation passes or blockers are recorded.
@@ -25,7 +27,7 @@ Use this skill whenever code is generated or modified. The environment, not subj
 
 ## Build And Test Summary
 
-Write `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md`:
+Write `$AIDLCconstruction/<unit>/build-and-test/build-and-test-summary.md`:
 
 ```markdown
 # Build And Test Summary: <unit>

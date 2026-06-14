@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: database-migration-safety-engine
 description: Reviews database migrations for backward compatibility, rollback coverage, locks, destructive operations, and production-dangerous changes.
@@ -37,7 +39,7 @@ Use this skill whenever schemas, migrations, ORM models, data stores, indexes, o
 
 ## Output
 
-Write `.engineering-intelligence/aidlc/construction/<unit>/database-migration-safety.md`:
+Write `$AIDLCconstruction/<unit>/database-migration-safety.md`:
 
 ```markdown
 # Database Migration Safety: <unit>

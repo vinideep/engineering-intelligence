@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: environment-variable-auditor
 description: Audits environment variable usage against examples, validation schemas, CI secrets, and deployment configuration.
@@ -27,7 +29,7 @@ Use this skill when code adds, removes, or changes environment variables, config
 
 ## Output
 
-Write `.engineering-intelligence/aidlc/construction/<unit>/environment-variable-audit.md`:
+Write `$AIDLCconstruction/<unit>/environment-variable-audit.md`:
 
 ```markdown
 # Environment Variable Audit: <unit>

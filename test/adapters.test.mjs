@@ -228,6 +228,58 @@ test("backlog decomposition and delivery ship as skills and commands for Claude 
   assert.deepEqual(await validateRender(["claude-code"]), []);
 });
 
+test("Claude Code adapter generates SKILL-BRIEF.md for every skill, substantially smaller than full skills", async () => {
+  const files = await renderAdapters(["claude-code"]);
+  const paths = new Set(files.map((item) => item.path));
+
+  // Every skill must have both a brief and a full skill file.
+  const skillNames = ["engineering-intelligence-skill", "change-detection-engine", "impact-analysis-engine", "context-budget-optimizer", "backlog-decomposition-engine"];
+  for (const name of skillNames) {
+    assert.ok(paths.has(`.claude/skills/${name}/SKILL-BRIEF.md`), `${name}/SKILL-BRIEF.md must exist`);
+    assert.ok(paths.has(`.claude/skills/${name}/SKILL.md`), `${name}/SKILL.md must exist`);
+  }
+
+  // Brief must be substantially smaller than full skill.
+  for (const name of skillNames) {
+    const brief = files.find((item) => item.path === `.claude/skills/${name}/SKILL-BRIEF.md`).content;
+    const full  = files.find((item) => item.path === `.claude/skills/${name}/SKILL.md`).content;
+    const briefTokens = Math.ceil(brief.length / 4);
+    const fullTokens  = Math.ceil(full.length / 4);
+    assert.ok(briefTokens < 400, `${name} brief should be under 400t, got ${briefTokens}`);
+    assert.ok(briefTokens < fullTokens * 0.5, `${name} brief (${briefTokens}t) must be less than 50% of full skill (${fullTokens}t)`);
+  }
+
+  // Briefs contain the loading notice enforcing tier-3 retrieval.
+  const brief = files.find((item) => item.path === ".claude/skills/engineering-intelligence-skill/SKILL-BRIEF.md").content;
+  assert.match(brief, /Load `SKILL\.md` from this directory before executing/);
+
+  // Briefs contain the overview paragraph (not just frontmatter).
+  assert.match(brief, /core implementation skill/);
+
+  // CLAUDE.md instructs three-tier loading.
+  const claudeMd = files.find((item) => item.path === "CLAUDE.md").content;
+  assert.match(claudeMd, /SKILL-BRIEF\.md/);
+  assert.match(claudeMd, /Tier 1/);
+  assert.match(claudeMd, /Tier 3/);
+});
+
+test("KV-cache pinned files appear before all other claude-code rendered files", async () => {
+  const files = await renderAdapters(["claude-code"]);
+  const claudeFiles = files.filter((item) => item.path.startsWith(".claude/") || item.path === "CLAUDE.md");
+  const idx0 = claudeFiles.findIndex((item) => item.path === ".claude/WORKFLOW-ROUTING.md");
+  const idx1 = claudeFiles.findIndex((item) => item.path === ".claude/skills/SKILLS-INDEX.md");
+
+  assert.ok(idx0 !== -1, "WORKFLOW-ROUTING.md must exist");
+  assert.ok(idx1 !== -1, "SKILLS-INDEX.md must exist");
+
+  // Both pinned files must come before any non-pinned file.
+  const firstNonPinned = claudeFiles.findIndex(
+    (item) => item.path !== ".claude/WORKFLOW-ROUTING.md" && item.path !== ".claude/skills/SKILLS-INDEX.md",
+  );
+  assert.ok(idx0 < firstNonPinned, "WORKFLOW-ROUTING.md must precede non-pinned files");
+  assert.ok(idx1 < firstNonPinned, "SKILLS-INDEX.md must precede non-pinned files");
+});
+
 test("antigravity-cli adapter writes agents to .agents/ (plural) matching CLI workspace path", async () => {
   const files = await renderAdapters(["antigravity-cli"]);
   const paths = new Set(files.map((item) => item.path));

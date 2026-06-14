@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: context-sync-engine
 description: Maintains compact AI navigation context when modules, services, dependencies, runtime paths, or risk areas change. Use after significant implementation changes.
@@ -11,11 +13,11 @@ Maintain concise, navigational context maps optimized for AI agent use. Context 
 ## Inputs
 
 - Impact report and graph updates
-- Current `.engineering-intelligence/context/` documents
+- Current `$EIcontext/` documents
 
 ## Context Maps
 
-Maintain these maps in `.engineering-intelligence/context/`:
+Maintain these maps in `$EIcontext/`:
 
 ### `module-map.md` — Module Navigation
 
@@ -101,7 +103,7 @@ Queue → Worker → Process → DB Write → Notify
    - impacted API/schema/security docs next
    - broad background docs last
    Estimate token cost and load in relevance order until roughly 40% of the available context budget is consumed. Reserve the rest for implementation, tests, diagnostics, and user interaction. If critical docs cannot fit, escalate with the missing docs and reason.
-   Write the ranking to `.engineering-intelligence/context/context-manifest.md`.
+   Write the ranking to `$EIcontext/context-manifest.md`.
 
 2. **Check Impact** — Review the impact report and graph updates. Identify which context maps are affected.
 
@@ -118,7 +120,7 @@ Queue → Worker → Process → DB Write → Notify
    - Optimized for AI agent context windows
 
 5. **Verify Accuracy** — Cross-check updated maps against:
-   - Current `.engineering-intelligence/graph/` data
+   - Current `$EIgraph/` data
    - Actual file system paths (do they still exist?)
 
 ## Rules

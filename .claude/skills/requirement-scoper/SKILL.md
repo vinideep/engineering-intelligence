@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: requirement-scoper
 description: Iteratively scopes product requirements by acting as a detailed business and technical analyst, asking clarifying questions, and generating a finalized requirement prompt.
@@ -12,8 +14,8 @@ Act as a detailed Business Analyst and Technical Architect persona. Analyze the 
 
 - User initial request (scope, feature, or bug details)
 - `knowledge-base/` (existing project domain context)
-- `.engineering-intelligence/graph/` (dependency graphs)
-- `.engineering-intelligence/memory/` (durable architecture/business decisions)
+- `$EIgraph/` (dependency graphs)
+- `$EImemory/` (durable architecture/business decisions)
 
 ## Procedure
 
@@ -38,7 +40,7 @@ Act as a detailed Business Analyst and Technical Architect persona. Analyze the 
 
 3. **Iterate with User** — Wait for user responses. Adjust assumptions based on their answers.
 
-4. **Generate Final Requirement Prompt** — Once requirements are clear, output a comprehensive requirements document to `knowledge-base/19-requirements.md`, update Agile artifacts under `.engineering-intelligence/aidlc/agile/`, and formulate the finalized prompt for the development agent.
+4. **Generate Final Requirement Prompt** — Once requirements are clear, output a comprehensive requirements document to `knowledge-base/19-requirements.md`, update Agile artifacts under `$AIDLCagile/`, and formulate the finalized prompt for the development agent.
 
 ## Output Format
 

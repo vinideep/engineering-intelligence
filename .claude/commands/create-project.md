@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 description: Create a new project from scratch with full AIDLC — from architectural interview through scaffolding, intelligence initialization, and convention detection.
 argument-hint: <new project description>
@@ -19,9 +21,9 @@ A complete, scaffolded project with:
 |---|---|
 | Project scaffold | Directory structure, configuration, dependencies, build system |
 | Knowledge Base | `knowledge-base/` — initialized project intelligence |
-| Memory | `.engineering-intelligence/memory/` — initial decisions and patterns |
-| Context | `.engineering-intelligence/context/` — AI navigation maps |
-| Graphs | `.engineering-intelligence/graph/` — initial architecture graphs |
+| Memory | `$EImemory/` — initial decisions and patterns |
+| Context | `$EIcontext/` — AI navigation maps |
+| Graphs | `$EIgraph/` — initial architecture graphs |
 | Conventions | `knowledge-base/06-conventions-and-standards.md` — detected and configured conventions |
 | Change Record | `.changes/CHG-000-initialization.md` — project creation record |
 

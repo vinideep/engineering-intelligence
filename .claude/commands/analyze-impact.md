@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 description: Analyze the impact of a proposed change or existing diff and write an evidence-backed impact report without changing product code.
 argument-hint: <intended change or diff to analyze>
@@ -13,7 +15,7 @@ Analyze the user-supplied scope: proposed change description, working-tree diff,
 
 ## Output
 
-Write `.engineering-intelligence/reports/IMP-XXX-<slug>.md` covering:
+Write `$EIreports/IMP-XXX-<slug>.md` covering:
 
 | Section | Content |
 |---|---|

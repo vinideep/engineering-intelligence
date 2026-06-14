@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: change-history-engine
 description: Records validated engineering work, impacted systems, tests, synchronized documentation, and outstanding risks. Use after initialization and completed engineering changes.
@@ -68,8 +70,8 @@ Store change records in `.changes/`:
 | Artifact | Change |
 |---|---|
 | knowledge-base/04-api-documentation.md | Updated rate limiting section |
-| .engineering-intelligence/graph/runtime-graph.json | Added rate-limiter node |
-| .engineering-intelligence/context/module-map.md | Added rate-limiter entry |
+| $EIgraph/runtime-graph.json | Added rate-limiter node |
+| $EIcontext/module-map.md | Added rate-limiter entry |
 
 ## Unresolved Risks
 - <any remaining concerns, follow-ups, or known limitations>
@@ -94,10 +96,10 @@ Initial engineering intelligence generated for <project name>.
 | Category | Count | Path |
 |---|---|---|
 | Knowledge Base | 16 documents | knowledge-base/ |
-| Memory | 5 documents | .engineering-intelligence/memory/ |
-| Context | 6 maps | .engineering-intelligence/context/ |
-| Events | 5 guides | .engineering-intelligence/events/ |
-| Graphs | 4 JSON + 1 map | .engineering-intelligence/graph/ |
+| Memory | 5 documents | $EImemory/ |
+| Context | 6 maps | $EIcontext/ |
+| Events | 5 guides | $EIevents/ |
+| Graphs | 4 JSON + 1 map | $EIgraph/ |
 
 ## Confidence Assessment
 - High confidence areas: <list>

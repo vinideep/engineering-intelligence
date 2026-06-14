@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 description: Review changed engineering work, tests, graphs, and synchronized intelligence without applying fixes.
 argument-hint: <scope, e.g. the current working-tree diff>
@@ -21,7 +23,7 @@ Use `change-detection-engine` and `engineering-change-review`.
 | Graph consistency | New/changed nodes and edges reflected |
 | Documentation sync | Knowledge, memory, context accuracy |
 
-4. **Write report** — Generate `.engineering-intelligence/reports/REV-XXX-<slug>.md` with:
+4. **Write report** — Generate `$EIreports/REV-XXX-<slug>.md` with:
    - Severity-ordered findings (🔴 Blocker → 🟢 Positive)
    - Evidence paths for each finding
    - Test gaps and coverage concerns

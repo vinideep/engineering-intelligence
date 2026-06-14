@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: api-snapshot-testing-engine
 description: Captures pre-change API request/response snapshots, replays them post-change, and flags semantic response regressions.
@@ -13,7 +15,7 @@ Use this skill when an API endpoint, route handler, controller, serializer, Grap
 Store snapshots under:
 
 ```text
-.engineering-intelligence/snapshots/
+$EIsnapshots/
 ```
 
 ## Procedure
@@ -46,7 +48,7 @@ Store snapshots under:
 
 ## Output
 
-Write `.engineering-intelligence/snapshots/<unit>/snapshot-report.md`:
+Write `$EIsnapshots/<unit>/snapshot-report.md`:
 
 ```markdown
 # API Snapshot Report: <unit>

@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: engineering-intelligence-skill
 description: Executes engineering changes with impact analysis, implementation, tests, validation, and incremental synchronization of project intelligence. Use for feature, bugfix, update, refactor, architecture, infrastructure, or security requests.
@@ -11,7 +13,7 @@ The core implementation skill for engineering work. Use after project intelligen
 ## Inputs
 
 - User request describing the desired change
-- Repository with initialized intelligence (`knowledge-base/`, `.engineering-intelligence/`)
+- Repository with initialized intelligence (`knowledge-base/`, `$EI`)
 
 ## Request Classification
 
@@ -32,12 +34,12 @@ Classify the incoming request before starting:
 
 ### 1. Pre-Flight: Read Intelligence
 
-Use `context-budget-optimizer` before loading broad intelligence. Do not read all of `knowledge-base/` or all graph JSON by default. Build `.engineering-intelligence/context/context-manifest.md`, then load only relevant slices:
+Use `context-budget-optimizer` before loading broad intelligence. Do not read all of `knowledge-base/` or all graph JSON by default. Build `$EIcontext/context-manifest.md`, then load only relevant slices:
 - `knowledge-base/` — only H2 sections relevant to the changed modules, APIs, schemas, or risk areas
-- `.engineering-intelligence/aidlc/` — `aidlc-state.md`, active checkpoint, active unit, acceptance criteria, and execution-plan rows relevant to the request
-- `.engineering-intelligence/memory/` — only matching decisions, constraints, conventions, regression patterns, and ADR references
-- `.engineering-intelligence/context/` — module/service/runtime rows near the change scope
-- `.engineering-intelligence/graph/` — only relevant nodes/edges by graph proximity
+- `$AIDLC` — `aidlc-state.md`, active checkpoint, active unit, acceptance criteria, and execution-plan rows relevant to the request
+- `$EImemory/` — only matching decisions, constraints, conventions, regression patterns, and ADR references
+- `$EIcontext/` — module/service/runtime rows near the change scope
+- `$EIgraph/` — only relevant nodes/edges by graph proximity
 
 **If intelligence is missing or stale**: Run `initialize-intelligence-skill` first.
 
@@ -57,7 +59,7 @@ Before impact analysis or code edits:
 
 ### 2. Impact Analysis: Write Report
 
-Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>.md`:
+Before any code edit, write `$EIreports/IMP-XXX-<summary>.md`:
 
 ```markdown
 # IMP-XXX: <summary>
@@ -102,19 +104,19 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
   - Design-first delivery for migrations, new architecture, and broad system boundaries
   - Hypothesis debugging for unknown-cause defects
 - Update Agile artifacts when product behavior is in scope:
-  - `.engineering-intelligence/aidlc/agile/product-backlog.md`
-  - `.engineering-intelligence/aidlc/agile/sprint-plan.md`
-  - `.engineering-intelligence/aidlc/agile/acceptance-criteria.md`
-  - `.engineering-intelligence/aidlc/agile/definition-of-ready.md`
-  - `.engineering-intelligence/aidlc/agile/definition-of-done.md`
-- Update `.engineering-intelligence/aidlc/execution-plan.md` and `.engineering-intelligence/aidlc/aidlc-state.md`
-- Split broad changes into construction units and keep `.engineering-intelligence/aidlc/construction/cross-unit-discoveries.md` current
+  - `$AIDLCagile/product-backlog.md`
+  - `$AIDLCagile/sprint-plan.md`
+  - `$AIDLCagile/acceptance-criteria.md`
+  - `$AIDLCagile/definition-of-ready.md`
+  - `$AIDLCagile/definition-of-done.md`
+- Update `$AIDLCexecution-plan.md` and `$AIDLCaidlc-state.md`
+- Split broad changes into construction units and keep `$AIDLCconstruction/cross-unit-discoveries.md` current
 - Edit only the files necessary for the request
-- Follow existing coding patterns from `.engineering-intelligence/memory/coding-patterns.md`
-- Read conventions from `knowledge-base/16-conventions.md` and `.engineering-intelligence/memory/coding-patterns.md` — match naming patterns, import style, error handling patterns, and code structure
+- Follow existing coding patterns from `$EImemory/coding-patterns.md`
+- Read conventions from `knowledge-base/16-conventions.md` and `$EImemory/coding-patterns.md` — match naming patterns, import style, error handling patterns, and code structure
 - If conventions document is missing or outdated, run `convention-detector` first
 - After generating or modifying each file, compare it against `coding-patterns.md` for naming, import order, error handling, logging, folder structure, test style, and framework idioms. Auto-correct minor violations. Structural convention violations become review findings and block completion when critical.
-- Respect architectural boundaries from `.engineering-intelligence/memory/architecture-decisions.md`
+- Respect architectural boundaries from `$EImemory/architecture-decisions.md`
 - Consult `dangerous-areas.md` before modifying flagged code
 
 #### Strict TDD Red-Green Gate
@@ -124,7 +126,7 @@ When TDD delivery mode is selected:
 1. Add or update the required tests first.
 2. Run the new/targeted tests before implementation code changes.
 3. Confirm they fail for the expected reason.
-4. Save failing output in `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md`.
+4. Save failing output in `$AIDLCconstruction/<unit>/build-and-test/build-and-test-summary.md`.
 5. Only then implement production code.
 6. If this sequence is skipped, mark the construction unit blocked unless the user explicitly approves non-TDD execution.
 
@@ -149,13 +151,13 @@ When TDD delivery mode is selected:
 - Run `environment-variable-auditor` when environment variable reads, validation schemas, deployment config, or CI secrets change
 - Run `adr-compliance-checker` when accepted ADRs or architecture decisions apply to the changed area
 - Run `llm-prompt-injection-guard` when user-controlled data reaches prompts, RAG, agent tools, LLM calls, or durable AI memory
-- Write `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md` for non-trivial units
+- Write `$AIDLCconstruction/<unit>/build-and-test/build-and-test-summary.md` for non-trivial units
 - **Never claim validation passed unless it actually ran and passed**
 - Record partial or failed validation honestly
 
 #### Acceptance Criteria Verification Matrix
 
-Before Definition of Done can pass, map every criterion from `.engineering-intelligence/aidlc/agile/acceptance-criteria.md` to evidence:
+Before Definition of Done can pass, map every criterion from `$AIDLCagile/acceptance-criteria.md` to evidence:
 
 ```markdown
 ## Acceptance Criteria Verification Matrix

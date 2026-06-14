@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: llm-prompt-injection-guard
 description: Detects user-input-to-LLM prompt injection paths, unsafe RAG ingestion, unvalidated LLM outputs, and poisoned AI memory/documentation flows.
@@ -23,7 +25,7 @@ Use this skill for AI-augmented applications, RAG pipelines, agent tools, prompt
 
 ## Output
 
-Write `.engineering-intelligence/reports/LLM-PROMPT-INJECTION-<slug>.md`:
+Write `$EIreports/LLM-PROMPT-INJECTION-<slug>.md`:
 
 ```markdown
 # LLM Prompt Injection Review: <summary>

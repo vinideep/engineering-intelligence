@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: engineering-change-review
 description: Reviews engineering changes for correctness, test coverage, architecture alignment, graph consistency, and documentation accuracy. Use after implementation to validate quality before completion.
@@ -11,7 +13,7 @@ Review completed engineering work for correctness, completeness, and alignment w
 ## Inputs
 
 - Implementation diff or changed scope
-- Impact report (`.engineering-intelligence/reports/IMP-XXX-*.md`)
+- Impact report (`$EIreports/IMP-XXX-*.md`)
 - Test and validation evidence
 - Updated graph and intelligence artifacts
 
@@ -97,7 +99,7 @@ Review completed engineering work for correctness, completeness, and alignment w
 
 ## Output Format
 
-Write `.engineering-intelligence/reports/REV-XXX-<slug>.md`:
+Write `$EIreports/REV-XXX-<slug>.md`:
 
 ```markdown
 # REV-XXX: <summary>

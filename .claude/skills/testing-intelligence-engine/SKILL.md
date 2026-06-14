@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: testing-intelligence-engine
 description: Determines risk-based testing needs for engineering changes and identifies coverage gaps in critical runtime flows. Use during implementation and validation.
@@ -10,11 +12,11 @@ Determine the minimum sufficient test coverage for a change based on risk assess
 
 ## Inputs
 
-- Impact report (`.engineering-intelligence/reports/IMP-XXX-*.md`)
+- Impact report (`$EIreports/IMP-XXX-*.md`)
 - Existing test patterns in the repository
 - Change classification (feature, bugfix, refactor, etc.)
 - Coverage reports when available (`coverage-final.json`, `coverage.xml`, `lcov.info`, `go test -cover`, pytest coverage output)
-- Agile acceptance criteria from `.engineering-intelligence/aidlc/agile/acceptance-criteria.md`
+- Agile acceptance criteria from `$AIDLCagile/acceptance-criteria.md`
 
 ## Risk-Based Test Selection Matrix
 
@@ -86,7 +88,7 @@ Determine the minimum sufficient test coverage for a change based on risk assess
 
 6. **Verify Acceptance Criteria** — Produce an Acceptance Criteria Verification Matrix mapping every criterion to automated tests, manual verification, or an unavailable check. Missing mappings block Definition of Done.
 
-7. **Propose Regression Patterns** — For bugfixes, compare against `.engineering-intelligence/memory/regression-patterns.md`. Reuse matching templates. If a new recurring bug category is found, propose a durable pattern to `memory-sync-engine`; Memory Sync owns durable persistence.
+7. **Propose Regression Patterns** — For bugfixes, compare against `$EImemory/regression-patterns.md`. Reuse matching templates. If a new recurring bug category is found, propose a durable pattern to `memory-sync-engine`; Memory Sync owns durable persistence.
 
 ## Output
 

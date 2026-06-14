@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: deep-project-knowledge-extractor
 description: Analyzes an existing software repository and produces evidence-based architecture, runtime, API, infrastructure, risk, and onboarding documentation. Use when creating or refreshing the project knowledge base.

@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: change-detection-engine
 description: Determines analysis scope from a proposed engineering change, working-tree diff, commit range, or explicit changed files. Use before impact analysis, synchronization, or review.

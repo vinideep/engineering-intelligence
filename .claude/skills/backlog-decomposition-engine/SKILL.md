@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: backlog-decomposition-engine
 description: Autonomously decomposes a high-level initiative into a durable Epic to Feature to Ticket backlog with stable IDs, acceptance criteria, dependencies, execution order, and a per-feature human approval gate. Use to plan large product work before implementation.
@@ -20,22 +22,22 @@ Epic  (a business outcome / initiative)
 
 - The user's high-level initiative or request
 - `knowledge-base/` (domain context)
-- `.engineering-intelligence/graph/` (dependency, service, runtime, business-flow graphs)
-- `.engineering-intelligence/memory/` (durable architecture and business decisions)
-- `.engineering-intelligence/aidlc/discovery/vision.md` and `agile/product-backlog.md` when present
+- `$EIgraph/` (dependency, service, runtime, business-flow graphs)
+- `$EImemory/` (durable architecture and business decisions)
+- `$AIDLCdiscovery/vision.md` and `agile/product-backlog.md` when present
 
 ## Runtime Artifacts
 
-Write the backlog under `.engineering-intelligence/aidlc/agile/backlog/`:
+Write the backlog under `$AIDLCagile/backlog/`:
 
 | Path | Purpose |
 |---|---|
-| `.engineering-intelligence/aidlc/agile/backlog/backlog-index.md` | Master index, ID counters, and status rollup for every epic, feature, and ticket |
-| `.engineering-intelligence/aidlc/agile/backlog/epics/EPIC-XXX-<slug>.md` | One epic: outcome, success metrics, child features |
-| `.engineering-intelligence/aidlc/agile/backlog/features/FEAT-XXX-<slug>.md` | One feature: user story, acceptance criteria, child tickets, approval state |
-| `.engineering-intelligence/aidlc/agile/backlog/tickets/TKT-XXX-<slug>.md` | One ticket: executable acceptance criteria, affected files, Ready/Done gates, implementation command |
-| `.engineering-intelligence/aidlc/agile/backlog/dependency-graph.md` | Feature and ticket dependency graph plus the derived execution order |
-| `.engineering-intelligence/aidlc/agile/backlog/sync/tracker-sync-map.md` | Local ID to external tracker (e.g. GitHub issue) mapping, written only by `issue-tracker-sync-engine` |
+| `$AIDLCagile/backlog/backlog-index.md` | Master index, ID counters, and status rollup for every epic, feature, and ticket |
+| `$AIDLCagile/backlog/epics/EPIC-XXX-<slug>.md` | One epic: outcome, success metrics, child features |
+| `$AIDLCagile/backlog/features/FEAT-XXX-<slug>.md` | One feature: user story, acceptance criteria, child tickets, approval state |
+| `$AIDLCagile/backlog/tickets/TKT-XXX-<slug>.md` | One ticket: executable acceptance criteria, affected files, Ready/Done gates, implementation command |
+| `$AIDLCagile/backlog/dependency-graph.md` | Feature and ticket dependency graph plus the derived execution order |
+| `$AIDLCagile/backlog/sync/tracker-sync-map.md` | Local ID to external tracker (e.g. GitHub issue) mapping, written only by `issue-tracker-sync-engine` |
 
 This backlog is the structured expansion of `agile/product-backlog.md`; keep the high-level epic list in `product-backlog.md` consistent with `backlog-index.md`.
 

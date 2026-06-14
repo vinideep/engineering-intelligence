@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 description: Build or refresh evidence-backed architecture graph intelligence without changing product code.
 ---
@@ -10,11 +12,11 @@ Inspect repository evidence and generate or comprehensively refresh:
 
 | Artifact | Content |
 |---|---|
-| `.engineering-intelligence/graph/dependency-graph.json` | Module/package dependency relationships |
-| `.engineering-intelligence/graph/service-graph.json` | Service-to-service communication topology |
-| `.engineering-intelligence/graph/runtime-graph.json` | Runtime call flows and middleware chains |
-| `.engineering-intelligence/graph/business-flow-graph.json` | Business process flows across boundaries |
-| `.engineering-intelligence/graph/architecture-map.md` | Mermaid diagrams derived from JSON graphs |
+| `$EIgraph/dependency-graph.json` | Module/package dependency relationships |
+| `$EIgraph/service-graph.json` | Service-to-service communication topology |
+| `$EIgraph/runtime-graph.json` | Runtime call flows and middleware chains |
+| `$EIgraph/business-flow-graph.json` | Business process flows across boundaries |
+| `$EIgraph/architecture-map.md` | Mermaid diagrams derived from JSON graphs |
 
 ## Requirements
 

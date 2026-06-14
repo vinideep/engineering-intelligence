@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: memory-sync-engine
 description: Maintains durable engineering memory after architecture, business rule, constraint, convention, or technology decisions change. Use only for long-lived knowledge.
@@ -11,7 +13,7 @@ Maintain durable, long-lived engineering memory. Memory is for decisions and pat
 ## Inputs
 
 - Impact report and actual change evidence
-- Current `.engineering-intelligence/memory/` documents
+- Current `$EImemory/` documents
 
 ## Memory Categories
 
@@ -26,7 +28,7 @@ Maintain durable, long-lived engineering memory. Memory is for decisions and pat
 
 ## Regression Pattern Ownership
 
-Testing Intelligence Engine owns detection and proposal of regression patterns during bugfix validation. Memory Sync owns durable persistence to `.engineering-intelligence/memory/regression-patterns.md` after confirming the pattern is reusable and evidence-backed. Testing Intelligence must not directly persist durable memory unless it is explicitly running through Memory Sync.
+Testing Intelligence Engine owns detection and proposal of regression patterns during bugfix validation. Memory Sync owns durable persistence to `$EImemory/regression-patterns.md` after confirming the pattern is reusable and evidence-backed. Testing Intelligence must not directly persist durable memory unless it is explicitly running through Memory Sync.
 
 ## Staleness Detection Rules
 
@@ -72,7 +74,7 @@ A memory entry may be stale if:
 
 6. **Regression Pattern Update** — For bugfixes:
    - Classify the bug category (pagination boundary, null/empty collection, race condition, permission bypass, retry/idempotency, schema drift, API contract mismatch, etc.)
-   - Match against `.engineering-intelligence/memory/regression-patterns.md`
+   - Match against `$EImemory/regression-patterns.md`
    - Add or update a reusable regression test template when the pattern is durable
 
 ## Rules

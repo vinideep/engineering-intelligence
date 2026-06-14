@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: convention-detector
 description: Detects and codifies project conventions by analyzing naming patterns, import organization, code structure, API patterns, test patterns, git conventions, and architecture patterns. Produces a conventions document and enhances coding-patterns memory.
@@ -136,7 +138,7 @@ This capability does not modify product code.
 
 10. **Write conventions document** — Generate `knowledge-base/16-conventions.md` following the output format below.
 
-11. **Enhance coding patterns memory** — Update `.engineering-intelligence/memory/coding-patterns.md` with durable conventions that are unlikely to change.
+11. **Enhance coding patterns memory** — Update `$EImemory/coding-patterns.md` with durable conventions that are unlikely to change.
 
 ## Output: `knowledge-base/16-conventions.md`
 
@@ -185,7 +187,7 @@ Sample size: <N files analyzed across M modules>
 | ... | ... | ... | ... |
 ```
 
-## Output: `.engineering-intelligence/memory/coding-patterns.md` (Enhanced)
+## Output: `$EImemory/coding-patterns.md` (Enhanced)
 
 Add a `## Conventions` section with only durable patterns that pass the durability check: "Will this convention still be relevant after 10+ more changes?"
 
@@ -207,7 +209,7 @@ Add a `## Conventions` section with only durable patterns that pass the durabili
 
 - Depends on: `codebase-discovery-engine` (tech stack context)
 - Used by: `initialize-intelligence-skill`, `engineering-intelligence-skill`
-- Feeds into: `knowledge-base/16-conventions.md`, `.engineering-intelligence/memory/coding-patterns.md`
+- Feeds into: `knowledge-base/16-conventions.md`, `$EImemory/coding-patterns.md`
 - Consumed by: `ongoing-learning-engine` (for convention drift detection)
 
 This capability does not modify product code.

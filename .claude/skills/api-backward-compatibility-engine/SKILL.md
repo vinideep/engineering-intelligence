@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: api-backward-compatibility-engine
 description: Diffs API contracts, classifies changes as additive, deprecated, or breaking, and requires versioning or migration notes for breaking changes.
@@ -42,7 +44,7 @@ Use this skill when routes, handlers, request schemas, response schemas, GraphQL
 
 ## Output
 
-Write `.engineering-intelligence/aidlc/construction/<unit>/api-compatibility.md`:
+Write `$AIDLCconstruction/<unit>/api-compatibility.md`:
 
 ```markdown
 # API Backward Compatibility: <unit>

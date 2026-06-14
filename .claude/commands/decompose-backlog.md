@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 description: Autonomously decompose a high-level initiative into a durable Epic to Feature to Ticket backlog with dependencies, execution order, and a per-feature approval gate, without modifying product code.
 argument-hint: <initiative or epic-sized request to decompose>
@@ -13,9 +15,9 @@ Analyze the user-supplied initiative: a product brief, epic-sized request, or la
 
 ## Pipeline
 
-1. **Read Intelligence** — Consult `knowledge-base/`, `.engineering-intelligence/graph/`, `.engineering-intelligence/memory/`, and existing `.engineering-intelligence/aidlc/` artifacts.
+1. **Read Intelligence** — Consult `knowledge-base/`, `$EIgraph/`, `$EImemory/`, and existing `$AIDLC` artifacts.
 2. **Decompose** — Run `backlog-decomposition-engine` to frame epics, slice features, and cut tickets with stable IDs (`EPIC-XXX`, `FEAT-XXX`, `TKT-XXX`).
-3. **Write Backlog** — Create artifacts under `.engineering-intelligence/aidlc/agile/backlog/`: `backlog-index.md`, `epics/`, `features/`, `tickets/`, and `dependency-graph.md`. Keep `agile/product-backlog.md` and `execution-plan.md` consistent.
+3. **Write Backlog** — Create artifacts under `$AIDLCagile/backlog/`: `backlog-index.md`, `epics/`, `features/`, `tickets/`, and `dependency-graph.md`. Keep `agile/product-backlog.md` and `execution-plan.md` consistent.
 4. **Map Dependencies** — Emit a topological execution order and mark parallel-safe work in `dependency-graph.md`.
 5. **Set Approval Gates** — Every feature is created with `Approval: pending`. No implementation occurs in this workflow.
 6. **Optional Sync** — If the user requested it, or a GitHub remote is detected and sync is enabled, run `issue-tracker-sync-engine` and record `sync/tracker-sync-map.md`.

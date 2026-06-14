@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: graph-engine
 description: Builds and maintains evidence-backed JSON architecture graphs and Mermaid architecture maps representing project dependencies, services, runtime flows, and business processes.
@@ -16,7 +18,7 @@ Build and maintain structured, evidence-backed architecture graphs that enable i
 
 ## Graph Artifacts
 
-All graphs are stored in `.engineering-intelligence/graph/`.
+All graphs are stored in `$EIgraph/`.
 
 ### Graph JSON Schema
 

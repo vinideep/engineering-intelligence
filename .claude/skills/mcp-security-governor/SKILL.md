@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: mcp-security-governor
 description: Reviews MCP tools and external execution surfaces for scoped authorization, schema integrity, sandboxing, and human approval gates.
@@ -22,7 +24,7 @@ Check for defense in depth:
 
 ## MCP Review Artifact
 
-Write `.engineering-intelligence/aidlc/operations/mcp-security-review.md`:
+Write `$AIDLCoperations/mcp-security-review.md`:
 
 ```markdown
 # MCP Security Review

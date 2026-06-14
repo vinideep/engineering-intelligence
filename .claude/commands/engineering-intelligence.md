@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 description: Implement an engineering request with impact analysis, tests, validation, and intelligence synchronization.
 argument-hint: <implementation request>
@@ -9,10 +11,10 @@ Use the `engineering-intelligence-skill` capability for the user's accompanying 
 
 ## Pipeline
 
-1. **Read Intelligence** — Consult `knowledge-base/`, `.engineering-intelligence/memory/`, `.engineering-intelligence/context/`, `.engineering-intelligence/graph/`
+1. **Read Intelligence** — Consult `knowledge-base/`, `$EImemory/`, `$EIcontext/`, `$EIgraph/`
 2. **Select Delivery Mode** — Choose standard Agile, adversarial, TDD, design-first, or hypothesis debugging based on risk
-3. **Write Impact Report** — Create `.engineering-intelligence/reports/IMP-XXX-<summary>.md` before any code edit
-4. **Plan Agile + AI-DLC Work** — Update backlog, acceptance criteria, Definition of Ready, `.engineering-intelligence/aidlc/execution-plan.md`, and `aidlc-state.md`
+3. **Write Impact Report** — Create `$EIreports/IMP-XXX-<summary>.md` before any code edit
+4. **Plan Agile + AI-DLC Work** — Update backlog, acceptance criteria, Definition of Ready, `$AIDLCexecution-plan.md`, and `aidlc-state.md`
 5. **Implement** — Make the requested code changes following established patterns
 6. **Test** — Add/update tests proportional to risk; execute and record results
 7. **Safety Gates** — Run freshness, type safety, API compatibility, API snapshot replay, migration safety, convention, acceptance-mapping, dependency-risk, env-var, ADR compliance, LLM prompt-injection, and rollback gates when applicable

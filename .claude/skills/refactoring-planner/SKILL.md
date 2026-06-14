@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: refactoring-planner
 description: Plans safe refactors by identifying dependencies, migration steps, validation needs, compatibility risk, and rollback strategy. Use before non-trivial refactors.
@@ -11,9 +13,9 @@ Plan safe, incremental refactoring with clear migration steps, validation checkp
 ## Inputs
 
 - Refactoring goal (described by user or identified by architecture review)
-- `.engineering-intelligence/graph/` (dependency relationships)
+- `$EIgraph/` (dependency relationships)
 - `knowledge-base/12-technical-debt.md` (existing debt)
-- `.engineering-intelligence/memory/architecture-decisions.md` (constraints)
+- `$EImemory/architecture-decisions.md` (constraints)
 
 ## Refactoring Categories
 

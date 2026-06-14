@@ -1,5 +1,6 @@
 import { AGENT_NAMES, SKILL_NAMES, WORKFLOW_NAMES, readTemplate } from "../templates.js";
 import {
+  generateAllSkillBriefs,
   generateSkillsIndex,
   generateWorkflowRouting,
   withPathOptimizations,
@@ -57,12 +58,20 @@ This repository uses installed engineering intelligence workflows.
 const claudeCodeInstructions = `
 ## Token-Efficient Skill Loading (Claude Code)
 
-Before loading individual skill files, read these two compact routing artifacts:
+**Three-tier loading protocol** — follow this order on every invocation:
 
-1. \`.claude/skills/SKILLS-INDEX.md\` — one-line description of all 44 skills (~1,500 tokens)
-2. \`.claude/WORKFLOW-ROUTING.md\` — pre-computed primary/optional skill map per command (~400 tokens)
+**Tier 1 — Routing (load once, always pinned)**
+1. \`.claude/WORKFLOW-ROUTING.md\` — primary/optional skill map per command (~400t)
+2. \`.claude/skills/SKILLS-INDEX.md\` — one-line description of all 44 skills (~1,500t)
 
-Then load only the specific \`SKILL.md\` files listed as **primary** for the active workflow.
+**Tier 2 — Brief (load per identified skill, ~150t each)**
+Load \`.claude/skills/<name>/SKILL-BRIEF.md\` for each primary skill identified in the routing table.
+The brief confirms relevance and summarises inputs — do not execute the skill from the brief alone.
+
+**Tier 3 — Full skill (load at execution time only)**
+Load \`.claude/skills/<name>/SKILL.md\` immediately before executing that skill's procedure.
+Never skip this step — the brief does not contain the complete procedure.
+
 Load **optional** skills only when the request explicitly requires that capability.
 
 Path aliases used in skill and command files (expand before writing file paths):
@@ -144,6 +153,16 @@ async function optimizedSkillsAt(directory: string, owner: IdeId): Promise<Rende
         owner,
       ),
     ),
+  );
+}
+
+// Render SKILL-BRIEF.md (tier-2 CCR) for each skill. Briefs are ~150t each vs
+// ~1,200t for full skills; AI loads briefs first to confirm relevance, then
+// loads SKILL.md at execution time.
+async function skillBriefsAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
+  const briefs = await generateAllSkillBriefs(SKILL_NAMES);
+  return SKILL_NAMES.map((name) =>
+    file(`${directory}/${name}/SKILL-BRIEF.md`, briefs.get(name) ?? "", owner),
   );
 }
 
@@ -281,16 +300,21 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
     case "generic":
       return [...(await skillsAt(".agents/skills", ide)), block("AGENTS.md", sharedInstructions, ide)];
     case "claude-code": {
-      const [skillsIndex, workflowRouting] = await Promise.all([
+      const [skillsIndex, workflowRouting, briefs, skills, agents, commands] = await Promise.all([
         generateSkillsIndex(SKILL_NAMES),
         Promise.resolve(generateWorkflowRouting()),
+        skillBriefsAt(".claude/skills", ide),
+        optimizedSkillsAt(".claude/skills", ide),
+        agentsAt(".claude/agents", ide),
+        claudeCommandsAt(".claude/commands", ide),
       ]);
       return [
-        ...(await optimizedSkillsAt(".claude/skills", ide)),
-        ...(await agentsAt(".claude/agents", ide)),
-        ...(await claudeCommandsAt(".claude/commands", ide)),
         file(".claude/skills/SKILLS-INDEX.md", skillsIndex, ide),
         file(".claude/WORKFLOW-ROUTING.md", workflowRouting, ide),
+        ...briefs,
+        ...skills,
+        ...agents,
+        ...commands,
         block("CLAUDE.md", sharedInstructions + claudeCodeInstructions, ide),
       ];
     }
@@ -372,6 +396,15 @@ function toGeminiCommand(description: string, prompt: string): string {
   return `description = ${JSON.stringify(description)}\nprompt = """\n${escaped}\n"""\n`;
 }
 
+// KV-cache pinned paths must sort first so they form a stable prefix in every
+// invocation context. Claude Code's context builder loads files in manifest
+// order — routing artifacts appearing first maximises KV-cache hits across
+// repeated invocations of different workflows.
+const KV_CACHE_PINNED = new Set([
+  ".claude/skills/SKILLS-INDEX.md",
+  ".claude/WORKFLOW-ROUTING.md",
+]);
+
 function mergeRenderedFiles(files: RenderedFile[]): RenderedFile[] {
   const merged = new Map<string, RenderedFile>();
   for (const candidate of files) {
@@ -389,7 +422,12 @@ function mergeRenderedFiles(files: RenderedFile[]): RenderedFile[] {
     }
     existing.owners = [...new Set([...existing.owners, ...candidate.owners])];
   }
-  return [...merged.values()].sort((left, right) => left.path.localeCompare(right.path));
+  return [...merged.values()].sort((left, right) => {
+    const lp = KV_CACHE_PINNED.has(left.path) ? 0 : 1;
+    const rp = KV_CACHE_PINNED.has(right.path) ? 0 : 1;
+    if (lp !== rp) return lp - rp;
+    return left.path.localeCompare(right.path);
+  });
 }
 
 export function isIdeId(input: string): input is IdeId {

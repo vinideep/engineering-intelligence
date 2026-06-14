@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: staleness-detector
 description: Compares knowledge-base document timestamps against related source file modification times, scores each document 0-100 for freshness, triggers incremental sync when freshness drops below threshold, and adds freshness metadata to document headers.
@@ -14,8 +16,8 @@ This capability does not modify product code.
 
 - Repository root path
 - Knowledge base directory (`knowledge-base/`)
-- Memory directory (`.engineering-intelligence/memory/`)
-- Context directory (`.engineering-intelligence/context/`)
+- Memory directory (`$EImemory/`)
+- Context directory (`$EIcontext/`)
 - Optional: specific document or module to check
 - Optional: custom freshness threshold (default: 60)
 
@@ -23,9 +25,9 @@ This capability does not modify product code.
 
 1. **Inventory knowledge documents** — Enumerate all documents in:
    - `knowledge-base/*.md` (00 through 16)
-   - `.engineering-intelligence/memory/*.md`
-   - `.engineering-intelligence/context/*.md`
-   - `.engineering-intelligence/graph/*.json`
+   - `$EImemory/*.md`
+   - `$EIcontext/*.md`
+   - `$EIgraph/*.json`
 
    For each document, extract:
    - Document path
@@ -115,7 +117,7 @@ This capability does not modify product code.
    | Referenced file moved | Update evidence citations, re-verify claims |
    | Multiple documents stale for same module | Recommend module-level re-discovery |
 
-7. **Generate FRESHNESS-report.md** — Write to `.engineering-intelligence/reports/FRESHNESS-report.md`:
+7. **Generate FRESHNESS-report.md** — Write to `$EIreports/FRESHNESS-report.md`:
 
    ```markdown
    # Freshness Report
@@ -187,7 +189,7 @@ This capability does not modify product code.
 - [ ] Score interpretation matches the defined status table
 - [ ] Freshness metadata is injected without modifying document content
 - [ ] Section-level confidence metadata is added for H2 sections where evidence can be resolved
-- [ ] FRESHNESS-report.md exists at `.engineering-intelligence/reports/FRESHNESS-report.md`
+- [ ] FRESHNESS-report.md exists at `$EIreports/FRESHNESS-report.md`
 - [ ] Structural changes (deleted/moved files) are detected and reported
 - [ ] Documents below threshold are queued for incremental sync
 - [ ] Module-level aggregation is included in the report
@@ -198,7 +200,7 @@ This capability does not modify product code.
 - Used by: `ongoing-learning-engine` (for freshness monitoring)
 - Uses: `incremental-sync-engine` (to refresh stale documents)
 - Consumed by: `engineering-intelligence-skill`, `engineering-orchestrator`
-- Feeds into: `.engineering-intelligence/reports/FRESHNESS-report.md`
+- Feeds into: `$EIreports/FRESHNESS-report.md`
 - Related: `knowledge-base-validator` (validates content accuracy; staleness-detector validates currency)
 
 This capability does not modify product code.

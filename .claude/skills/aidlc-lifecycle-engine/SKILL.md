@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: aidlc-lifecycle-engine
 description: Runs the adaptive AI-DLC lifecycle with Discovery, Inception, Construction, Operations, durable artifacts, hatted agents, and objective completion gates.
@@ -10,31 +12,31 @@ Use this skill inside the existing Engineering Intelligence workflows. It is not
 
 ## Runtime Artifacts
 
-Use `.engineering-intelligence/aidlc/` as the canonical AI-DLC root:
+Use `$AIDLC` as the canonical AI-DLC root:
 
 | Path | Purpose |
 |---|---|
-| `.engineering-intelligence/aidlc/aidlc-state.md` | Active phase, stage, workflow, hat, unit, and completion status |
-| `.engineering-intelligence/aidlc/audit.md` | Append-only chronological log of decisions, user answers, tool checks, and transitions |
-| `.engineering-intelligence/aidlc/open-questions.md` | Unresolved ambiguities and owner/status |
-| `.engineering-intelligence/aidlc/execution-plan.md` | Adaptive stage plan with mandatory/conditional/skipped stages |
-| `.engineering-intelligence/aidlc/checkpoints.md` | Resume checkpoints after major workflow steps |
-| `.engineering-intelligence/aidlc/discovery/vision.md` | Business objectives, personas, value, success metrics |
-| `.engineering-intelligence/aidlc/discovery/technical-environment.md` | Runtime, deployment, integrations, data stores, auth, constraints |
-| `.engineering-intelligence/aidlc/agile/product-backlog.md` | High-level epics, priorities, dependencies, and status |
-| `.engineering-intelligence/aidlc/agile/backlog/` | Hierarchical Epic → Feature → Ticket backlog with stable IDs, dependency graph, and per-feature approval gates, owned by `backlog-decomposition-engine` |
-| `.engineering-intelligence/aidlc/agile/sprint-plan.md` | Active sprint goal, selected stories, capacity, risks, and commitments |
-| `.engineering-intelligence/aidlc/agile/acceptance-criteria.md` | Story-level acceptance criteria expressed as executable validation targets |
-| `.engineering-intelligence/aidlc/agile/definition-of-ready.md` | Readiness checklist before construction |
-| `.engineering-intelligence/aidlc/agile/definition-of-done.md` | Completion checklist after validation and sync |
-| `.engineering-intelligence/aidlc/agile/retrospective.md` | Lessons, process improvements, recurring risks, and follow-ups |
-| `.engineering-intelligence/aidlc/inception/requirements.md` | Validated functional requirements and edge cases |
-| `.engineering-intelligence/aidlc/inception/reverse-engineering/` | Brownfield architecture, API, code structure, component inventory, technology stack |
-| `.engineering-intelligence/aidlc/construction/cross-unit-discoveries.md` | Shared discoveries from parallel or sequential units |
-| `.engineering-intelligence/aidlc/construction/<unit>/` | Unit functional design, NFR design, ADRs, code plan, build/test evidence |
-| `.engineering-intelligence/aidlc/operations/` | Deployment readiness, observability, runbooks, rollback notes |
+| `$AIDLCaidlc-state.md` | Active phase, stage, workflow, hat, unit, and completion status |
+| `$AIDLCaudit.md` | Append-only chronological log of decisions, user answers, tool checks, and transitions |
+| `$AIDLCopen-questions.md` | Unresolved ambiguities and owner/status |
+| `$AIDLCexecution-plan.md` | Adaptive stage plan with mandatory/conditional/skipped stages |
+| `$AIDLCcheckpoints.md` | Resume checkpoints after major workflow steps |
+| `$AIDLCdiscovery/vision.md` | Business objectives, personas, value, success metrics |
+| `$AIDLCdiscovery/technical-environment.md` | Runtime, deployment, integrations, data stores, auth, constraints |
+| `$AIDLCagile/product-backlog.md` | High-level epics, priorities, dependencies, and status |
+| `$AIDLCagile/backlog/` | Hierarchical Epic → Feature → Ticket backlog with stable IDs, dependency graph, and per-feature approval gates, owned by `backlog-decomposition-engine` |
+| `$AIDLCagile/sprint-plan.md` | Active sprint goal, selected stories, capacity, risks, and commitments |
+| `$AIDLCagile/acceptance-criteria.md` | Story-level acceptance criteria expressed as executable validation targets |
+| `$AIDLCagile/definition-of-ready.md` | Readiness checklist before construction |
+| `$AIDLCagile/definition-of-done.md` | Completion checklist after validation and sync |
+| `$AIDLCagile/retrospective.md` | Lessons, process improvements, recurring risks, and follow-ups |
+| `$AIDLCinception/requirements.md` | Validated functional requirements and edge cases |
+| `$AIDLCinception/reverse-engineering/` | Brownfield architecture, API, code structure, component inventory, technology stack |
+| `$AIDLCconstruction/cross-unit-discoveries.md` | Shared discoveries from parallel or sequential units |
+| `$AIDLCconstruction/<unit>/` | Unit functional design, NFR design, ADRs, code plan, build/test evidence |
+| `$AIDLCoperations/` | Deployment readiness, observability, runbooks, rollback notes |
 
-These AI-DLC files complement `knowledge-base/`, `.engineering-intelligence/memory/`, `.engineering-intelligence/context/`, `.engineering-intelligence/graph/`, `.engineering-intelligence/reports/`, and `.changes/`.
+These AI-DLC files complement `knowledge-base/`, `$EImemory/`, `$EIcontext/`, `$EIgraph/`, `$EIreports/`, and `.changes/`.
 
 ## Embedded Agile + AI-DLC Model
 
@@ -132,7 +134,7 @@ Each stage must end with binary evidence:
 
 ## Checkpoint And Resume
 
-Write `.engineering-intelligence/aidlc/checkpoints.md` and update `aidlc-state.md` after each major step:
+Write `$AIDLCcheckpoints.md` and update `aidlc-state.md` after each major step:
 
 | Checkpoint | Meaning | Resume Action |
 |---|---|---|
@@ -153,7 +155,7 @@ If the user asks for dry run, preview, or plan-only execution:
 - Show files likely to change and why
 - Run safe current-state checks such as type/lint/test discovery
 - Do not edit product code
-- Write a pre-flight report under `.engineering-intelligence/reports/`
+- Write a pre-flight report under `$EIreports/`
 
 ## Environmental Backpressure
 

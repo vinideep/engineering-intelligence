@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: security-audit-engine
 description: Performs evidence-based security audits covering dependency vulnerabilities, auth/authz patterns, secrets detection, OWASP Top 10 compliance, and input validation. Use during initialization, before releases, or when security-sensitive changes are detected.
@@ -98,7 +100,7 @@ Identify security risks through systematic, evidence-backed analysis of dependen
 7. **Targeted Dependency-Risk Output** — During implementation runs triggered by new or upgraded packages, write a lighter unit artifact instead of conflating the result with a full audit:
 
    ```text
-   .engineering-intelligence/aidlc/construction/<unit>/dependency-risk-summary.md
+   $AIDLCconstruction/<unit>/dependency-risk-summary.md
    ```
 
    This summary must include CVE, license, maintenance, and bundle impact findings for changed dependencies. Critical CVEs block completion.

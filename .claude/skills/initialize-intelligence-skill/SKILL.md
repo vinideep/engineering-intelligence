@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: initialize-intelligence-skill
 description: Initializes project engineering intelligence by analyzing repository evidence and generating knowledge, context, memory, event guidance, architecture graphs, and an initialization change record. Invoke when onboarding a repository or when asked to initialize engineering intelligence.
@@ -38,7 +40,7 @@ Generate the following artifacts in order:
 | `14-glossary.md` | Domain terms, abbreviations, naming conventions |
 | `15-validation-report.md` | Evidence audit of all claims made above |
 
-### Durable Memory (`.engineering-intelligence/memory/`)
+### Durable Memory (`$EImemory/`)
 
 | Document | Content |
 |---|---|
@@ -48,7 +50,7 @@ Generate the following artifacts in order:
 | `project-constraints.md` | Performance budgets, compatibility, regulatory |
 | `technology-decisions.md` | Stack choices, version policies, deprecation plans |
 
-### Navigation Context (`.engineering-intelligence/context/`)
+### Navigation Context (`$EIcontext/`)
 
 | Document | Content |
 |---|---|
@@ -59,7 +61,7 @@ Generate the following artifacts in order:
 | `dangerous-areas.md` | Fragile code, missing tests, race conditions |
 | `dependency-map.md` | External deps → internal consumers → risk |
 
-### Event Guidance (`.engineering-intelligence/events/`)
+### Event Guidance (`$EIevents/`)
 
 | Document | Trigger |
 |---|---|
@@ -69,7 +71,7 @@ Generate the following artifacts in order:
 | `feature-added.md` | When new user-facing features are introduced |
 | `infrastructure-changed.md` | When CI, deployment, or infra config changes |
 
-### Architecture Graphs (`.engineering-intelligence/graph/`)
+### Architecture Graphs (`$EIgraph/`)
 
 | Artifact | Content |
 |---|---|

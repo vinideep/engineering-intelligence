@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: pr-intelligence-engine
 description: Generates intelligent PR descriptions, reviewer suggestions, impact summaries, and split recommendations from change records and git intelligence. Use before submitting or reviewing pull requests.
@@ -12,7 +14,7 @@ Produce evidence-backed PR artifacts that accelerate review cycles and improve c
 
 - Change records from `.changes/CHG-XXX-*.md`
 - Git diff or commit range for the PR
-- Ownership mapping from `git-intelligence-engine` (`.engineering-intelligence/reports/GIT-intelligence.md`)
+- Ownership mapping from `git-intelligence-engine` (`$EIreports/GIT-intelligence.md`)
 - Impact report from `impact-analysis-engine` (when available)
 - Architecture decisions from `knowledge-base/`
 

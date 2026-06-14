@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 description: Incrementally synchronize intelligence artifacts for an identified change without modifying product code.
 argument-hint: <scope, e.g. the current working-tree diff>

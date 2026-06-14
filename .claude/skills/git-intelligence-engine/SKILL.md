@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: git-intelligence-engine
 description: Extracts structural intelligence from git history — hotspot analysis, ownership mapping, change coupling, velocity tracking, and drift detection. Feeds graph intelligence and impact analysis with git-derived edges.
@@ -68,16 +70,16 @@ Extract actionable intelligence from git history to reveal hidden dependencies, 
    | Merge complexity | Estimated effort to reconcile (based on overlapping changes) |
    | Stale branches | Branches with no commits in >30 days |
 
-7. **Feed Graph Intelligence** — Write git-derived edges to `.engineering-intelligence/graph/`:
+7. **Feed Graph Intelligence** — Write git-derived edges to `$EIgraph/`:
    - Add `co-changes-with` edges to `dependency-graph.json` for verified change-coupled pairs
    - Add `owned-by` metadata to graph nodes based on ownership mapping
    - Mark edge confidence based on analysis evidence
 
-8. **Generate Report** — Write `.engineering-intelligence/reports/GIT-intelligence.md` with all findings, ranked by actionability.
+8. **Generate Report** — Write `$EIreports/GIT-intelligence.md` with all findings, ranked by actionability.
 
 ## Output Format
 
-Write `.engineering-intelligence/reports/GIT-intelligence.md`:
+Write `$EIreports/GIT-intelligence.md`:
 
 ```markdown
 # Git Intelligence Report

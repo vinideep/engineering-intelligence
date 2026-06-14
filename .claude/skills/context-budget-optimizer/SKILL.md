@@ -1,3 +1,5 @@
+> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
+
 ---
 name: context-budget-optimizer
 description: Minimizes AI IDE token usage by ranking, slicing, summarizing, and lazy-loading project intelligence while preserving required gates and output quality.
@@ -26,7 +28,7 @@ If the AI IDE exposes a context-window size, estimate against that. If not, use 
 Before loading full documents, create or update:
 
 ```text
-.engineering-intelligence/context/context-manifest.md
+$EIcontext/context-manifest.md
 ```
 
 Format:
@@ -42,7 +44,7 @@ Format:
 ## Ranked Context
 | Rank | Artifact | Sections / Keys | Reason | Estimated Tokens | Load Mode |
 |---:|---|---|---|---:|---|
-| 1 | `.engineering-intelligence/context/module-map.md` | auth row | direct scope | 120 | slice |
+| 1 | `$EIcontext/module-map.md` | auth row | direct scope | 120 | slice |
 | 2 | `knowledge-base/04-api-documentation.md` | H2: Auth API | API contract | 500 | section |
 ```
 
@@ -72,7 +74,7 @@ Format:
      - Load snapshots only when API replay applies.
 
 5. **Summarize And Cache**
-   - Write compact summaries to `.engineering-intelligence/context/context-manifest.md`.
+   - Write compact summaries to `$EIcontext/context-manifest.md`.
    - Store pointers to source evidence instead of copying long excerpts.
    - Reuse manifest rankings during resume/checkpoint flows.
 
