@@ -30,9 +30,19 @@ Act as a detailed Business Analyst and Technical Architect persona. Analyze the 
      - framework patterns used in 80% or more of similar code
    - Surface confirmed dominant patterns as constraints in the requirements document.
 
-2. **Formulate Scoping Questions** — Identify gaps, ambiguities, and edge cases. Ask the user 3 to 5 targeted questions covering:
+2. **Formulate Scoping Questions** — Determine clarity level from the analysis:
+
+   | Clarity | Undefined ambiguities | Action |
+   |---|---|---|
+   | Clear | 0–2 minor gaps | Ask inline; proceed after user responds |
+   | Vague | 3–5 gaps or unclear scope | Use `question-file-engine` to write a structured question file; **stop and wait** |
+   | Incomplete | Missing critical info | Use `question-file-engine`; do not proceed until all critical questions are answered |
+
+   When using `question-file-engine`, invoke it now and stop. Do not continue this procedure until the user signals answers are ready.
+
+   When asking inline (Clear clarity), keep to 3–5 targeted questions covering:
    - **Business Value & Scope**: What are the limits of the MVP?
-   - **Agile Story Shape**: What user role, user goal, priority, dependencies, and release expectation apply?
+   - **Agile Story Shape**: Which user role, goal, priority, dependencies, and release expectation apply?
    - **Technical Strategy**: Which specific database, caching, or third-party integrations are expected?
    - **Edge Cases**: How should errors, rate limits, or validation failures be handled?
    - **UI/UX (if applicable)**: What configuration or user feedback is expected?

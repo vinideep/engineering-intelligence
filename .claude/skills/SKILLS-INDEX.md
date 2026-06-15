@@ -30,6 +30,7 @@
 | `greenfield-architect` | Interview-based skill for new greenfield projects. Conducts a structured requirements interview (7-12 quest… |
 | `git-intelligence-engine` | Extracts structural intelligence from git history — hotspot analysis, ownership mapping, change coupling, v… |
 | `pr-intelligence-engine` | Generates intelligent PR descriptions, reviewer suggestions, impact summaries, and split recommendations fr… |
+| `question-file-engine` | Writes structured MCQ clarification files to .engineering-intelligence/aidlc/open-questions/ instead of ask… |
 | `staleness-detector` | Compares knowledge-base document timestamps against related source file modification times, scores each doc… |
 | `security-audit-engine` | Performs evidence-based security audits covering dependency vulnerabilities, auth/authz patterns, secrets d… |
 | `performance-analysis-engine` | Identifies performance issues through static analysis of database query patterns, frontend bundle size, ren… |

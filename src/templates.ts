@@ -35,6 +35,7 @@ export const SKILL_NAMES = [
   "greenfield-architect",
   "git-intelligence-engine",
   "pr-intelligence-engine",
+  "question-file-engine",
   "staleness-detector",
   "security-audit-engine",
   "performance-analysis-engine",
@@ -268,6 +269,12 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
   for (const requiredContract of ["Token Budget", "Context Manifest", "Lazy Loading", "40%"]) {
     if (!contextBudget.includes(requiredContract)) {
       errors.push(`context-budget-optimizer does not define required token optimization contract: ${requiredContract}`);
+    }
+  }
+  const questionFile = await readTemplate("skills", "question-file-engine").catch(() => "");
+  for (const requiredContract of ["open-questions", "questions answered, continue", "Re-read", "Multiple", "Stop"]) {
+    if (!questionFile.includes(requiredContract)) {
+      errors.push(`question-file-engine does not define required question file contract: ${requiredContract}`);
     }
   }
   return errors;

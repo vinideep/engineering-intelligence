@@ -298,6 +298,40 @@ test("KV-cache pinned files appear before all other claude-code rendered files",
   assert.ok(idx1 < firstNonPinned, "SKILLS-INDEX.md must precede non-pinned files");
 });
 
+test("question-file-engine skill ships for Claude Code with correct content and routing", async () => {
+  const files = await renderAdapters(["claude-code"]);
+  const paths = new Set(files.map((item) => item.path));
+
+  // Skill ships with full skill and brief files.
+  assert.ok(paths.has(".claude/skills/question-file-engine/SKILL.md"), "question-file-engine SKILL.md must ship");
+  assert.ok(paths.has(".claude/skills/question-file-engine/SKILL-BRIEF.md"), "question-file-engine SKILL-BRIEF.md must ship");
+
+  // Skill content defines the question file pattern.
+  const skill = files.find((item) => item.path === ".claude/skills/question-file-engine/SKILL.md").content;
+  assert.match(skill, /open-questions/, "skill must reference open-questions path");
+  assert.match(skill, /questions answered.*continue/i, "skill must define resume trigger phrase");
+  assert.match(skill, /Re-read.*disk|disk.*re-read/i, "skill must enforce disk re-read on resume");
+  assert.match(skill, /Do not proceed/, "skill must instruct AI to stop and wait");
+
+  // Skill is in the routing table for scope-requirement and decompose-backlog.
+  const routing = files.find((item) => item.path === ".claude/WORKFLOW-ROUTING.md").content;
+  assert.match(routing, /question-file-engine/, "question-file-engine must appear in WORKFLOW-ROUTING.md");
+
+  // Depth level and never-vibe-code are in engineering-intelligence-skill.
+  const eiSkill = files.find((item) => item.path === ".claude/skills/engineering-intelligence-skill/SKILL.md").content;
+  assert.match(eiSkill, /Minimal/i, "engineering-intelligence-skill must define Minimal depth level");
+  assert.match(eiSkill, /Comprehensive/i, "engineering-intelligence-skill must define Comprehensive depth level");
+  assert.match(eiSkill, /vibe.?code/i, "engineering-intelligence-skill must include never-vibe-code principle");
+
+  // scope-requirement and decompose-backlog commands reference question-file-engine.
+  const scopeCmd = files.find((item) => item.path === ".claude/commands/scope-requirement.md").content;
+  assert.match(scopeCmd, /question-file-engine/, "scope-requirement command must reference question-file-engine");
+  const decomposeCmd = files.find((item) => item.path === ".claude/commands/decompose-backlog.md").content;
+  assert.match(decomposeCmd, /question-file-engine/, "decompose-backlog command must reference question-file-engine");
+
+  assert.deepEqual(await validateRender(["claude-code"]), []);
+});
+
 test("antigravity-cli adapter writes agents to .agents/ (plural) matching CLI workspace path", async () => {
   const files = await renderAdapters(["antigravity-cli"]);
   const paths = new Set(files.map((item) => item.path));
@@ -309,3 +343,4 @@ test("antigravity-cli adapter writes agents to .agents/ (plural) matching CLI wo
   assert.ok(paths.has(".agents/workflows/engineering-intelligence.md"));
   assert.ok(!paths.has(".agent/agents/engineering-orchestrator/agent.json"), "CLI must not write to .agent/ (singular)");
 });
+

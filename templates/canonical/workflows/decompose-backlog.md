@@ -12,12 +12,13 @@ Analyze the user-supplied initiative: a product brief, epic-sized request, or la
 
 ## Pipeline
 
-1. **Read Intelligence** — Consult `knowledge-base/`, `.engineering-intelligence/graph/`, `.engineering-intelligence/memory/`, and existing `.engineering-intelligence/aidlc/` artifacts.
-2. **Decompose** — Run `backlog-decomposition-engine` to frame epics, slice features, and cut tickets with stable IDs (`EPIC-XXX`, `FEAT-XXX`, `TKT-XXX`).
-3. **Write Backlog** — Create artifacts under `.engineering-intelligence/aidlc/agile/backlog/`: `backlog-index.md`, `epics/`, `features/`, `tickets/`, and `dependency-graph.md`. Keep `agile/product-backlog.md` and `execution-plan.md` consistent.
-4. **Map Dependencies** — Emit a topological execution order and mark parallel-safe work in `dependency-graph.md`.
-5. **Set Approval Gates** — Every feature is created with `Approval: pending`. No implementation occurs in this workflow.
-6. **Optional Sync** — If the user requested it, or a GitHub remote is detected and sync is enabled, run `issue-tracker-sync-engine` and record `sync/tracker-sync-map.md`.
+1. **Clarify Scope** — If the initiative description is vague or missing key decisions (target users, excluded scope, phasing, integration boundaries), use `question-file-engine` to write a structured clarification file at `.engineering-intelligence/aidlc/open-questions/`. Stop and wait for the user to fill answers and signal "questions answered, continue" before decomposing.
+2. **Read Intelligence** — Consult `knowledge-base/`, `.engineering-intelligence/graph/`, `.engineering-intelligence/memory/`, and existing `.engineering-intelligence/aidlc/` artifacts.
+3. **Decompose** — Run `backlog-decomposition-engine` to frame epics, slice features, and cut tickets with stable IDs (`EPIC-XXX`, `FEAT-XXX`, `TKT-XXX`).
+4. **Write Backlog** — Create artifacts under `.engineering-intelligence/aidlc/agile/backlog/`: `backlog-index.md`, `epics/`, `features/`, `tickets/`, and `dependency-graph.md`. Keep `agile/product-backlog.md` and `execution-plan.md` consistent.
+5. **Map Dependencies** — Emit a topological execution order and mark parallel-safe work in `dependency-graph.md`.
+6. **Set Approval Gates** — Every feature is created with `Approval: pending`. No implementation occurs in this workflow.
+7. **Optional Sync** — If the user requested it, or a GitHub remote is detected and sync is enabled, run `issue-tracker-sync-engine` and record `sync/tracker-sync-map.md`.
 
 ## Completion Report
 

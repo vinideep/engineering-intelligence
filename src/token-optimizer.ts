@@ -77,6 +77,7 @@ export const WORKFLOW_SKILL_ROUTING: Record<
       "change-history-engine",
       "environmental-backpressure-engine",
       "testing-intelligence-engine",
+      "question-file-engine",
     ],
   },
   "initialize-engineering-intelligence": {
@@ -90,7 +91,7 @@ export const WORKFLOW_SKILL_ROUTING: Record<
   },
   "decompose-backlog": {
     primary: ["backlog-decomposition-engine", "context-budget-optimizer"],
-    optional: ["issue-tracker-sync-engine", "aidlc-lifecycle-engine"],
+    optional: ["issue-tracker-sync-engine", "aidlc-lifecycle-engine", "question-file-engine"],
   },
   "deliver-backlog": {
     primary: ["aidlc-lifecycle-engine", "engineering-intelligence-skill"],
@@ -118,7 +119,7 @@ export const WORKFLOW_SKILL_ROUTING: Record<
   },
   "scope-requirement": {
     primary: ["requirement-scoper"],
-    optional: ["context-budget-optimizer", "aidlc-lifecycle-engine"],
+    optional: ["context-budget-optimizer", "aidlc-lifecycle-engine", "question-file-engine"],
   },
   "discover-codebase": {
     primary: ["codebase-discovery-engine", "convention-detector", "graph-engine"],

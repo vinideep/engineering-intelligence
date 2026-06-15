@@ -8,7 +8,7 @@
     {
       "path": ".claude/skills/SKILLS-INDEX.md",
       "kind": "file",
-      "hash": "5b7ecd01682dd84f99c8a81289f393902e0727104b080769affbb5523b4cf9e5",
+      "hash": "1691d5939377293176fcfc1074f067cff4435e967fd162b600b339e2d6cd1af7",
       "owners": [
         "claude-code"
       ]
@@ -16,7 +16,7 @@
     {
       "path": ".claude/WORKFLOW-ROUTING.md",
       "kind": "file",
-      "hash": "f0437915aabd815704cfb63b0a2e42b99c949d1e1b30917cda3794ae8e3cdc40",
+      "hash": "bc61fab9cca50c569695ff6e03b3072e8ed9dc832e6290a4f2d999d5678c088e",
       "owners": [
         "claude-code"
       ]
@@ -160,7 +160,7 @@
     {
       "path": ".claude/commands/decompose-backlog.md",
       "kind": "file",
-      "hash": "a717966f42d5b8d9332aba9c5e98c4ac7b7551b70df79b23c5a83eade5808c60",
+      "hash": "9eff1aafa1e900b05dbc3576d6eae022c36ea50862f76333df7487b4a578f450",
       "owners": [
         "claude-code"
       ]
@@ -216,7 +216,7 @@
     {
       "path": ".claude/commands/scope-requirement.md",
       "kind": "file",
-      "hash": "6c876052159dd8f5650491f448c2b5add5e624fbc7479aa504011f228323fd3f",
+      "hash": "736addd8d0c5658512dfbea7ec891ed6f0f2cd8ce9754d64fa46ffcb405fbd83",
       "owners": [
         "claude-code"
       ]
@@ -528,7 +528,7 @@
     {
       "path": ".claude/skills/engineering-intelligence-skill/SKILL.md",
       "kind": "file",
-      "hash": "cfa97bafa32f11e43d97757df903609e9a499a259fddfcb275d4a86ddb008efa",
+      "hash": "997d90fde69f0c48e3c0d5457f7d4ea56b714a4b0b7401b4ef86993d9209f58a",
       "owners": [
         "claude-code"
       ]
@@ -838,6 +838,22 @@
       ]
     },
     {
+      "path": ".claude/skills/question-file-engine/SKILL-BRIEF.md",
+      "kind": "file",
+      "hash": "447bece7cb0f80d712a388d9dd24b8fd18bf72ed3ba865d68b550b29b3c6c43b",
+      "owners": [
+        "claude-code"
+      ]
+    },
+    {
+      "path": ".claude/skills/question-file-engine/SKILL.md",
+      "kind": "file",
+      "hash": "9709d195c2e3615661a097452d0aa9ea7f21a4b3dcb46da51f0c0e288a441174",
+      "owners": [
+        "claude-code"
+      ]
+    },
+    {
       "path": ".claude/skills/refactoring-planner/SKILL-BRIEF.md",
       "kind": "file",
       "hash": "a1d2e59fbdcf5aec4876dac679b9ca01cab5bb78c4328bf036da9e70d36d301d",
@@ -864,7 +880,7 @@
     {
       "path": ".claude/skills/requirement-scoper/SKILL.md",
       "kind": "file",
-      "hash": "31e8dceba28251c2f4cb185f848c06708c526d8e0b1e63fe81bb4423bd3bcc0e",
+      "hash": "5baed63f75876e9dcff2954061a73c90e91b4efe3c3d5b80c2313a43f3e7b42d",
       "owners": [
         "claude-code"
       ]
@@ -944,5 +960,5 @@
     }
   ],
   "installedAt": "2026-06-14T06:09:18.721Z",
-  "updatedAt": "2026-06-14T08:06:50.375Z"
+  "updatedAt": "2026-06-15T16:04:32.806Z"
 }

@@ -319,6 +319,13 @@ const SKILL_CATALOG: Record<string, SkillInfo> = {
     usedBy: ["backlog-decomposition-engine"],
     dependsOn: [],
   },
+  "question-file-engine": {
+    name: "Question File Engine",
+    category: "planning",
+    description: "Creates structured MCQ clarification files instead of asking inline. Enables context reset and durable decision artifacts.",
+    usedBy: ["requirement-scoper", "backlog-decomposition-engine"],
+    dependsOn: [],
+  },
 };
 
 const CATEGORY_COLORS: Record<string, string> = {

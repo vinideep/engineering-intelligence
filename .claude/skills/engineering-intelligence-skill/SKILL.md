@@ -29,6 +29,20 @@ Classify the incoming request before starting:
 | `security` | Auth, permissions, vulnerability fixes | High |
 | `documentation` | Knowledge-only changes (no product code) | Low |
 
+## Depth Level
+
+Determine execution depth from the user's request before proceeding:
+
+| Signal words | Depth | Effect |
+|---|---|---|
+| "minimal", "quick", "sketch", "spike", "prototype" | **Minimal** | Skip optional gates; lightweight impact report; no full sync; use existing intelligence as-is |
+| (default — no explicit signal) | **Standard** | Full procedure; all applicable gates; incremental sync after changes |
+| "comprehensive", "thorough", "production-critical", "audit" | **Comprehensive** | All gates mandatory; extended scope analysis; full intelligence sync; cross-reference all ADRs |
+
+Record the depth on line 2 of the impact report header. For **Minimal** depth, list which gates were skipped and why.
+
+**Context gate (Standard and Comprehensive):** On high-risk or architecture-level changes, commit all intelligence artifacts and the current execution plan to git before starting implementation. This creates a clean recovery point if the context window fills mid-implementation.
+
 ## Procedure
 
 ### 1. Pre-Flight: Read Intelligence
@@ -274,6 +288,13 @@ Summarize to the user:
 - [ ] Change record references the correct impact report
 - [ ] High-risk changes went through review gate
 - [ ] Generated code follows detected project conventions (naming, imports, structure)
+
+## Rules
+
+- **Never vibe-code** — Do not edit files directly without first recording the change in the impact report. If an urgent direct edit is unavoidable, log the file and reason in the impact report's "direct edits" section and update design artifacts before marking the work done.
+- Always write the impact report before any code edit.
+- Never claim validation passed unless it actually ran and passed.
+- Record partial or failed validation honestly.
 
 ## Cross-References
 

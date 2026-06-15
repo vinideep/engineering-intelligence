@@ -12,8 +12,10 @@ Use the `requirement-scoper` capability to interactively scope and document a us
 ## Pipeline
 
 1. **Read Context** — Read `knowledge-base/`, `$AIDLC`, `$EImemory/`, and `$EIgraph/` mapping files.
-2. **Draft Questions** — Generate 3 to 5 targeted business/tech questions clarifying the requirements, user story, acceptance criteria, dependencies, and Definition of Ready.
-3. **Iterate** — Prompt the user for answers in the chat pane.
+2. **Draft Questions** — Assess clarity level:
+   - **Vague or Incomplete** (3+ ambiguities, unclear scope, or missing critical info): Use `question-file-engine` to write a structured MCQ clarification file at `$AIDLCopen-questions/`. Stop and wait for the user to fill answers and signal "questions answered, continue" before proceeding.
+   - **Clear** (0–2 minor gaps): Ask 3–5 targeted questions inline and iterate.
+3. **Iterate** — Wait for user responses (from question file or inline). Adjust assumptions based on answers.
 4. **Document Scoping** — Create or update `knowledge-base/19-requirements.md` and `$AIDLCagile/` artifacts with goals, user stories, acceptance criteria, edge cases, dependencies, and the Q&A log.
 5. **Finalize Prompt** — Output the exact `/engineering-intelligence` command required to build the ready story.
 
