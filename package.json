@@ -3,6 +3,14 @@
   "version": "1.6.0",
   "description": "Install and visualize graph-backed engineering intelligence skills, agents, and workflows for AI coding IDEs.",
   "type": "module",
+  "homepage": "https://github.com/vinideep/engineering-intelligence#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vinideep/engineering-intelligence.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vinideep/engineering-intelligence/issues"
+  },
   "bin": {
     "engineering-intelligence": "./dist/cli/index.js"
   },
@@ -21,6 +29,10 @@
   "keywords": [
     "agent-skills",
     "ai-ide",
+    "ai-dlc",
+    "agentic-workflows",
+    "token-optimization",
+    "agile",
     "codex",
     "claude-code",
     "cursor",

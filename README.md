@@ -1,8 +1,43 @@
-# Engineering Intelligence OS
+<h1 align="center">Engineering Intelligence OS</h1>
 
-`engineering-intelligence` installs a reusable, graph-backed Agile + AI-DLC engineering-orchestration toolkit into a software repository for AI coding IDEs. The installed skills and workflows teach the IDE agent how to initialize an evidence-based project knowledge base, maintain backlog and acceptance criteria, map architecture, analyze change impact, preserve lifecycle state, govern NFRs/ADRs, use environmental backpressure, and keep intelligence synchronized while implementing engineering work.
+<p align="center">
+  <strong>Turn any AI coding IDE into a disciplined engineering team.</strong><br>
+  One install drops a graph-backed Agile + AI-DLC toolkit — 45 skills, 15 specialist agents, and 11 workflows — into your repo, and teaches the agent to plan, implement, validate, and keep its own project knowledge in sync.
+</p>
 
-The installer does **not** inspect the target source code, call an AI model, or generate documentation itself. That work occurs later inside the selected IDE when a developer invokes the installed workflow.
+<p align="center">
+  <a href="https://www.npmjs.com/package/engineering-intelligence"><img src="https://img.shields.io/npm/v/engineering-intelligence?color=cb3837&logo=npm" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/engineering-intelligence"><img src="https://img.shields.io/npm/dm/engineering-intelligence?color=cb3837&logo=npm" alt="npm downloads"></a>
+  <a href="https://github.com/vinideep/engineering-intelligence/stargazers"><img src="https://img.shields.io/github/stars/vinideep/engineering-intelligence?style=flat&logo=github&color=yellow" alt="GitHub stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/npm/l/engineering-intelligence?color=blue" alt="MIT license"></a>
+  <img src="https://img.shields.io/node/v/engineering-intelligence?color=brightgreen&logo=node.js" alt="node version">
+</p>
+
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#why-this-exists">Why</a> ·
+  <a href="#use-in-a-target-repository">Workflows</a> ·
+  <a href="#autonomous-epic--feature--ticket-backlog">Autonomous backlog</a> ·
+  <a href="WORKFLOW_GUIDE.md">Full guide</a>
+</p>
+
+---
+
+## Why This Exists
+
+AI coding agents are powerful but undisciplined: they forget architecture between sessions, skip impact analysis, drift from your conventions, and burn context re-reading the same files. `engineering-intelligence` installs the missing scaffolding so the agent works like a senior team instead of an eager intern.
+
+| Most AI IDE setups | With Engineering Intelligence |
+| --- | --- |
+| Agent re-learns the codebase every session | Evidence-based knowledge base + architecture graphs persist across sessions |
+| Jumps straight to code | Writes an impact report and plans Agile/AI-DLC work first |
+| Ad-hoc, one prompt at a time | Autonomous Epic → Feature → Ticket backlog with per-feature human approval gates |
+| Locked to one tool | One toolkit, **9 AI IDEs** (Claude Code, Cursor, Copilot, Gemini, Codex, Antigravity, and more) |
+| Bloated context, high token cost | **~54% fewer tokens per invocation** via a lossless tiered skill-loading system |
+
+The installer does **not** inspect your source, call an AI model, or generate docs itself. It ships the skills, agents, and workflows; the real work happens inside your IDE when you invoke them.
+
+> ⭐ **If this saves you time, [star the repo](https://github.com/vinideep/engineering-intelligence)** — it's the fastest way to help others discover it.
 
 ## Supported IDEs
 
@@ -192,3 +227,18 @@ To add an IDE adapter:
 4. Document the host’s actual invocation support in the supported IDE table.
 
 To improve workflow behavior, edit canonical templates under `templates/canonical/` and keep generated runtime paths host-neutral.
+
+## Contributing
+
+Contributions are welcome — new IDE adapters, workflow improvements, and skills are all great first issues. Run `npm test` before opening a PR; the adapter and lifecycle suites cover generated paths, multi-adapter compatibility, and update/uninstall behavior. See the [workflow guide](WORKFLOW_GUIDE.md) for the bigger picture.
+
+## License
+
+[MIT](LICENSE) — free for personal and commercial use.
+
+---
+
+<p align="center">
+  Built to make AI coding agents accountable.<br>
+  <strong>⭐ <a href="https://github.com/vinideep/engineering-intelligence">Star the repo</a></strong> if it helped, and share what you build.
+</p>
