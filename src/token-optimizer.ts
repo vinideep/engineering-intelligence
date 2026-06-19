@@ -131,7 +131,10 @@ export const WORKFLOW_SKILL_ROUTING: Record<
   },
 };
 
-export function generateWorkflowRouting(): string {
+export const SKILLS_INDEX_FILENAME = "SKILLS-INDEX.md";
+export const WORKFLOW_ROUTING_FILENAME = "WORKFLOW-ROUTING.md";
+
+export function generateWorkflowRouting(skillsDir = ".claude/skills"): string {
   const rows = (Object.entries(WORKFLOW_SKILL_ROUTING) as [string, { primary: string[]; optional: string[] }][])
     .map(([cmd, r]) => {
       const primary = r.primary.map((s) => `\`${s}\``).join(", ");
@@ -145,7 +148,7 @@ export function generateWorkflowRouting(): string {
     "> **Read this before loading any skill files.**",
     "> For each primary skill: load `SKILL-BRIEF.md` to understand it (~150t), then `SKILL.md` to execute.",
     "> Load **optional** skills only when the request explicitly requires that capability.",
-    "> Skill files are in `.claude/skills/<name>/` (SKILL-BRIEF.md and SKILL.md).",
+    `> Skill files are in \`${skillsDir}/<name>/\` (SKILL-BRIEF.md and SKILL.md).`,
     "",
     "| Command | Primary Skills — load first | Optional Skills — load if needed |",
     "|---|---|---|",
@@ -168,6 +171,7 @@ function parseFrontmatterDescription(content: string): string {
  */
 export async function generateSkillsIndex(
   skillNames: ReadonlyArray<string>,
+  skillsDir = ".claude/skills",
 ): Promise<string> {
   const rows = await Promise.all(
     skillNames.map(async (name) => {
@@ -184,7 +188,7 @@ export async function generateSkillsIndex(
     "> **Token-saving routing layer.** Read this index first.",
     "> Identify the 1-3 skills relevant to the request.",
     "> Tiered loading: `SKILL-BRIEF.md` (~150t) → understand the skill. `SKILL.md` → execute the procedure.",
-    "> Both files live at `.claude/skills/<name>/`.",
+    `> Both files live at \`${skillsDir}/<name>/\`.`,
     "",
     "| Skill | Purpose |",
     "|---|---|",

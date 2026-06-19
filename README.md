@@ -33,7 +33,7 @@ AI coding agents are powerful but undisciplined: they forget architecture betwee
 | Jumps straight to code | Writes an impact report and plans Agile/AI-DLC work first |
 | Ad-hoc, one prompt at a time | Autonomous Epic → Feature → Ticket backlog with per-feature human approval gates |
 | Locked to one tool | One toolkit, **9 AI IDEs** (Claude Code, Cursor, Copilot, Gemini, Codex, Antigravity, and more) |
-| Bloated context, high token cost | **~54% fewer tokens per invocation** via a lossless tiered skill-loading system |
+| Bloated context, high token cost | **~28–37% fewer tokens per invocation** via a measured, regression-guarded optimization pipeline (path aliasing, skills index, tiered briefs, SmartCrush, KV-cache-friendly ordering) — now applied across **all 9 IDEs** |
 
 The installer does **not** inspect your source, call an AI model, or generate docs itself. It ships the skills, agents, and workflows; the real work happens inside your IDE when you invoke them.
 

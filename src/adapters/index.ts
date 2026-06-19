@@ -1,5 +1,7 @@
 import { AGENT_NAMES, SKILL_NAMES, WORKFLOW_NAMES, readTemplate } from "../templates.js";
 import {
+  SKILLS_INDEX_FILENAME,
+  WORKFLOW_ROUTING_FILENAME,
   generateAllSkillBriefs,
   generateSkillsIndex,
   generateWorkflowRouting,
@@ -48,6 +50,8 @@ This repository uses installed engineering intelligence workflows.
 - Before non-trivial edits, write an impact report; after edits, validate and incrementally synchronize only affected intelligence and graph artifacts.
 - AI-DLC work must preserve durable state in \`.engineering-intelligence/aidlc/aidlc-state.md\`, maintain Agile artifacts, use environmental backpressure, and end with an \`AI-DLC: <phase> -> <stage> -> <status>\` breadcrumb.
 - Base documentation claims on repository evidence and identify unknowns explicitly.
+- **Prefer persisted intelligence over re-exploration.** Before reading source files to understand the codebase, read the persisted knowledge base in \`knowledge-base/\`, context maps in \`.engineering-intelligence/context/\`, and architecture graphs in \`.engineering-intelligence/graph/\`. Re-read source only for the specific files a task touches. Run \`sync-engineering-intelligence\` to refresh these artifacts incrementally rather than re-deriving from scratch each session.
+- **Route before loading skills.** Consult the installed \`WORKFLOW-ROUTING.md\` and \`SKILLS-INDEX.md\` in your IDE's skills directory before opening any individual \`SKILL.md\`. Load only the 1-3 skills relevant to the current request.
 `;
 
 /**
@@ -91,7 +95,11 @@ function block(path: string, content: string, owner: IdeId): RenderedFile {
 async function skillsAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
   return Promise.all(
     SKILL_NAMES.map(async (name) =>
-      file(`${directory}/${name}/SKILL.md`, await readTemplate("skills", name), owner),
+      file(
+        `${directory}/${name}/SKILL.md`,
+        withPathOptimizations(smartCrush(await readTemplate("skills", name))),
+        owner,
+      ),
     ),
   );
 }
@@ -99,7 +107,11 @@ async function skillsAt(directory: string, owner: IdeId): Promise<RenderedFile[]
 async function workflowsAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
   return Promise.all(
     WORKFLOW_NAMES.map(async (name) =>
-      file(`${directory}/${name}.md`, await readTemplate("workflows", name), owner),
+      file(
+        `${directory}/${name}.md`,
+        withPathOptimizations(smartCrush(await readTemplate("workflows", name))),
+        owner,
+      ),
     ),
   );
 }
@@ -144,19 +156,6 @@ async function claudeCommandsAt(directory: string, owner: IdeId): Promise<Render
   );
 }
 
-// Render skill files for Claude Code: SmartCrush + path aliases applied.
-async function optimizedSkillsAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
-  return Promise.all(
-    SKILL_NAMES.map(async (name) =>
-      file(
-        `${directory}/${name}/SKILL.md`,
-        withPathOptimizations(smartCrush(await readTemplate("skills", name))),
-        owner,
-      ),
-    ),
-  );
-}
-
 // Render SKILL-BRIEF.md (tier-2 CCR) for each skill. Briefs are ~150t each vs
 // ~1,200t for full skills; AI loads briefs first to confirm relevance, then
 // loads SKILL.md at execution time.
@@ -165,6 +164,41 @@ async function skillBriefsAt(directory: string, owner: IdeId): Promise<RenderedF
   return SKILL_NAMES.map((name) =>
     file(`${directory}/${name}/SKILL-BRIEF.md`, briefs.get(name) ?? "", owner),
   );
+}
+
+interface SkillBundleProfile {
+  skillsDir: string;
+  indexPath: string;
+  routingPath: string;
+  emitBriefs: boolean;
+}
+
+async function skillBundle(owner: IdeId, p: SkillBundleProfile): Promise<RenderedFile[]> {
+  const [index, skills, briefs] = await Promise.all([
+    generateSkillsIndex(SKILL_NAMES, p.skillsDir),
+    skillsAt(p.skillsDir, owner),
+    p.emitBriefs ? skillBriefsAt(p.skillsDir, owner) : Promise.resolve([]),
+  ]);
+  const routing = generateWorkflowRouting(p.skillsDir);
+  return [
+    file(p.indexPath, index, owner),
+    file(p.routingPath, routing, owner),
+    ...briefs,
+    ...skills,
+  ];
+}
+
+function routingInstructions(routingPath: string, indexPath: string): string {
+  return `
+## Token-Efficient Skill Loading
+
+**Before loading any skill file, consult:**
+1. \`${routingPath}\` — primary/optional skill map per workflow command (~400t)
+2. \`${indexPath}\` — one-line description of all skills (~1,500t)
+
+Load **optional** skills only when the request explicitly requires that capability.
+Path aliases in skill files: \`$AIDLC\`=\`.engineering-intelligence/aidlc/\`, \`$EI\`=\`.engineering-intelligence/\`. Expand before writing file paths.
+`;
 }
 
 function parseFrontmatter(content: string): { meta: Record<string, string>; body: string } {
@@ -278,63 +312,108 @@ async function agentsAsJsonAt(directory: string, owner: IdeId): Promise<Rendered
 
 async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
   switch (ide) {
-    case "antigravity":
+    case "antigravity": {
+      const ruleContent = withPathOptimizations(smartCrush(await readTemplate("rules", "engineering-intelligence")));
+      const [bundle, agents, workflows] = await Promise.all([
+        skillBundle(ide, {
+          skillsDir: ".agent/skills",
+          indexPath: `.agent/skills/${SKILLS_INDEX_FILENAME}`,
+          routingPath: `.agent/${WORKFLOW_ROUTING_FILENAME}`,
+          emitBriefs: false,
+        }),
+        agentsAsJsonAt(".agent/agents", ide),
+        workflowsAt(".agent/workflows", ide),
+      ]);
       return [
-        ...(await skillsAt(".agent/skills", ide)),
-        ...(await agentsAsJsonAt(".agent/agents", ide)),
-        ...(await workflowsAt(".agent/workflows", ide)),
-        file(
-          ".agent/rules/engineering-intelligence.md",
-          await readTemplate("rules", "engineering-intelligence"),
-          ide,
-        ),
+        ...bundle,
+        ...agents,
+        ...workflows,
+        file(".agent/rules/engineering-intelligence.md", ruleContent, ide),
       ];
-    case "antigravity-cli":
+    }
+    case "antigravity-cli": {
+      const [bundle, agents, workflows] = await Promise.all([
+        skillBundle(ide, {
+          skillsDir: ".agents/skills",
+          indexPath: `.agents/skills/${SKILLS_INDEX_FILENAME}`,
+          routingPath: `.agents/${WORKFLOW_ROUTING_FILENAME}`,
+          emitBriefs: false,
+        }),
+        agentsAsJsonAt(".agents/agents", ide),
+        workflowsAt(".agents/workflows", ide),
+      ]);
       return [
-        ...(await skillsAt(".agents/skills", ide)),
-        ...(await agentsAsJsonAt(".agents/agents", ide)),
-        ...(await workflowsAt(".agents/workflows", ide)),
+        ...bundle,
+        ...agents,
+        ...workflows,
         block("AGENTS.md", sharedInstructions, ide),
       ];
-    case "codex":
-      return [...(await skillsAt(".agents/skills", ide)), block("AGENTS.md", sharedInstructions, ide)];
-    case "generic":
-      return [...(await skillsAt(".agents/skills", ide)), block("AGENTS.md", sharedInstructions, ide)];
+    }
+    case "codex": {
+      const bundle = await skillBundle(ide, {
+        skillsDir: ".agents/skills",
+        indexPath: `.agents/skills/${SKILLS_INDEX_FILENAME}`,
+        routingPath: `.agents/${WORKFLOW_ROUTING_FILENAME}`,
+        emitBriefs: false,
+      });
+      return [...bundle, block("AGENTS.md", sharedInstructions, ide)];
+    }
+    case "generic": {
+      const bundle = await skillBundle(ide, {
+        skillsDir: ".agents/skills",
+        indexPath: `.agents/skills/${SKILLS_INDEX_FILENAME}`,
+        routingPath: `.agents/${WORKFLOW_ROUTING_FILENAME}`,
+        emitBriefs: false,
+      });
+      return [...bundle, block("AGENTS.md", sharedInstructions, ide)];
+    }
     case "claude-code": {
-      const [skillsIndex, workflowRouting, briefs, skills, agents, commands] = await Promise.all([
-        generateSkillsIndex(SKILL_NAMES),
-        Promise.resolve(generateWorkflowRouting()),
-        skillBriefsAt(".claude/skills", ide),
-        optimizedSkillsAt(".claude/skills", ide),
+      const [bundle, agents, commands] = await Promise.all([
+        skillBundle(ide, {
+          skillsDir: ".claude/skills",
+          indexPath: `.claude/skills/${SKILLS_INDEX_FILENAME}`,
+          routingPath: `.claude/${WORKFLOW_ROUTING_FILENAME}`,
+          emitBriefs: true,
+        }),
         agentsAt(".claude/agents", ide),
         claudeCommandsAt(".claude/commands", ide),
       ]);
       return [
-        file(".claude/skills/SKILLS-INDEX.md", skillsIndex, ide),
-        file(".claude/WORKFLOW-ROUTING.md", workflowRouting, ide),
-        ...briefs,
-        ...skills,
+        ...bundle,
         ...agents,
         ...commands,
         block("CLAUDE.md", sharedInstructions + claudeCodeInstructions, ide),
       ];
     }
     case "cursor": {
-      const rule = `---\ndescription: Engineering Intelligence orchestration and synchronization rules\nalwaysApply: true\n---\n\n${await readTemplate("rules", "engineering-intelligence")}`;
+      const ruleContent = withPathOptimizations(smartCrush(await readTemplate("rules", "engineering-intelligence")));
+      const rule = `---\ndescription: Engineering Intelligence orchestration and synchronization rules\nalwaysApply: true\n---\n\n${ruleContent}`;
       return [
         file(".cursor/rules/engineering-intelligence.mdc", rule, ide),
         ...(await workflowsAt(".cursor/commands", ide)),
       ];
     }
     case "github-copilot": {
-      const agentFiles = await agentsAt(".github/agents", ide);
-      const promptFiles = await Promise.all(
-        WORKFLOW_NAMES.map(async (name) =>
-          file(`.github/prompts/${name}.prompt.md`, await readTemplate("workflows", name), ide),
+      const [bundle, agentFiles, promptFiles] = await Promise.all([
+        skillBundle(ide, {
+          skillsDir: ".github/skills",
+          indexPath: `.github/skills/${SKILLS_INDEX_FILENAME}`,
+          routingPath: `.github/${WORKFLOW_ROUTING_FILENAME}`,
+          emitBriefs: false,
+        }),
+        agentsAt(".github/agents", ide),
+        Promise.all(
+          WORKFLOW_NAMES.map(async (name) =>
+            file(
+              `.github/prompts/${name}.prompt.md`,
+              withPathOptimizations(smartCrush(await readTemplate("workflows", name))),
+              ide,
+            ),
+          ),
         ),
-      );
+      ]);
       return [
-        ...(await skillsAt(".github/skills", ide)),
+        ...bundle,
         ...agentFiles,
         ...promptFiles,
         block(".github/copilot-instructions.md", sharedInstructions, ide),
@@ -354,37 +433,49 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
         "decompose-backlog": "Autonomously decompose an initiative into an epic, feature, and ticket backlog without modifying product code.",
         "deliver-backlog": "Deliver a decomposed backlog feature by feature with a human approval gate before each feature.",
       };
-      const commands = await Promise.all(
-        WORKFLOW_NAMES.map(async (name) => {
-          const workflow = await readTemplate("workflows", name);
-          const prompt = INPUT_WORKFLOWS.has(name)
-            ? `${workflow}\n\nUser supplied scope or request: {{args}}`
-            : workflow;
-          return file(
-            `.gemini/commands/${name}.toml`,
-            toGeminiCommand(workflowDescriptions[name], prompt),
-            ide,
-          );
+      const [bundle, commands] = await Promise.all([
+        skillBundle(ide, {
+          skillsDir: ".agents/skills",
+          indexPath: `.agents/skills/${SKILLS_INDEX_FILENAME}`,
+          routingPath: `.agents/${WORKFLOW_ROUTING_FILENAME}`,
+          emitBriefs: false,
         }),
-      );
+        Promise.all(
+          WORKFLOW_NAMES.map(async (name) => {
+            const workflow = withPathOptimizations(smartCrush(await readTemplate("workflows", name)));
+            const prompt = INPUT_WORKFLOWS.has(name)
+              ? `${workflow}\n\nUser supplied scope or request: {{args}}`
+              : workflow;
+            return file(`.gemini/commands/${name}.toml`, toGeminiCommand(workflowDescriptions[name], prompt), ide);
+          }),
+        ),
+      ]);
       return [
-        ...(await skillsAt(".agents/skills", ide)),
+        ...bundle,
         ...commands,
         block("GEMINI.md", sharedInstructions, ide),
       ];
     }
     case "commandcode": {
-      const commands = await Promise.all(
-        WORKFLOW_NAMES.map(async (name) => {
-          const workflow = await readTemplate("workflows", name);
-          const prompt = INPUT_WORKFLOWS.has(name)
-            ? `${workflow}\n\nUser supplied scope or request: $ARGUMENTS`
-            : workflow;
-          return file(`.commandcode/commands/${name}.md`, prompt, ide);
+      const [bundle, commands] = await Promise.all([
+        skillBundle(ide, {
+          skillsDir: ".commandcode/skills",
+          indexPath: `.commandcode/skills/${SKILLS_INDEX_FILENAME}`,
+          routingPath: `.commandcode/${WORKFLOW_ROUTING_FILENAME}`,
+          emitBriefs: true,
         }),
-      );
+        Promise.all(
+          WORKFLOW_NAMES.map(async (name) => {
+            const workflow = withPathOptimizations(smartCrush(await readTemplate("workflows", name)));
+            const prompt = INPUT_WORKFLOWS.has(name)
+              ? `${workflow}\n\nUser supplied scope or request: $ARGUMENTS`
+              : workflow;
+            return file(`.commandcode/commands/${name}.md`, prompt, ide);
+          }),
+        ),
+      ]);
       return [
-        ...(await skillsAt(".commandcode/skills", ide)),
+        ...bundle,
         ...commands,
         block("AGENTS.md", sharedInstructions, ide),
       ];
@@ -397,14 +488,12 @@ function toGeminiCommand(description: string, prompt: string): string {
   return `description = ${JSON.stringify(description)}\nprompt = """\n${escaped}\n"""\n`;
 }
 
-// KV-cache pinned paths must sort first so they form a stable prefix in every
-// invocation context. Claude Code's context builder loads files in manifest
-// order — routing artifacts appearing first maximises KV-cache hits across
-// repeated invocations of different workflows.
-const KV_CACHE_PINNED = new Set([
-  ".claude/skills/SKILLS-INDEX.md",
-  ".claude/WORKFLOW-ROUTING.md",
-]);
+// KV-cache pinned files sort first across ALL IDEs so routing artifacts form
+// a stable, cacheable prefix on every invocation. Suffix-based matching
+// generalises to every IDE's directory layout without a hardcoded set.
+function isKvCachePinned(path: string): boolean {
+  return path.endsWith(SKILLS_INDEX_FILENAME) || path.endsWith(WORKFLOW_ROUTING_FILENAME);
+}
 
 function mergeRenderedFiles(files: RenderedFile[]): RenderedFile[] {
   const merged = new Map<string, RenderedFile>();
@@ -424,8 +513,8 @@ function mergeRenderedFiles(files: RenderedFile[]): RenderedFile[] {
     existing.owners = [...new Set([...existing.owners, ...candidate.owners])];
   }
   return [...merged.values()].sort((left, right) => {
-    const lp = KV_CACHE_PINNED.has(left.path) ? 0 : 1;
-    const rp = KV_CACHE_PINNED.has(right.path) ? 0 : 1;
+    const lp = isKvCachePinned(left.path) ? 0 : 1;
+    const rp = isKvCachePinned(right.path) ? 0 : 1;
     if (lp !== rp) return lp - rp;
     return left.path.localeCompare(right.path);
   });

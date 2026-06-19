@@ -10,9 +10,12 @@ export async function validateRender(ides: IdeId[]): Promise<string[]> {
   const errors = await validateCanonicalTemplates();
   const rendered = await renderAdapters(ides);
   for (const item of rendered) {
+    // Flag only the genuinely obsolete runtime output paths; `.agent/skills`, `.agent/workflows`,
+    // `.agent/rules`, `.agent/agents` are legitimate Antigravity IDE paths.
     if (
       !item.path.endsWith(".json") &&
-      (item.content.includes(".agent/") ||
+      (item.content.includes(".agent/memory") ||
+        item.content.includes(".agent/context") ||
         item.content.includes(".agents/memory") ||
         item.content.includes(".agents/context"))
     ) {
@@ -20,12 +23,13 @@ export async function validateRender(ides: IdeId[]): Promise<string[]> {
     }
   }
   const allContent = rendered.map((item) => item.content).join("\n");
-  // Path aliases ($AIDLC, $EIG, $EIR) are the compressed forms of these paths in claude-code
-  // rendered files; accept either the full path or its alias as proof the path is described.
+  // After universal path aliasing, `.engineering-intelligence/` becomes `$EI` in all skill files,
+  // so `.engineering-intelligence/graph/` becomes `$EIgraph/` and `.engineering-intelligence/reports/`
+  // becomes `$EIreports/`. The alias preamble preserves `.engineering-intelligence/aidlc/` literally.
   for (const [requiredPath, alias] of [
     [".engineering-intelligence/aidlc/", "$AIDLC"],
-    [".engineering-intelligence/graph/", "$EIG"],
-    [".engineering-intelligence/reports/", "$EIR"],
+    [".engineering-intelligence/graph/", "$EIgraph/"],
+    [".engineering-intelligence/reports/", "$EIreports/"],
   ] as [string, string][]) {
     if (!allContent.includes(requiredPath) && !allContent.includes(alias)) {
       errors.push(`Rendered templates do not describe required runtime path: ${requiredPath}`);
