@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+*.tgz
+.DS_Store
+package/
+
+# Dogfooding / generated artifacts — not part of the published package
+.claude/
+.engineering-intelligence/
+knowledge-base/
+
+# Internal marketing kit — not for the public repo
+MARKETING.md

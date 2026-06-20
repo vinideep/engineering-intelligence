@@ -1,0 +1,52 @@
+{
+  "name": "engineering-intelligence",
+  "version": "1.7.0",
+  "description": "Install and visualize graph-backed engineering intelligence skills, agents, and workflows for AI coding IDEs.",
+  "type": "module",
+  "homepage": "https://github.com/vinideep/engineering-intelligence#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vinideep/engineering-intelligence.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vinideep/engineering-intelligence/issues"
+  },
+  "bin": {
+    "engineering-intelligence": "./dist/cli/index.js"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "test": "npm run build && node --test test/adapters.test.mjs test/installer.test.mjs test/templates.test.mjs test/token-reduction.test.mjs test/visualizer.test.mjs",
+    "test:integration": "npm run build && node --test test/install-integration.test.mjs",
+    "prepack": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "agent-skills",
+    "ai-ide",
+    "ai-dlc",
+    "agentic-workflows",
+    "token-optimization",
+    "agile",
+    "codex",
+    "claude-code",
+    "cursor",
+    "copilot",
+    "gemini",
+    "antigravity"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.8.3"
+  }
+}
