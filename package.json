@@ -23,7 +23,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
-    "test": "npm run build && node --test test/*.test.mjs",
+    "test": "npm run build && node --test test/adapters.test.mjs test/installer.test.mjs test/templates.test.mjs test/token-reduction.test.mjs test/visualizer.test.mjs",
+    "test:integration": "npm run build && node --test test/install-integration.test.mjs",
     "prepack": "npm run clean && npm run build"
   },
   "keywords": [
