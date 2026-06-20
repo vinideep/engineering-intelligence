@@ -39,6 +39,23 @@ AI coding agents are powerful but undisciplined: they forget architecture betwee
 
 > The installer does **not** inspect your source, call an AI model, or generate docs itself. It ships the skills, agents, and workflows — the real work happens inside your IDE when you invoke them.
 
+### What it is — and what it isn't
+
+Being precise about this up front, so you can decide if it fits:
+
+**What it is**
+- An installable library of structured **instructions** (skills, agents, workflows) plus the machinery to render them natively into 9 different AI IDEs from one canonical source.
+- A **persistence layer**: it directs the agent to build and reuse an evidence-based knowledge base and architecture graphs across sessions, instead of re-deriving them every time.
+- A **discipline layer**: it asks the agent to run impact analysis and safety gates before non-trivial changes, and to keep its own project knowledge in sync afterward.
+- **Conflict-aware tooling**: install/update tracks content hashes, preserves your own edits, and removes only what it added on uninstall.
+
+**What it isn't**
+- It is **not** a runtime enforcement engine. The skills guide the agent; they don't intercept or block its actions. Their effectiveness depends on your IDE's model following the instructions — strong models follow them well, smaller ones less so.
+- It is **not** a replacement for review. It makes the agent more thorough and consistent; you still own the final call.
+- The **28–37% token reduction** is measured at the rendered-file level (compression + deferred loading) by a regression-guarded test harness (`test/token-reduction.test.mjs`), not from live IDE sessions. It reflects how much less instruction text is loaded per invocation — treat it as a strong directional figure, not a per-session guarantee.
+
+If you want a low-friction start, install it and use just `/initialize-engineering-intelligence` + `/engineering-intelligence` first; adopt the deeper AI-DLC backlog and safety-gate workflows once you've seen the basics fit your team.
+
 ---
 
 ## ⚡ Quick Start
