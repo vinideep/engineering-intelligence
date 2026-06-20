@@ -2,7 +2,8 @@
 
 <p align="center">
   <strong>Turn any AI coding IDE into a disciplined engineering team.</strong><br>
-  One install drops a graph-backed Agile + AI-DLC toolkit — 45 skills, 15 specialist agents, and 11 workflows — into your repo, and teaches the agent to plan, implement, validate, and keep its own project knowledge in sync.
+  One install drops 45 skills, 15 specialist agents, and 11 workflows into your repo —<br>
+  teaching the agent to plan, implement, validate, and keep its own project knowledge in sync.
 </p>
 
 <p align="center">
@@ -14,223 +15,392 @@
 </p>
 
 <p align="center">
-  <a href="#install">Install</a> ·
-  <a href="#why-this-exists">Why</a> ·
-  <a href="#use-in-a-target-repository">Workflows</a> ·
-  <a href="#autonomous-epic--feature--ticket-backlog">Autonomous backlog</a> ·
-  <a href="WORKFLOW_GUIDE.md">Full guide</a>
+  <a href="#-quick-start">Quick Start</a> ·
+  <a href="#-supported-ides">Supported IDEs</a> ·
+  <a href="#-workflow-commands">Workflow Commands</a> ·
+  <a href="#-lifecycle-commands">Lifecycle</a> ·
+  <a href="#-toolkit-contents">What's Included</a> ·
+  <a href="WORKFLOW_GUIDE.md">Full Guide</a>
 </p>
 
 ---
 
 ## Why This Exists
 
-AI coding agents are powerful but undisciplined: they forget architecture between sessions, skip impact analysis, drift from your conventions, and burn context re-reading the same files. `engineering-intelligence` installs the missing scaffolding so the agent works like a senior team instead of an eager intern.
+AI coding agents are powerful but undisciplined: they forget architecture between sessions, skip impact analysis, drift from your conventions, and burn context re-reading the same files. `engineering-intelligence` installs the missing scaffolding so the agent works like a senior engineering team.
 
-| Most AI IDE setups | With Engineering Intelligence |
-| --- | --- |
+| Without Engineering Intelligence | With Engineering Intelligence |
+|---|---|
 | Agent re-learns the codebase every session | Evidence-based knowledge base + architecture graphs persist across sessions |
 | Jumps straight to code | Writes an impact report and plans Agile/AI-DLC work first |
 | Ad-hoc, one prompt at a time | Autonomous Epic → Feature → Ticket backlog with per-feature human approval gates |
-| Locked to one tool | One toolkit, **9 AI IDEs** (Claude Code, Cursor, Copilot, Gemini, Codex, Antigravity, and more) |
-| Bloated context, high token cost | **~28–37% fewer tokens per invocation** via a measured, regression-guarded optimization pipeline (path aliasing, skills index, tiered briefs, SmartCrush, KV-cache-friendly ordering) — now applied across **all 9 IDEs** |
+| Locked to one tool | One toolkit, **9 AI IDEs** — Claude Code, Cursor, Copilot, Gemini, Codex, Antigravity, CommandCode, and more |
+| Bloated context on every call | **28–37% fewer tokens per invocation** via path aliasing, tiered skill loading, routing tables, and KV-cache ordering — applied across all 9 IDEs |
 
-The installer does **not** inspect your source, call an AI model, or generate docs itself. It ships the skills, agents, and workflows; the real work happens inside your IDE when you invoke them.
+> The installer does **not** inspect your source, call an AI model, or generate docs itself. It ships the skills, agents, and workflows — the real work happens inside your IDE when you invoke them.
 
-> ⭐ **If this saves you time, [star the repo](https://github.com/vinideep/engineering-intelligence)** — it's the fastest way to help others discover it.
+---
 
-## Supported IDEs
+## ⚡ Quick Start
 
-| IDE adapter | Installed integration | Invocation |
-| --- | --- | --- |
-| Antigravity | `.agent/skills`, `.agent/rules`, `.agent/workflows` | Native slash workflows |
-| Antigravity CLI | `.agent/skills`, `.agent/rules`, `.agent/workflows`, managed `AGENTS.md` | Native slash workflows |
-| Codex | `.agents/skills`, managed `AGENTS.md` guidance | Mention the installed `$skill-name` in chat |
-| Claude Code | `.claude/skills`, `.claude/agents`, `.claude/commands`, managed `CLAUDE.md` | Native slash workflows |
-| Cursor | `.cursor/rules`, `.cursor/commands` | Native slash workflows |
-| GitHub Copilot | `.github/skills`, `.github/agents`, `.github/prompts`, managed instructions | Use supported skills/prompts or ask for the workflow in chat |
-| Gemini CLI | `.agents/skills`, `.gemini/commands`, managed `GEMINI.md` | Native slash workflows |
-| CommandCode | `.commandcode/skills`, `.commandcode/commands`, managed `AGENTS.md` | Use `/skills` or native slash commands in CommandCode terminal |
-| Generic | `.agents/skills`, managed `AGENTS.md` | Ask the agent to invoke the named workflow |
-
-## Install
-
-From the repository that should receive the toolkit:
+**Step 1 — Install into your project** (run once per project, from the project root):
 
 ```bash
+# Interactive — the CLI will ask which IDE you use
 npx engineering-intelligence
+
+# Or install for a specific IDE directly (no prompt)
+npx engineering-intelligence install . --ide claude-code --yes
 ```
 
-For repeatable or multi-IDE setup:
+**Step 2 — Initialize** (run once inside your AI IDE after installing):
 
-```bash
-npx engineering-intelligence install . --ide antigravity --ide codex --ide cursor --yes
-npx engineering-intelligence install . --ide commandcode --yes
-npx engineering-intelligence install ./my-project --ide claude-code,gemini-cli --dry-run
 ```
-
-With no `--ide` in an interactive terminal, the CLI prompts for one or more adapters. In noninteractive use, `--yes` without an adapter installs the `generic` adapter.
-
-## Use In A Target Repository
-
-Initialize project understanding through the selected AI IDE:
-
-```text
 /initialize-engineering-intelligence
 ```
 
-Then use the engineering workflow for implementation requests:
+**Step 3 — Start building:**
 
-```text
-/engineering-intelligence Add rate limiting to public authentication endpoints
+```
+/engineering-intelligence Add rate limiting to the authentication endpoints
 ```
 
-The standard workflows embed AI-DLC and Agile delivery internally:
+That's it. The agent now plans, implements, validates, and self-documents.
 
-```text
-/scope-requirement Define rate limiting for public authentication endpoints
-/engineering-intelligence Add rate limiting to public authentication endpoints
-/engineering-intelligence Harden public checkout APIs using adversarial delivery mode
-/engineering-intelligence Implement invoice status transition rules using TDD delivery mode
-/engineering-intelligence Migrate orders from MongoDB to PostgreSQL using design-first delivery mode
-/engineering-intelligence Investigate intermittent checkout latency spikes using hypothesis debugging mode
+---
+
+## 🖥 Supported IDEs
+
+Install the adapter that matches your IDE. Each adapter writes to the IDE's native file locations so skills and commands are discovered automatically.
+
+| IDE | Adapter ID | Install Command |
+|-----|-----------|----------------|
+| **Claude Code** (CLI, Desktop, Web) | `claude-code` | `npx engineering-intelligence install . --ide claude-code --yes` |
+| **Cursor** | `cursor` | `npx engineering-intelligence install . --ide cursor --yes` |
+| **GitHub Copilot** (VS Code) | `github-copilot` | `npx engineering-intelligence install . --ide github-copilot --yes` |
+| **Gemini CLI** | `gemini-cli` | `npx engineering-intelligence install . --ide gemini-cli --yes` |
+| **OpenAI Codex CLI** | `codex` | `npx engineering-intelligence install . --ide codex --yes` |
+| **CommandCode** | `commandcode` | `npx engineering-intelligence install . --ide commandcode --yes` |
+| **Antigravity** (GUI) | `antigravity` | `npx engineering-intelligence install . --ide antigravity --yes` |
+| **Antigravity CLI** | `antigravity-cli` | `npx engineering-intelligence install . --ide antigravity-cli --yes` |
+| **Any other AI IDE** | `generic` | `npx engineering-intelligence install . --ide generic --yes` |
+
+**Installing for multiple IDEs at once:**
+
+```bash
+npx engineering-intelligence install . --ide claude-code,cursor,github-copilot --yes
 ```
 
-Use the existing `/engineering-intelligence` workflow for implementation. The orchestrator selects standard Agile delivery, adversarial delivery, TDD delivery, design-first delivery, or hypothesis debugging based on risk and task shape.
+### What gets installed per IDE
 
-V2 also includes read-only-with-respect-to-product-code workflows:
+| IDE | Files Written |
+|-----|--------------|
+| Claude Code | `.claude/skills/` · `.claude/agents/` · `.claude/commands/` · managed block in `CLAUDE.md` |
+| Cursor | `.cursor/rules/` · `.cursor/commands/` |
+| GitHub Copilot | `.github/skills/` · `.github/agents/` · `.github/prompts/` · managed instructions block |
+| Gemini CLI | `.agents/skills/` · `.gemini/commands/` · managed block in `GEMINI.md` |
+| OpenAI Codex | `.agents/skills/` · managed block in `AGENTS.md` |
+| CommandCode | `.commandcode/skills/` · `.commandcode/commands/` · managed block in `AGENTS.md` |
+| Antigravity | `.agent/skills/` · `.agent/rules/` · `.agent/workflows/` |
+| Antigravity CLI | `.agent/skills/` · `.agent/rules/` · `.agent/workflows/` · managed block in `AGENTS.md` |
+| Generic | `.agents/skills/` · managed block in `AGENTS.md` |
 
-```text
+> Managed blocks are clearly delimited sections inside shared files like `CLAUDE.md` and `AGENTS.md`. Content outside the managed block is never touched. Uninstall removes only the managed block.
+
+---
+
+## 🚀 First-Time Setup
+
+### Existing project
+
+```bash
+# 1. Install (terminal)
+npx engineering-intelligence install . --ide claude-code --yes
+
+# 2. Open your AI IDE, then run:
+/initialize-engineering-intelligence
+
+# 3. Optionally map your architecture:
 /map-architecture
-/analyze-impact Introduce a checkout service boundary
-/sync-engineering-intelligence Review the current working-tree diff
-/review-engineering-change Review the current working-tree diff
 ```
 
-`/map-architecture` writes graph intelligence, `/analyze-impact` writes impact reports, `/sync-engineering-intelligence` updates intelligence artifacts, and `/review-engineering-change` writes findings. `/engineering-intelligence` and `/deliver-backlog` are the workflows intended to implement product-code changes.
+`/initialize-engineering-intelligence` reads your codebase and creates:
 
-### Autonomous Epic → Feature → Ticket Backlog
+```
+knowledge-base/                              ← architecture and domain knowledge
+.engineering-intelligence/graph/             ← dependency, service, and architecture graphs
+.engineering-intelligence/aidlc/             ← AI-DLC lifecycle state
+.engineering-intelligence/memory/            ← session memory
+```
 
-For epic-sized initiatives, the toolkit can autonomously decompose work into a durable, hierarchical backlog and then deliver it feature by feature behind a human approval gate:
+### New (greenfield) project
 
-```text
+```bash
+# 1. Create the project directory
+mkdir my-project && cd my-project
+
+# 2. Install the toolkit
+npx engineering-intelligence install . --ide claude-code --yes
+
+# 3. Inside your AI IDE, scaffold the project:
+/create-project Build a TypeScript REST API with PostgreSQL and Stripe
+```
+
+---
+
+## 💬 Workflow Commands
+
+All commands are invoked inside your AI IDE. For IDEs with native slash commands (Claude Code, Cursor, Gemini CLI, CommandCode, Antigravity), use `/command-name`. For chat-based IDEs (GitHub Copilot, Codex, generic), type the workflow name in chat.
+
+### Core implementation workflow
+
+```
+/engineering-intelligence <your request>
+```
+
+Examples:
+
+```
+/engineering-intelligence Add rate limiting to the public authentication endpoints
+/engineering-intelligence Fix the intermittent timeout on the checkout service
+/engineering-intelligence Refactor the user service to extract a billing domain
+/engineering-intelligence Add webhook signature validation for Stripe events
+```
+
+The orchestrator runs the full AI-DLC pipeline internally: freshness check → impact analysis → Agile planning → implementation → safety gates → tests → knowledge sync → change history.
+
+### Delivery modes
+
+Append a delivery mode to the request for specialized workflows:
+
+```
+/engineering-intelligence Harden checkout APIs using adversarial delivery mode
+/engineering-intelligence Add invoice state machine using TDD delivery mode
+/engineering-intelligence Migrate orders to PostgreSQL using design-first delivery mode
+/engineering-intelligence Debug checkout latency spikes using hypothesis debugging mode
+```
+
+| Mode | When to use |
+|------|------------|
+| (default) | Standard Agile delivery — most features and bugfixes |
+| adversarial | Security-sensitive or high-stakes changes |
+| TDD | When tests must drive the design |
+| design-first | Large architectural changes that need an ADR before code |
+| hypothesis debugging | Intermittent bugs or production mysteries |
+
+### Requirement scoping
+
+Use this before implementing to get acceptance criteria, edge cases, and a clear spec:
+
+```
+/scope-requirement Add SSO login for enterprise customers
+/scope-requirement Replace in-memory cache with Redis
+```
+
+### Architecture and impact
+
+```
+/map-architecture                                       ← generate architecture graphs
+/analyze-impact Introduce a checkout service boundary   ← impact report, no code changes
+/review-engineering-change Review the working-tree diff ← engineering review of your changes
+/sync-engineering-intelligence Review the working-tree diff ← sync knowledge after manual edits
+```
+
+### Autonomous Epic → Feature → Ticket backlog
+
+For large initiatives, decompose first, then deliver feature by feature behind a human approval gate:
+
+```
+# Step 1 — decompose the epic into tickets (no code written)
 /decompose-backlog Build a self-serve billing portal with invoices, payment methods, and dunning
+
+# Step 2 — deliver: selects the next ready feature, asks for approval, then implements
 /deliver-backlog
+
+# Step 3 — deliver a specific feature by ID
 /deliver-backlog FEAT-002
 ```
 
-`/decompose-backlog` runs the `backlog-decomposition-engine` to create epics, features, and tickets with stable IDs (`EPIC-XXX`, `FEAT-XXX`, `TKT-XXX`), a dependency graph, and an execution order under `.engineering-intelligence/aidlc/agile/backlog/`. It plans only and does not modify product code. Every feature is created with `Approval: pending`.
+`/decompose-backlog` creates epics, features, and tickets with stable IDs (`EPIC-XXX`, `FEAT-XXX`, `TKT-XXX`) under `.engineering-intelligence/aidlc/agile/backlog/`. Every feature starts with `Approval: pending` — the agent waits for your sign-off before writing any product code.
 
-`/deliver-backlog` selects the next ready feature, **requires a human to approve it**, then implements its tickets one at a time through the engineering-intelligence pipeline, rolling up ticket → feature → epic status. Each subsequent feature re-enters the approval gate.
+### Direct skill invocations
 
-The local markdown backlog is the source of truth. When the target repo has a GitHub remote, `issue-tracker-sync-engine` can mirror the backlog to GitHub Issues (epics, features, and tickets as linked issues), keeping local artifacts authoritative.
+For focused, targeted work without going through the full orchestration pipeline:
 
-Where a host does not expose native custom slash commands, mention the installed skill name or request the same workflow in chat.
-
-For CommandCode terminal projects, install with `--ide commandcode`. The installer writes project-level skills to `.commandcode/skills/` and workflow commands to `.commandcode/commands/`. CommandCode also discovers `.agents/skills/`, but the native `.commandcode/skills/` location has priority, so this adapter uses the native project-level path.
-
-For a step-by-step guide covering new projects, existing projects, CommandCode, daily workflows, safety gates, and maintenance, see [WORKFLOW_GUIDE.md](WORKFLOW_GUIDE.md).
-
-The IDE agent, not this installer, creates and maintains:
-
-```text
-knowledge-base/
-.engineering-intelligence/memory/
-.engineering-intelligence/aidlc/
-.engineering-intelligence/context/
-.engineering-intelligence/events/
-.engineering-intelligence/graph/
-.engineering-intelligence/reports/
-.engineering-intelligence/snapshots/
-.changes/
+```
+/type-safety-engine
+/api-backward-compatibility-engine
+/api-snapshot-testing-engine
+/database-migration-safety-engine
+/environment-variable-auditor
+/adr-compliance-checker
+/dead-code-detector
+/llm-prompt-injection-guard
+/context-budget-optimizer
+/security-audit-engine
+/refactoring-planner
+/debugging-engine
 ```
 
-Graph intelligence includes `dependency-graph.json`, `service-graph.json`, `runtime-graph.json`, `business-flow-graph.json`, and a Mermaid-backed `architecture-map.md`. Impact and review results are stored as `IMP-XXX-*.md` and `REV-XXX-*.md` reports.
+---
 
-Agile + AI-DLC lifecycle state is stored under `.engineering-intelligence/aidlc/`, including `aidlc-state.md`, `audit.md`, `open-questions.md`, `execution-plan.md`, `discovery/`, `agile/`, `inception/`, `construction/`, and `operations/`. The hierarchical backlog lives under `.engineering-intelligence/aidlc/agile/backlog/` as `backlog-index.md`, `epics/`, `features/`, `tickets/`, `dependency-graph.md`, and an optional `sync/tracker-sync-map.md`.
+## 🔧 Lifecycle Commands
 
-The installer reserves only `.engineering-intelligence/install-manifest.json` for safe lifecycle management.
-
-## Lifecycle Commands
+Run these in the terminal (not inside the IDE):
 
 ```bash
-npx engineering-intelligence update . --dry-run
-npx engineering-intelligence update .
+# Check installation health — reports missing files, hash mismatches, legacy folders
 npx engineering-intelligence doctor .
+
+# Check health and output JSON (for CI scripts)
 npx engineering-intelligence doctor . --json
-npx engineering-intelligence visualize . --open
+
+# Preview an update without writing anything
+npx engineering-intelligence update . --dry-run
+
+# Apply updates (files you've locally edited are protected — reported as conflicts)
+npx engineering-intelligence update .
+
+# Force overwrite even locally-edited managed files
+npx engineering-intelligence update . --force
+
+# Generate an interactive HTML dashboard of all installed skills, agents, and workflows
 npx engineering-intelligence visualize .
+
+# Generate and open the dashboard in the browser
+npx engineering-intelligence visualize . --open
+
+# Preview uninstall without removing anything
 npx engineering-intelligence uninstall . --dry-run
+
+# Uninstall (removes only managed content; your files and generated artifacts are untouched)
 npx engineering-intelligence uninstall .
 ```
 
-Installation and update track managed content hashes. Files created by the package are updated only when they still match their installed version. Shared instruction documents such as `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` receive a marked managed block; content outside that block remains user-owned. Locally modified managed content is reported as a conflict and preserved unless `--force` is explicitly provided.
+### Upgrade from V1
 
-`doctor` validates installed files, manifest drift, template paths, and obsolete legacy `.agent` folders.
-
-`visualize` generates an interactive HTML dashboard (`.engineering-intelligence/dashboard.html`) to display the relationship between installed skills, workflows, agents, and artifacts. The `--open` option automatically launches it in the default browser.
-
-Repositories installed with V1 can adopt V2 safely:
+If you installed an earlier version, upgrade in place:
 
 ```bash
 npx engineering-intelligence update .
 ```
 
-The update adds graph/impact skills and workflows and updates untouched managed instruction blocks; locally edited managed files remain protected by conflict reporting.
+The update adds graph/impact skills and workflows, updates untouched managed blocks, and leaves any locally-edited managed files unchanged (reported as conflicts).
 
-## Toolkit Contents
+---
 
-The default package installs only engineering-intelligence capabilities:
+## 🛡 Safety Gates
 
-- initialization, knowledge extraction, and validation
-- adaptive AI-DLC Discovery, Inception, Construction, and Operations lifecycle artifacts embedded into the existing workflows
-- Agile backlog, user stories, acceptance criteria, Definition of Ready, Definition of Done, sprint plan, and retrospective artifacts
-- autonomous Epic → Feature → Ticket backlog decomposition with stable IDs, dependency graph, per-feature approval gates, and optional GitHub Issues sync
-- delivery modes inside `/engineering-intelligence`: standard Agile, adversarial, TDD, design-first, and hypothesis debugging
-- safety gates for type checking, API compatibility, API snapshots, database migrations, dependencies, environment variables, ADR compliance, LLM prompt injection, rollback, and observability
-- context-budget optimization through ranked context manifests, section-level loading, graph slices, and lazy-loaded safety-gate evidence
-- specialist hats for product analysis, architecture, security, data, testing, adversarial validation, performance, compliance, release, SRE, and documentation
-- NFR and ADR governance, MCP security review, operations readiness, and environmental backpressure loops
-- impact and testing intelligence
-- evidence-backed JSON architecture graphs and Mermaid architecture mapping
-- standalone impact, synchronization, and read-only engineering review workflows
-- incremental knowledge, memory, and context synchronization
-- change history, architecture review, and refactoring planning
-- engineering orchestrator, change, quality, and knowledge roles
+The `/engineering-intelligence` workflow applies these gates automatically when relevant:
 
-Earlier experimental trading, PDF, and unrelated workflow assets in this development repository are not exported in the package and are never installed into a target project.
+| Gate | Triggered by |
+|------|-------------|
+| Freshness / drift | Every implementation request |
+| Impact analysis | Every implementation request |
+| Acceptance criteria | Product behavior changes |
+| Type safety | Typed projects |
+| API compatibility | API, SDK, event, webhook, or schema contracts |
+| API snapshots | Replayable API response behavior |
+| Database migration | Migrations, schemas, ORM models, indexes |
+| Dependency security | New or upgraded packages |
+| Environment variable audit | Env vars, config schemas, CI/deploy secrets |
+| ADR compliance | Architecture-governed areas |
+| LLM prompt injection guard | User input reaches LLMs, RAG, or durable memory |
+| Rollback planning | Medium, high, or critical risk changes |
+| Observability | New endpoints, jobs, services, or production paths |
 
-## Development
+---
+
+## 📦 Toolkit Contents
+
+**45 skills** across six domains:
+
+- **Knowledge & architecture:** codebase discovery, graph engine, knowledge extraction, architecture review, change detection, staleness detection, context sync, memory sync, knowledge sync, incremental sync, change history
+- **Planning & delivery:** AI-DLC lifecycle, backlog decomposition, issue tracker sync, requirement scoping, impact analysis, refactoring planner, greenfield architect
+- **Quality & safety:** testing intelligence, type safety, API compatibility, API snapshots, database migration safety, environment variable auditor, ADR compliance, LLM prompt injection guard, MCP security governor, dead code detector, engineering change review, NFR/ADR governor
+- **Operations:** performance analysis, operations readiness, environmental backpressure, context budget optimizer, debugging engine, PR intelligence, convention detector
+- **Security & compliance:** security audit, contract test generator, API backward compatibility
+- **Engineering workflow:** engineering intelligence orchestration, initialize intelligence, ongoing learning
+
+**15 specialist agents:** engineering orchestrator, change agent, quality agent, knowledge agent, system architect, product analyst, security officer, compliance auditor, test engineer, database administrator, performance analyst, documentation writer, release engineer, site reliability engineer, adversary
+
+**11 workflows:** `engineering-intelligence`, `initialize-engineering-intelligence`, `create-project`, `scope-requirement`, `map-architecture`, `analyze-impact`, `review-engineering-change`, `sync-engineering-intelligence`, `discover-codebase`, `decompose-backlog`, `deliver-backlog`
+
+---
+
+## 📁 Generated Artifacts
+
+After regular use, a healthy project contains:
+
+```
+knowledge-base/                                    ← architecture, domain, and API knowledge
+.engineering-intelligence/
+  aidlc/
+    aidlc-state.md                                 ← current AI-DLC lifecycle state
+    execution-plan.md                              ← current sprint plan
+    agile/backlog/                                 ← epics, features, tickets, dependency graph
+    discovery/ inception/ construction/ operations/
+  graph/
+    dependency-graph.json
+    service-graph.json
+    runtime-graph.json
+    business-flow-graph.json
+    architecture-map.md                            ← Mermaid architecture diagram
+  reports/
+    IMP-XXX-*.md                                   ← impact reports
+    REV-XXX-*.md                                   ← engineering review reports
+  memory/                                          ← session memory
+  context/
+    context-manifest.md                            ← ranked context for the current session
+  snapshots/                                       ← API response snapshots
+.changes/
+  CHG-XXX-*.md                                     ← change history
+```
+
+The installer manages only `.engineering-intelligence/install-manifest.json`. Everything else is written by the agent.
+
+---
+
+## 🔨 Development
 
 ```bash
 npm install
-npm test
-npm pack
+npm test       # build + run all tests
+npm run build  # TypeScript compile only
 ```
 
-The source repository is organized as:
+**Source layout:**
 
-```text
-src/adapters/      native IDE renderers
-src/installer/     install, update, conflict, and uninstall behavior
-src/manifest/      managed-content tracking
-src/validation/    doctor and content checks
-templates/canonical/ host-neutral engineering toolkit source
-test/              adapter and installer lifecycle tests
+```
+src/adapters/      IDE renderers — one per adapter
+src/cli/           CLI entry point
+src/installer/     install, update, uninstall, conflict handling
+src/manifest/      managed-content tracking (hashes)
+src/validation/    doctor and template validation
+src/visualizer/    interactive HTML dashboard
+src/token-optimizer.ts  path aliasing, SmartCrush, tiered skills, KV-cache ordering
+templates/canonical/    host-neutral skill, workflow, agent, and rule templates
+test/              adapter, installer, template, and token-reduction tests
 ```
 
-To add an IDE adapter:
+**Adding a new IDE adapter:**
 
-1. Add a renderer in `src/adapters/index.ts` using documented native locations and formats.
-2. Reuse canonical skills and workflow meaning rather than duplicating host-specific logic.
-3. Extend adapter and lifecycle tests to cover generated paths, multi-adapter compatibility, and update/uninstall behavior.
-4. Document the host’s actual invocation support in the supported IDE table.
+1. Add a renderer in `src/adapters/index.ts` targeting the IDE's native file locations.
+2. Reuse canonical skills and workflow templates — don't duplicate logic.
+3. Extend adapter and lifecycle tests for generated paths, multi-adapter deduplication, and update/uninstall behavior.
+4. Document the IDE's invocation method in the supported IDE table.
 
-To improve workflow behavior, edit canonical templates under `templates/canonical/` and keep generated runtime paths host-neutral.
+**Improving workflow behavior:**
+
+Edit canonical templates under `templates/canonical/` — all adapters pull from the same source, so one change propagates everywhere.
+
+---
 
 ## Contributing
 
-Contributions are welcome — new IDE adapters, workflow improvements, and skills are all great first issues. Run `npm test` before opening a PR; the adapter and lifecycle suites cover generated paths, multi-adapter compatibility, and update/uninstall behavior. See the [workflow guide](WORKFLOW_GUIDE.md) for the bigger picture.
+New IDE adapters, workflow improvements, and skills are all welcome. Run `npm test` before opening a PR. The test suite covers generated paths, multi-adapter compatibility, and update/uninstall behavior.
+
+---
 
 ## License
 
@@ -240,5 +410,5 @@ Contributions are welcome — new IDE adapters, workflow improvements, and skill
 
 <p align="center">
   Built to make AI coding agents accountable.<br>
-  <strong>⭐ <a href="https://github.com/vinideep/engineering-intelligence">Star the repo</a></strong> if it helped, and share what you build.
+  <strong>⭐ <a href="https://github.com/vinideep/engineering-intelligence">Star the repo</a></strong> if it helped you ship faster.
 </p>
