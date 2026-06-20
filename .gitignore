@@ -4,6 +4,4 @@ coverage/
 *.tgz
 .DS_Store
 package/
-.engineering-intelligence/token-report.md
-.engineering-intelligence/token-report.csv
 .engineering-intelligence/dashboard.html

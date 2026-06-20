@@ -1,6 +1,6 @@
 {
   "name": "engineering-intelligence",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Install and visualize graph-backed engineering intelligence skills, agents, and workflows for AI coding IDEs.",
   "type": "module",
   "homepage": "https://github.com/vinideep/engineering-intelligence#readme",

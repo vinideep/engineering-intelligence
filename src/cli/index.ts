@@ -6,12 +6,11 @@ import { stdin as input, stdout as output } from "node:process";
 import { fileURLToPath } from "node:url";
 import { isIdeId } from "../adapters/index.js";
 import { install, uninstall, update } from "../installer/index.js";
-import { generateTokenReport, formatMarkdown, formatCsv } from "../report/index.js";
 import { doctor } from "../validation/index.js";
 import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "token-report";
+type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create";
 
 interface Options {
   command: Command;
@@ -22,8 +21,6 @@ interface Options {
   force: boolean;
   json: boolean;
   openBrowser: boolean;
-  format: "md" | "csv";
-  out: string | undefined;
 }
 
 async function packageVersion(): Promise<string> {
@@ -44,7 +41,6 @@ Usage:
   engineering-intelligence doctor [path] [--json]
   engineering-intelligence uninstall [path] [--dry-run] [--force]
   engineering-intelligence visualize [path] [--open]
-  engineering-intelligence token-report [path] [--format md|csv] [--out <file>]
 
 IDE ids: ${IDE_IDS.join(", ")}
 `;
@@ -53,12 +49,7 @@ IDE ids: ${IDE_IDS.join(", ")}
 function parseArgs(args: string[]): Options {
   let command: Command = "install";
   const remaining = [...args];
-  if (
-    remaining[0] &&
-    ["install", "create", "update", "doctor", "uninstall", "visualize", "token-report"].includes(
-      remaining[0],
-    )
-  ) {
+  if (remaining[0] && ["install", "create", "update", "doctor", "uninstall", "visualize"].includes(remaining[0])) {
     command = remaining.shift() as Command;
   }
   if (remaining.includes("--help") || remaining.includes("-h")) {
@@ -72,8 +63,6 @@ function parseArgs(args: string[]): Options {
   let force = false;
   let json = false;
   let openBrowser = false;
-  let format: "md" | "csv" = "md";
-  let out: string | undefined;
   for (let index = 0; index < remaining.length; index += 1) {
     const arg = remaining[index];
     if (arg === "--ide") {
@@ -105,23 +94,6 @@ function parseArgs(args: string[]): Options {
       json = true;
     } else if (arg === "--open") {
       openBrowser = true;
-    } else if (arg === "--format") {
-      const value = remaining[++index];
-      if (value !== "md" && value !== "csv") {
-        throw new Error(`--format must be "md" or "csv".`);
-      }
-      format = value;
-    } else if (arg.startsWith("--format=")) {
-      const value = arg.slice("--format=".length);
-      if (value !== "md" && value !== "csv") {
-        throw new Error(`--format must be "md" or "csv".`);
-      }
-      format = value;
-    } else if (arg === "--out") {
-      out = remaining[++index];
-      if (!out) throw new Error("--out requires a file path.");
-    } else if (arg.startsWith("--out=")) {
-      out = arg.slice("--out=".length);
     } else if (arg.startsWith("-")) {
       throw new Error(`Unknown option "${arg}".`);
     } else if (!target) {
@@ -139,8 +111,6 @@ function parseArgs(args: string[]): Options {
     force,
     json,
     openBrowser,
-    format,
-    out,
   };
 }
 
@@ -194,20 +164,6 @@ async function main(): Promise<void> {
       }
     : undefined;
 
-  if (options.command === "token-report") {
-    const report = await generateTokenReport(options.root);
-    const content =
-      options.format === "csv" ? formatCsv(report) : formatMarkdown(report);
-    const ext = options.format === "csv" ? "csv" : "md";
-    const outPath = options.out
-      ? path.resolve(options.out)
-      : path.join(options.root, ".engineering-intelligence", `token-report.${ext}`);
-    await mkdir(path.dirname(outPath), { recursive: true });
-    await writeFile(outPath, content, "utf8");
-    output.write(`Token report written: ${outPath}\n`);
-    if (readline) readline.close();
-    return;
-  }
   if (options.command === "doctor") {
     const actions = await doctor(options.root);
     if (options.json) {
