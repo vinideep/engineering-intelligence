@@ -266,7 +266,8 @@ async function extractRustImports(filePath: string, root: string): Promise<Impor
         const internalPath = line.match(/^(?:pub\s+)?use\s+(?:crate|super|self)::([\w:]+)/);
         if (internalPath) {
           const modPath = internalPath[1].split("::")[0];
-          const id = `module:${rel.split("/").slice(0, -1).join("/")}/${modPath}`.replace(/^\//, "");
+          const dir = rel.split("/").slice(0, -1).join("/");
+          const id = dir ? `module:${dir}/${modPath}` : `module:${modPath}`;
           nodes.push({ id, kind: "module", label: modPath, confidence: "verified", metadata: {}, evidence: [] });
           edges.push({ from: sourceId, to: id, relation: "imports", confidence: "verified", metadata: {}, evidence: [`${path.relative(root, filePath)}:${i + 1}`] });
         }
