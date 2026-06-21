@@ -104,7 +104,9 @@ Generate the following artifacts in order:
 
 6. **Generate Context** — Create concise, navigational maps. Each map should fit in ~100 lines. Optimize for an AI agent quickly finding the right file, not for human reading.
 
-7. **Build Graphs** — Invoke `graph-engine` to produce all four JSON graphs and `architecture-map.md`. Every node and edge must have `evidence` and `confidence` fields.
+7. **Build Graphs** — Two sub-steps:
+   a. Run `engineering-intelligence map .` (or `npx engineering-intelligence map .` if not globally installed) to generate the real computed `dependency-graph.json` from source code. The CLI output (node count, edge count, graph path) serves as evidence. This graph is fully validated against the schema.
+   b. Invoke `graph-engine` to produce the remaining three JSON graphs (`service-graph.json`, `runtime-graph.json`, `business-flow-graph.json`) and `architecture-map.md`. Every node and edge must have `evidence` and `confidence` fields.
 
 8. **Generate Events** — Write change-event guidance documents that describe what to check and update when specific types of changes occur.
 

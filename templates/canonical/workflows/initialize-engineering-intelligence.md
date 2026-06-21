@@ -29,7 +29,7 @@ Analyzes this repository thoroughly without changing product code. Produces a co
 3. **Validate** — Audit claims against source code; write validation report
 4. **Generate Memory** — Extract durable decisions and patterns
 5. **Generate Context** — Create concise AI navigation maps
-6. **Build Graphs** — Generate evidence-backed architecture graphs
+6. **Build Graphs** — Run `engineering-intelligence map .` (or `npx engineering-intelligence map .`) to generate the real computed dependency graph at `.engineering-intelligence/graph/dependency-graph.json`. Then invoke `graph-engine` to produce service, runtime, and business-flow graphs and `architecture-map.md`
 7. **Initialize AI-DLC + Agile** — Create `aidlc-state.md`, `audit.md`, `open-questions.md`, `execution-plan.md`, `checkpoints.md`, Agile delivery artifacts, and `construction/cross-unit-discoveries.md`
 8. **Audit Memory** — Run memory pruning audit and initialize `.engineering-intelligence/memory/regression-patterns.md`
 9. **Record** — Write initialization change record

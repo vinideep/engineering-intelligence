@@ -5,8 +5,8 @@ import { parseManifests } from "../parsers/manifest.js";
 import { extractImports } from "../parsers/imports.js";
 
 // Directories to skip when walking source files
-const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "coverage", "__pycache__", ".venv", "venv"]);
-const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs", ".py"]);
+const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "coverage", "__pycache__", ".venv", "venv", "vendor", "target", ".gradle"]);
+const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".go", ".rs", ".rb", ".java", ".kt"]);
 
 async function walkSourceFiles(dir: string, root: string, files: string[] = []): Promise<string[]> {
   let entries: string[];

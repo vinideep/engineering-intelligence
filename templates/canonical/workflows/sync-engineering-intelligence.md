@@ -18,7 +18,7 @@ Use `change-detection-engine`, `impact-analysis-engine`, and `incremental-sync-e
 | Memory | `memory-sync-engine` | Only if durable decisions changed |
 | Context | `context-sync-engine` | Only affected navigation maps |
 | Events | Direct update | Only if API/schema/auth contracts changed |
-| Graphs | `graph-engine` (incremental) | Only affected nodes and edges |
+| Graphs | `graph-engine` (incremental) + CLI | Run `engineering-intelligence map . --update --files <changed-files>` to refresh the dependency graph, then apply `graph-engine` incremental update for service/runtime/business-flow graphs |
 | Reports | Impact report update | Add sync notes |
 
 ## Rules

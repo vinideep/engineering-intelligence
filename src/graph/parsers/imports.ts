@@ -168,6 +168,206 @@ async function extractPythonImports(filePath: string, root: string): Promise<Imp
   return { nodes, edges };
 }
 
+async function extractGoImports(filePath: string, root: string): Promise<ImportResult> {
+  let content: string;
+  try {
+    content = await readFile(filePath, "utf8");
+  } catch {
+    return { nodes: [], edges: [] };
+  }
+  const rel = path.relative(root, filePath).replace(/\.go$/, "");
+  const sourceId = `module:${rel}`;
+  const sourceNode: GraphNode = {
+    id: sourceId,
+    kind: "module",
+    label: path.basename(rel),
+    path: rel,
+    confidence: "verified",
+    metadata: {},
+    evidence: [path.relative(root, filePath)],
+  };
+  const nodes: GraphNode[] = [sourceNode];
+  const edges: GraphEdge[] = [];
+
+  // Collect all quoted import paths from single and block imports
+  const importPaths: { spec: string; line: number }[] = [];
+  const lines = content.split("\n");
+  let inBlock = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!inBlock) {
+      // Single: import "pkg" or import alias "pkg"
+      const single = line.match(/^\s*import\s+(?:\w+\s+)?"([^"]+)"/);
+      if (single) { importPaths.push({ spec: single[1], line: i + 1 }); continue; }
+      if (/^\s*import\s*\(/.test(line)) { inBlock = true; continue; }
+    } else {
+      if (/^\s*\)/.test(line)) { inBlock = false; continue; }
+      const entry = line.match(/^\s*(?:\w+\s+)?"([^"]+)"/);
+      if (entry) importPaths.push({ spec: entry[1], line: i + 1 });
+    }
+  }
+
+  for (const { spec, line } of importPaths) {
+    const firstSegment = spec.split("/")[0];
+    // Skip stdlib: first segment has no dot (e.g. "fmt", "net", "os")
+    if (!firstSegment.includes(".")) continue;
+    // External package: use up to 3 path segments as the package id
+    const pkgId = `pkg:${spec.split("/").slice(0, 3).join("/")}`;
+    const pkgLabel = spec.split("/").slice(0, 3).join("/");
+    nodes.push({ id: pkgId, kind: "package", label: pkgLabel, confidence: "verified", metadata: {}, evidence: [] });
+    edges.push({ from: sourceId, to: pkgId, relation: "imports", confidence: "verified", metadata: {}, evidence: [`${path.relative(root, filePath)}:${line}`] });
+  }
+  return { nodes, edges };
+}
+
+async function extractRustImports(filePath: string, root: string): Promise<ImportResult> {
+  let content: string;
+  try {
+    content = await readFile(filePath, "utf8");
+  } catch {
+    return { nodes: [], edges: [] };
+  }
+  const rel = path.relative(root, filePath).replace(/\.rs$/, "");
+  const sourceId = `module:${rel}`;
+  const sourceNode: GraphNode = {
+    id: sourceId,
+    kind: "module",
+    label: path.basename(rel),
+    path: rel,
+    confidence: "verified",
+    metadata: {},
+    evidence: [path.relative(root, filePath)],
+  };
+  const nodes: GraphNode[] = [sourceNode];
+  const edges: GraphEdge[] = [];
+  const RUST_INTERNAL = new Set(["crate", "super", "self"]);
+  const RUST_STDLIB = new Set(["std", "core", "alloc", "proc_macro", "test"]);
+  const lines = content.split("\n");
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    // extern crate name;
+    const extCrate = line.match(/^extern\s+crate\s+(\w+)\s*;/);
+    if (extCrate) {
+      const name = extCrate[1];
+      if (!RUST_STDLIB.has(name)) {
+        const id = `pkg:${name}`;
+        nodes.push({ id, kind: "package", label: name, confidence: "verified", metadata: {}, evidence: [] });
+        edges.push({ from: sourceId, to: id, relation: "imports", confidence: "verified", metadata: {}, evidence: [`${path.relative(root, filePath)}:${i + 1}`] });
+      }
+      continue;
+    }
+    // use path::to::thing or use path::to::{a, b}
+    const useStmt = line.match(/^(?:pub\s+)?use\s+([\w]+)/);
+    if (useStmt) {
+      const root_ = useStmt[1];
+      if (RUST_INTERNAL.has(root_)) {
+        // Internal module — extract path after crate:: / super:: / self::
+        const internalPath = line.match(/^(?:pub\s+)?use\s+(?:crate|super|self)::([\w:]+)/);
+        if (internalPath) {
+          const modPath = internalPath[1].split("::")[0];
+          const id = `module:${rel.split("/").slice(0, -1).join("/")}/${modPath}`.replace(/^\//, "");
+          nodes.push({ id, kind: "module", label: modPath, confidence: "verified", metadata: {}, evidence: [] });
+          edges.push({ from: sourceId, to: id, relation: "imports", confidence: "verified", metadata: {}, evidence: [`${path.relative(root, filePath)}:${i + 1}`] });
+        }
+      } else if (!RUST_STDLIB.has(root_)) {
+        const id = `pkg:${root_}`;
+        nodes.push({ id, kind: "package", label: root_, confidence: "verified", metadata: {}, evidence: [] });
+        edges.push({ from: sourceId, to: id, relation: "imports", confidence: "verified", metadata: {}, evidence: [`${path.relative(root, filePath)}:${i + 1}`] });
+      }
+    }
+  }
+  return { nodes, edges };
+}
+
+async function extractRubyImports(filePath: string, root: string): Promise<ImportResult> {
+  let content: string;
+  try {
+    content = await readFile(filePath, "utf8");
+  } catch {
+    return { nodes: [], edges: [] };
+  }
+  const rel = path.relative(root, filePath).replace(/\.rb$/, "");
+  const sourceId = `module:${rel}`;
+  const sourceNode: GraphNode = {
+    id: sourceId,
+    kind: "module",
+    label: path.basename(rel),
+    path: rel,
+    confidence: "verified",
+    metadata: {},
+    evidence: [path.relative(root, filePath)],
+  };
+  const nodes: GraphNode[] = [sourceNode];
+  const edges: GraphEdge[] = [];
+  const lines = content.split("\n");
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    // require_relative './path'
+    const relReq = line.match(/^require_relative\s+['"]([^'"]+)['"]/);
+    if (relReq) {
+      const resolved = path.relative(root, path.resolve(path.dirname(filePath), relReq[1]));
+      const id = `module:${resolved}`;
+      nodes.push({ id, kind: "module", label: path.basename(resolved), path: resolved, confidence: "verified", metadata: {}, evidence: [] });
+      edges.push({ from: sourceId, to: id, relation: "imports", confidence: "verified", metadata: {}, evidence: [`${path.relative(root, filePath)}:${i + 1}`] });
+      continue;
+    }
+    // require 'name'
+    const req = line.match(/^require\s+['"]([^'"]+)['"]/);
+    if (req) {
+      const name = req[1].split("/")[0];
+      const id = `pkg:${name}`;
+      nodes.push({ id, kind: "package", label: name, confidence: "verified", metadata: {}, evidence: [] });
+      edges.push({ from: sourceId, to: id, relation: "imports", confidence: "verified", metadata: {}, evidence: [`${path.relative(root, filePath)}:${i + 1}`] });
+    }
+  }
+  return { nodes, edges };
+}
+
+async function extractJavaImports(filePath: string, root: string): Promise<ImportResult> {
+  let content: string;
+  try {
+    content = await readFile(filePath, "utf8");
+  } catch {
+    return { nodes: [], edges: [] };
+  }
+  const ext = path.extname(filePath).toLowerCase();
+  const rel = path.relative(root, filePath).replace(ext === ".kt" ? /\.kt$/ : /\.java$/, "");
+  const sourceId = `module:${rel}`;
+  const sourceNode: GraphNode = {
+    id: sourceId,
+    kind: "module",
+    label: path.basename(rel),
+    path: rel,
+    confidence: "verified",
+    metadata: {},
+    evidence: [path.relative(root, filePath)],
+  };
+  const nodes: GraphNode[] = [sourceNode];
+  const edges: GraphEdge[] = [];
+  // Skip stdlib/platform prefixes
+  const SKIP_PREFIXES = ["java.", "javax.", "kotlin.", "android.", "sun.", "com.sun.", "jdk."];
+  const lines = content.split("\n");
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    // import static com.example.Util.method; or import com.example.Class;
+    const imp = line.match(/^import\s+(?:static\s+)?([\w.]+)\s*;/);
+    if (imp) {
+      const fqn = imp[1];
+      if (SKIP_PREFIXES.some((p) => fqn.startsWith(p))) continue;
+      // Use first 2 segments as package id (e.g. com.example)
+      const parts = fqn.split(".");
+      const pkgLabel = parts.slice(0, 2).join(".");
+      const id = `pkg:${pkgLabel}`;
+      nodes.push({ id, kind: "package", label: pkgLabel, confidence: "verified", metadata: {}, evidence: [] });
+      edges.push({ from: sourceId, to: id, relation: "imports", confidence: "verified", metadata: {}, evidence: [`${path.relative(root, filePath)}:${i + 1}`] });
+    }
+  }
+  return { nodes, edges };
+}
+
 export async function extractImports(filePath: string, root: string): Promise<ImportResult> {
   const ext = path.extname(filePath).toLowerCase();
   if ([".ts", ".tsx", ".js", ".mjs", ".cjs"].includes(ext)) {
@@ -175,6 +375,18 @@ export async function extractImports(filePath: string, root: string): Promise<Im
   }
   if (ext === ".py") {
     return extractPythonImports(filePath, root);
+  }
+  if (ext === ".go") {
+    return extractGoImports(filePath, root);
+  }
+  if (ext === ".rs") {
+    return extractRustImports(filePath, root);
+  }
+  if (ext === ".rb") {
+    return extractRubyImports(filePath, root);
+  }
+  if (ext === ".java" || ext === ".kt") {
+    return extractJavaImports(filePath, root);
   }
   return { nodes: [], edges: [] };
 }
