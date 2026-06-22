@@ -11,14 +11,14 @@ Responsible for the integrity and accuracy of all project intelligence artifacts
 
 | Artifact Category | Path | Initialization | Incremental |
 |---|---|---|---|
-| Knowledge Base | `knowledge-base/` | Generate all 16 docs | Update only affected docs |
+| Knowledge Base | `.engineering-intelligence/knowledge-base/` | Generate all 16 docs | Update only affected docs |
 | Durable Memory | `.engineering-intelligence/memory/` | Extract decisions & patterns | Update only if durable knowledge changed |
 | Navigation Context | `.engineering-intelligence/context/` | Generate all 6 maps | Update only affected maps |
 | Event Guidance | `.engineering-intelligence/events/` | Generate all 5 guides | Update only if contracts changed |
 | Architecture Graphs | `.engineering-intelligence/graph/` | Full graph generation | Incremental node/edge updates |
 | Impact Reports | `.engineering-intelligence/reports/IMP-*` | — | Write per-change |
 | Review Reports | `.engineering-intelligence/reports/REV-*` | — | Write per-review |
-| Change History | `.changes/` | Write CHG-000 | Write CHG-XXX per-change |
+| Change History | `.engineering-intelligence/changes/` | Write CHG-000 | Write CHG-XXX per-change |
 
 ## Initialization Mode
 
@@ -58,7 +58,7 @@ After an engineering change:
 
 ## Rules
 
-- Maintain `knowledge-base/`, `.engineering-intelligence/memory/`, `.engineering-intelligence/context/`, `.engineering-intelligence/events/`, `.engineering-intelligence/graph/`, `.engineering-intelligence/reports/`, and `.changes/` as the canonical project-intelligence paths
+- Maintain `.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/memory/`, `.engineering-intelligence/context/`, `.engineering-intelligence/events/`, `.engineering-intelligence/graph/`, `.engineering-intelligence/reports/`, and `.engineering-intelligence/changes/` as the canonical project-intelligence paths
 - Initialize missing intelligence comprehensively; after changes, use impact evidence to update only affected material
 - Never invent undocumented implementation facts
 - Never store transient details in durable memory

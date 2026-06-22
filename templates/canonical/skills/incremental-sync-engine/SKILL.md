@@ -39,7 +39,7 @@ Use this matrix to determine which artifact types need updating based on the cha
 
 2. **Classify Changes** — Match each change against the sync decision matrix above.
 
-3. **Update Knowledge Base** — For each affected `knowledge-base/` document:
+3. **Update Knowledge Base** — For each affected `.engineering-intelligence/knowledge-base/` document:
    - Read the current document
    - Identify the specific section(s) affected
    - Update only those sections with new evidence
@@ -84,7 +84,7 @@ During sync, check how many changes have occurred since each artifact was last v
 - **Evidence required**: Attach evidence for every changed claim
 - **Preserve accuracy**: Don't modify correct existing content
 - **Full remap trigger**: Require full graph remapping only for broad structural changes (major refactors, architecture changes)
-- **No change records**: As a standalone synchronization capability, do not write `.changes/CHG-XXX-*` records
+- **No change records**: As a standalone synchronization capability, do not write `.engineering-intelligence/changes/CHG-XXX-*` records
 - **No product code**: Must not modify product code
 
 ## Quality Gates

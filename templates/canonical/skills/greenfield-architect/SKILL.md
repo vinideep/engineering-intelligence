@@ -109,7 +109,7 @@ project-root/
 │   └── e2e/
 ├── .github/
 │   └── workflows/
-├── knowledge-base/             # Pre-filled engineering intelligence
+├── .engineering-intelligence/knowledge-base/             # Pre-filled engineering intelligence
 ├── .engineering-intelligence/
 │   ├── memory/
 │   ├── context/

@@ -134,11 +134,11 @@ This capability does not modify product code.
 
    A pattern must exceed `>70%` adherence to be treated as a convention. Structural means the violation changes file placement, layer ownership, dependency direction, API envelope, persistence access, or lifecycle hook usage rather than simple naming.
 
-10. **Write conventions document** — Generate `knowledge-base/16-conventions.md` following the output format below.
+10. **Write conventions document** — Generate `.engineering-intelligence/knowledge-base/16-conventions.md` following the output format below.
 
 11. **Enhance coding patterns memory** — Update `.engineering-intelligence/memory/coding-patterns.md` with durable conventions that are unlikely to change.
 
-## Output: `knowledge-base/16-conventions.md`
+## Output: `.engineering-intelligence/knowledge-base/16-conventions.md`
 
 ```markdown
 # Project Conventions
@@ -199,7 +199,7 @@ Add a `## Conventions` section with only durable patterns that pass the durabili
 - [ ] Each convention has an adherence rate and evidence citation
 - [ ] Exceptions to conventions are listed (not hidden)
 - [ ] Convention violations include severity and blocking decision
-- [ ] `knowledge-base/16-conventions.md` exists and follows the output format
+- [ ] `.engineering-intelligence/knowledge-base/16-conventions.md` exists and follows the output format
 - [ ] `coding-patterns.md` is enhanced with a Conventions section
 - [ ] Only patterns with >70% adherence are classified as conventions
 
@@ -207,7 +207,7 @@ Add a `## Conventions` section with only durable patterns that pass the durabili
 
 - Depends on: `codebase-discovery-engine` (tech stack context)
 - Used by: `initialize-intelligence-skill`, `engineering-intelligence-skill`
-- Feeds into: `knowledge-base/16-conventions.md`, `.engineering-intelligence/memory/coding-patterns.md`
+- Feeds into: `.engineering-intelligence/knowledge-base/16-conventions.md`, `.engineering-intelligence/memory/coding-patterns.md`
 - Consumed by: `ongoing-learning-engine` (for convention drift detection)
 
 This capability does not modify product code.

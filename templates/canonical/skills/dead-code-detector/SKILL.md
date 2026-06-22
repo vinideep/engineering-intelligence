@@ -18,7 +18,7 @@ Use this skill during initialization, major refactors, dependency cleanup, and t
 
 ## Output
 
-Write or update `knowledge-base/12-technical-debt.md`:
+Write or update `.engineering-intelligence/knowledge-base/12-technical-debt.md`:
 
 ```markdown
 ## Dead Code Candidates

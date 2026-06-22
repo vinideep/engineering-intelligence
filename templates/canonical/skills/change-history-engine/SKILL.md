@@ -18,7 +18,7 @@ Create structured, traceable change records that document what was done, why, wh
 
 ## Change Record Format
 
-Store change records in `.changes/`:
+Store change records in `.engineering-intelligence/changes/`:
 
 - Initialization creates `CHG-000-initialization.md`
 - Subsequent changes create the next numbered `CHG-XXX-<summary>.md`
@@ -67,7 +67,7 @@ Store change records in `.changes/`:
 ## Synchronized Artifacts
 | Artifact | Change |
 |---|---|
-| knowledge-base/04-api-documentation.md | Updated rate limiting section |
+| .engineering-intelligence/knowledge-base/04-api-documentation.md | Updated rate limiting section |
 | .engineering-intelligence/graph/runtime-graph.json | Added rate-limiter node |
 | .engineering-intelligence/context/module-map.md | Added rate-limiter entry |
 
@@ -93,7 +93,7 @@ Initial engineering intelligence generated for <project name>.
 ## Generated Artifacts
 | Category | Count | Path |
 |---|---|---|
-| Knowledge Base | 16 documents | knowledge-base/ |
+| Knowledge Base | 16 documents | .engineering-intelligence/knowledge-base/ |
 | Memory | 5 documents | .engineering-intelligence/memory/ |
 | Context | 6 maps | .engineering-intelligence/context/ |
 | Events | 5 guides | .engineering-intelligence/events/ |

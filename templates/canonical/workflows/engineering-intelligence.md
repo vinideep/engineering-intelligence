@@ -8,7 +8,7 @@ Use the `engineering-intelligence-skill` capability for the user's accompanying 
 
 ## Pipeline
 
-1. **Read Intelligence** — Consult `knowledge-base/`, `.engineering-intelligence/memory/`, `.engineering-intelligence/context/`, `.engineering-intelligence/graph/`
+1. **Read Intelligence** — Consult `.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/memory/`, `.engineering-intelligence/context/`, `.engineering-intelligence/graph/`
 2. **Select Delivery Mode** — Choose standard Agile, adversarial, TDD, design-first, or hypothesis debugging based on risk
 3. **Write Impact Report** — Create `.engineering-intelligence/reports/IMP-XXX-<summary>.md` before any code edit
 4. **Plan Agile + AI-DLC Work** — Update backlog, acceptance criteria, Definition of Ready, `.engineering-intelligence/aidlc/execution-plan.md`, and `aidlc-state.md`
@@ -17,7 +17,7 @@ Use the `engineering-intelligence-skill` capability for the user's accompanying 
 7. **Safety Gates** — Run freshness, type safety, API compatibility, API snapshot replay, migration safety, convention, acceptance-mapping, dependency-risk, env-var, ADR compliance, LLM prompt-injection, and rollback gates when applicable
 8. **Validate** — Run available linters, type checks, test suites, scans, and architecture checks as environmental backpressure
 9. **Sync Intelligence** — Incrementally update only affected knowledge, memory, context, event, graph artifacts, and AI-DLC artifacts
-10. **Record Change** — Write `.changes/CHG-XXX-<summary>.md` referencing related reports and acceptance verification
+10. **Record Change** — Write `.engineering-intelligence/changes/CHG-XXX-<summary>.md` referencing related reports and acceptance verification
 11. **Review Gate** — For high-risk changes, run engineering-change review before completion
 
 ## Completion Report

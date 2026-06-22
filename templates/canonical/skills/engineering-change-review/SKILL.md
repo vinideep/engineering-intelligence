@@ -134,7 +134,7 @@ Write `.engineering-intelligence/reports/REV-XXX-<slug>.md`:
 ## Intelligence Sync Status
 | Artifact | Status | Notes |
 |---|---|---|
-| knowledge-base/ | ✅ Synced | API docs updated |
+| .engineering-intelligence/knowledge-base/ | ✅ Synced | API docs updated |
 | graph/ | ⚠️ Partial | Missing new service node |
 
 ## Stale Intelligence Risks

@@ -43,7 +43,7 @@ Format:
 | Rank | Artifact | Sections / Keys | Reason | Estimated Tokens | Load Mode |
 |---:|---|---|---|---:|---|
 | 1 | `.engineering-intelligence/context/module-map.md` | auth row | direct scope | 120 | slice |
-| 2 | `knowledge-base/04-api-documentation.md` | H2: Auth API | API contract | 500 | section |
+| 2 | `.engineering-intelligence/knowledge-base/04-api-documentation.md` | H2: Auth API | API contract | 500 | section |
 ```
 
 ## Procedure

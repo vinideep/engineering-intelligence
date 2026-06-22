@@ -12,7 +12,7 @@ Update only the knowledge-base documents affected by a verified behavior change.
 
 - Persisted impact report (`.engineering-intelligence/reports/IMP-XXX-*.md`)
 - Actual diff or change record showing what changed
-- Current `knowledge-base/` documents
+- Current `.engineering-intelligence/knowledge-base/` documents
 
 ## Document-to-Change Mapping
 

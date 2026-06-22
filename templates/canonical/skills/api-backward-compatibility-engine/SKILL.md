@@ -11,7 +11,7 @@ Use this skill when routes, handlers, request schemas, response schemas, GraphQL
 ## Procedure
 
 1. **Load Current API Contract**
-   - `knowledge-base/04-api-documentation.md`
+   - `.engineering-intelligence/knowledge-base/04-api-documentation.md`
    - OpenAPI / Swagger specs
    - GraphQL schemas
    - Protobuf / gRPC definitions

@@ -46,11 +46,11 @@ This repository uses installed engineering intelligence workflows.
 - For implementation work, invoke \`engineering-intelligence\` with the request or ask the agent to apply the engineering intelligence workflow. This workflow embeds AI-DLC and Agile delivery modes internally.
 - For epic-sized initiatives, invoke \`decompose-backlog\` to autonomously create an Epic → Feature → Ticket backlog under \`.engineering-intelligence/aidlc/agile/backlog/\`, then \`deliver-backlog\` to implement it feature by feature. Each feature requires human approval before implementation; the local backlog is the source of truth and can optionally be mirrored to GitHub Issues.
 - For architecture mapping, impact analysis, synchronization, or review, invoke \`map-architecture\`, \`analyze-impact\`, \`sync-engineering-intelligence\`, or \`review-engineering-change\`; these workflows do not modify product code.
-- Canonical generated outputs live in \`knowledge-base/\`, \`.engineering-intelligence/aidlc/\`, \`.engineering-intelligence/memory/\`, \`.engineering-intelligence/context/\`, \`.engineering-intelligence/events/\`, \`.engineering-intelligence/graph/\`, \`.engineering-intelligence/reports/\`, and \`.changes/\`.
+- Canonical generated outputs live in \`.engineering-intelligence/knowledge-base/\`, \`.engineering-intelligence/aidlc/\`, \`.engineering-intelligence/memory/\`, \`.engineering-intelligence/context/\`, \`.engineering-intelligence/events/\`, \`.engineering-intelligence/graph/\`, \`.engineering-intelligence/reports/\`, and \`.engineering-intelligence/changes/\`.
 - Before non-trivial edits, write an impact report; after edits, validate and incrementally synchronize only affected intelligence and graph artifacts.
 - AI-DLC work must preserve durable state in \`.engineering-intelligence/aidlc/aidlc-state.md\`, maintain Agile artifacts, use environmental backpressure, and end with an \`AI-DLC: <phase> -> <stage> -> <status>\` breadcrumb.
 - Base documentation claims on repository evidence and identify unknowns explicitly.
-- **Prefer persisted intelligence over re-exploration.** Before reading source files to understand the codebase, read the persisted knowledge base in \`knowledge-base/\`, context maps in \`.engineering-intelligence/context/\`, and architecture graphs in \`.engineering-intelligence/graph/\`. Re-read source only for the specific files a task touches. Run \`sync-engineering-intelligence\` to refresh these artifacts incrementally rather than re-deriving from scratch each session.
+- **Prefer persisted intelligence over re-exploration.** Before reading source files to understand the codebase, read the persisted knowledge base in \`.engineering-intelligence/knowledge-base/\`, context maps in \`.engineering-intelligence/context/\`, and architecture graphs in \`.engineering-intelligence/graph/\`. Re-read source only for the specific files a task touches. Run \`sync-engineering-intelligence\` to refresh these artifacts incrementally rather than re-deriving from scratch each session.
 - **Route before loading skills.** Consult the installed \`WORKFLOW-ROUTING.md\` and \`SKILLS-INDEX.md\` in your IDE's skills directory before opening any individual \`SKILL.md\`. Load only the 1-3 skills relevant to the current request.
 `;
 
@@ -220,65 +220,65 @@ const AGENT_METADATA: Record<
   { context: string[]; agents?: string[]; skills?: string[]; autoRoute?: boolean; parallel?: boolean }
 > = {
   "engineering-orchestrator": {
-    context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/memory", ".changes"],
+    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/memory", ".engineering-intelligence/changes"],
     agents: ["product-analyst", "system-architect", "change-agent", "test-engineer", "quality-agent", "knowledge-agent"],
     autoRoute: true,
     parallel: false,
   },
   "change-agent": {
-    context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".changes"],
+    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/changes"],
     skills: ["engineering-intelligence-skill", "context-budget-optimizer", "aidlc-lifecycle-engine", "impact-analysis-engine", "change-detection-engine", "type-safety-engine", "api-backward-compatibility-engine", "api-snapshot-testing-engine", "environment-variable-auditor", "adr-compliance-checker", "llm-prompt-injection-guard"],
   },
   "quality-agent": {
-    context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
+    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
     skills: ["engineering-change-review", "knowledge-base-validator", "testing-intelligence-engine", "environmental-backpressure-engine", "contract-test-generator", "adr-compliance-checker"],
   },
   "knowledge-agent": {
-    context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/memory", ".changes"],
+    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/memory", ".engineering-intelligence/changes"],
     skills: ["knowledge-sync-engine", "memory-sync-engine", "context-sync-engine", "context-budget-optimizer", "graph-engine", "change-history-engine", "dead-code-detector"],
   },
   "product-analyst": {
-    context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/graph"],
+    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/graph"],
     skills: ["requirement-scoper", "backlog-decomposition-engine", "context-budget-optimizer", "aidlc-lifecycle-engine"],
   },
   "system-architect": {
-    context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph", ".engineering-intelligence/memory"],
+    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph", ".engineering-intelligence/memory"],
     skills: ["aidlc-lifecycle-engine", "nfr-adr-governor", "architecture-review-engine", "graph-engine", "adr-compliance-checker"],
   },
   "security-officer": {
-    context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
+    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
     skills: ["security-audit-engine", "mcp-security-governor", "nfr-adr-governor", "llm-prompt-injection-guard", "environment-variable-auditor"],
   },
   "database-administrator": {
-    context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
+    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
     skills: ["nfr-adr-governor", "impact-analysis-engine", "database-migration-safety-engine"],
   },
   "test-engineer": {
-    context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
+    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
     skills: ["testing-intelligence-engine", "environmental-backpressure-engine", "type-safety-engine", "api-snapshot-testing-engine", "contract-test-generator"],
   },
   "adversary": {
-    context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
+    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
     skills: ["security-audit-engine", "testing-intelligence-engine", "environmental-backpressure-engine"],
   },
   "performance-analyst": {
-    context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
+    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
     skills: ["performance-analysis-engine", "environmental-backpressure-engine", "nfr-adr-governor"],
   },
   "compliance-auditor": {
-    context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/reports"],
+    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/reports"],
     skills: ["nfr-adr-governor", "mcp-security-governor", "engineering-change-review"],
   },
   "release-engineer": {
-    context: ["knowledge-base", ".engineering-intelligence/aidlc", ".changes"],
+    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/changes"],
     skills: ["git-intelligence-engine", "pr-intelligence-engine", "issue-tracker-sync-engine", "operations-readiness-engine", "api-backward-compatibility-engine", "database-migration-safety-engine"],
   },
   "site-reliability-engineer": {
-    context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
+    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
     skills: ["operations-readiness-engine", "performance-analysis-engine"],
   },
   "documentation-writer": {
-    context: ["knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/memory", ".changes"],
+    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/memory", ".engineering-intelligence/changes"],
     skills: ["knowledge-sync-engine", "memory-sync-engine", "context-sync-engine", "change-history-engine"],
   },
 };

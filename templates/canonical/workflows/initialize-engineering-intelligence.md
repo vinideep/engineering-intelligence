@@ -14,13 +14,13 @@ Analyzes this repository thoroughly without changing product code. Produces a co
 
 | Category | Path | Content |
 |---|---|---|
-| Knowledge Base | `knowledge-base/` | 16 evidence-backed documents (00-15) |
+| Knowledge Base | `.engineering-intelligence/knowledge-base/` | 16 evidence-backed documents (00-15) |
 | Memory | `.engineering-intelligence/memory/` | 5 durable decision/pattern documents |
 | Context | `.engineering-intelligence/context/` | 6 compact navigation maps |
 | Events | `.engineering-intelligence/events/` | 5 change-event guidance documents |
 | Graphs | `.engineering-intelligence/graph/` | 4 JSON graphs + architecture-map.md |
 | AI-DLC + Agile | `.engineering-intelligence/aidlc/` | Lifecycle state, audit, discovery placeholders, open questions, Agile backlog/sprint/DoR/DoD, cross-unit discovery log |
-| History | `.changes/CHG-000-initialization.md` | Initialization record |
+| History | `.engineering-intelligence/changes/CHG-000-initialization.md` | Initialization record |
 
 ## Execution Steps
 

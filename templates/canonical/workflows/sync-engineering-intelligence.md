@@ -23,7 +23,7 @@ Use `change-detection-engine`, `impact-analysis-engine`, and `incremental-sync-e
 
 ## Rules
 
-- Standalone synchronization must not create `.changes/CHG-XXX-*` implementation records
+- Standalone synchronization must not create `.engineering-intelligence/changes/CHG-XXX-*` implementation records
 - Must not modify product code
 - Update only artifacts identified by the impact report
 - Preserve accurate existing content in all artifacts

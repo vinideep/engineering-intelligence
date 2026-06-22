@@ -13,7 +13,7 @@ Systematically diagnose issues through evidence-driven root cause analysis, leve
 - Bug report or error description (symptoms, error messages, stack traces)
 - Repository root path
 - Graph intelligence from `.engineering-intelligence/graph/` (when available)
-- Project intelligence from `knowledge-base/` and `.engineering-intelligence/`
+- Project intelligence from `.engineering-intelligence/knowledge-base/` and `.engineering-intelligence/`
 - Optional: log output, reproduction steps from reporter, environment details
 
 ## Procedure

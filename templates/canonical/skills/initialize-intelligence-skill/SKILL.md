@@ -17,7 +17,7 @@ Create a trustworthy, evidence-backed project intelligence baseline. Analyze onl
 
 Generate the following artifacts in order:
 
-### Knowledge Base (`knowledge-base/`)
+### Knowledge Base (`.engineering-intelligence/knowledge-base/`)
 
 | Document | Purpose |
 |---|---|
@@ -83,7 +83,7 @@ Generate the following artifacts in order:
 
 | Artifact | Content |
 |---|---|
-| `.changes/CHG-000-initialization.md` | Record of this initialization run |
+| `.engineering-intelligence/changes/CHG-000-initialization.md` | Record of this initialization run |
 
 ## Procedure
 

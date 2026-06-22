@@ -13,7 +13,7 @@ This capability does not modify product code.
 ## Inputs
 
 - Repository root path
-- Knowledge base directory (`knowledge-base/`)
+- Knowledge base directory (`.engineering-intelligence/knowledge-base/`)
 - Memory directory (`.engineering-intelligence/memory/`)
 - Context directory (`.engineering-intelligence/context/`)
 - Optional: specific document or module to check
@@ -22,7 +22,7 @@ This capability does not modify product code.
 ## Procedure
 
 1. **Inventory knowledge documents** — Enumerate all documents in:
-   - `knowledge-base/*.md` (00 through 16)
+   - `.engineering-intelligence/knowledge-base/*.md` (00 through 16)
    - `.engineering-intelligence/memory/*.md`
    - `.engineering-intelligence/context/*.md`
    - `.engineering-intelligence/graph/*.json`

@@ -6,16 +6,16 @@ version: 3.0.0
 
 # Knowledge Base Validator
 
-Systematically audit every significant claim in `knowledge-base/*.md` against actual repository evidence. Produce a structured validation report that identifies exactly what is supported, what is stale, and what needs human review.
+Systematically audit every significant claim in `.engineering-intelligence/knowledge-base/*.md` against actual repository evidence. Produce a structured validation report that identifies exactly what is supported, what is stale, and what needs human review.
 
 ## Inputs
 
-- Repository root path with `knowledge-base/` present
+- Repository root path with `.engineering-intelligence/knowledge-base/` present
 - Optional: specific documents to validate (defaults to all)
 
 ## Procedure
 
-1. **Enumerate Claims** — Read each `knowledge-base/*.md` document. Extract every material claim about architecture, APIs, schemas, dependencies, configurations, flows, and behavior.
+1. **Enumerate Claims** — Read each `.engineering-intelligence/knowledge-base/*.md` document. Extract every material claim about architecture, APIs, schemas, dependencies, configurations, flows, and behavior.
 
 2. **Verify Against Evidence** — For each claim, check:
    - Does the referenced file/path still exist?
@@ -42,7 +42,7 @@ Systematically audit every significant claim in `knowledge-base/*.md` against ac
 
 6. **Auto-Heal Unsupported Claims** — During explicit synchronization workflows only, re-extract the smallest affected section for unsupported or stale claims, update that section with fresh evidence citations, and record the heal. Escalate claims requiring product judgment instead of guessing.
 
-7. **Write Report** — Generate `knowledge-base/15-validation-report.md`
+7. **Write Report** — Generate `.engineering-intelligence/knowledge-base/15-validation-report.md`
 
 ## Output Format
 

@@ -11,7 +11,7 @@ Systematically assess architectural quality using evidence from code, graphs, an
 ## Inputs
 
 - `.engineering-intelligence/graph/` (dependency, service, runtime graphs)
-- `knowledge-base/02-architecture.md`
+- `.engineering-intelligence/knowledge-base/02-architecture.md`
 - `.engineering-intelligence/memory/architecture-decisions.md`
 - Specific scope or concern (optional)
 
@@ -67,7 +67,7 @@ Systematically assess architectural quality using evidence from code, graphs, an
 
 ## Output Format
 
-Write `knowledge-base/16-architecture-review.md`:
+Write `.engineering-intelligence/knowledge-base/16-architecture-review.md`:
 
 ```markdown
 # Architecture Review

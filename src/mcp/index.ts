@@ -133,7 +133,7 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
       }
 
       if (name === "read_knowledge") {
-        const kbDir = path.join(root, "knowledge-base");
+        const kbDir = path.join(root, ".engineering-intelligence", "knowledge-base");
         if (typeof args.file === "string" && args.file) {
           const filePath = path.join(kbDir, args.file);
           try {
@@ -141,7 +141,7 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
             return { content: [{ type: "text", text: content }] };
           } catch {
             return {
-              content: [{ type: "text", text: JSON.stringify({ error: `File not found: knowledge-base/${args.file}` }) }],
+              content: [{ type: "text", text: JSON.stringify({ error: `.engineering-intelligence/knowledge-base/${args.file} not found` }) }],
               isError: true,
             };
           }
@@ -152,7 +152,7 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
           const files = (entries as string[]).filter((e) => e.endsWith(".md") || e.endsWith(".json"));
           return { content: [{ type: "text", text: JSON.stringify({ files }) }] };
         } catch {
-          return { content: [{ type: "text", text: JSON.stringify({ files: [], note: "knowledge-base/ directory not found. Run /initialize-engineering-intelligence first." }) }] };
+          return { content: [{ type: "text", text: JSON.stringify({ files: [], note: ".engineering-intelligence/knowledge-base/ not found. Run /initialize-engineering-intelligence first." }) }] };
         }
       }
 

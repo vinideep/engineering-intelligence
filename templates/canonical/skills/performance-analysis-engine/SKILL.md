@@ -13,7 +13,7 @@ Identify performance risks and optimization opportunities through evidence-based
 - Repository root path
 - Mode: `full` (comprehensive analysis) or `targeted` (specific area or post-change)
 - Optional: scope constraints (specific modules, change diff)
-- Optional: previous assessment (`knowledge-base/21-performance-assessment.md`) for delta comparison
+- Optional: previous assessment (`.engineering-intelligence/knowledge-base/21-performance-assessment.md`) for delta comparison
 
 ## Procedure
 
@@ -78,11 +78,11 @@ Identify performance risks and optimization opportunities through evidence-based
 
    Review existing caching infrastructure (Redis, Memcached, in-memory, HTTP) and identify gaps.
 
-6. **Generate Assessment** — Write findings to `knowledge-base/21-performance-assessment.md`.
+6. **Generate Assessment** — Write findings to `.engineering-intelligence/knowledge-base/21-performance-assessment.md`.
 
 ## Output Format
 
-Write `knowledge-base/21-performance-assessment.md`:
+Write `.engineering-intelligence/knowledge-base/21-performance-assessment.md`:
 
 ```markdown
 # Performance Assessment
@@ -151,6 +151,6 @@ Write `knowledge-base/21-performance-assessment.md`:
 
 - Depends on: `deep-project-knowledge-extractor` (project structure and technology understanding)
 - Used by: `engineering-intelligence-skill`, `impact-analysis-engine` (performance risk scoring)
-- Updates: `knowledge-base/21-performance-assessment.md`
+- Updates: `.engineering-intelligence/knowledge-base/21-performance-assessment.md`
 
 This capability is analytical only. It must not modify product code.
