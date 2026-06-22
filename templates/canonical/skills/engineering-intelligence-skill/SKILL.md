@@ -11,7 +11,7 @@ The core implementation skill for engineering work. Use after project intelligen
 ## Inputs
 
 - User request describing the desired change
-- Repository with initialized intelligence (`knowledge-base/`, `.engineering-intelligence/`)
+- Repository with initialized intelligence (`.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/`)
 
 ## Request Classification
 
@@ -46,8 +46,8 @@ Record the depth on line 2 of the impact report header. For **Minimal** depth, l
 
 ### 1. Pre-Flight: Read Intelligence
 
-Use `context-budget-optimizer` before loading broad intelligence. Do not read all of `knowledge-base/` or all graph JSON by default. Build `.engineering-intelligence/context/context-manifest.md`, then load only relevant slices:
-- `knowledge-base/` — only H2 sections relevant to the changed modules, APIs, schemas, or risk areas
+Use `context-budget-optimizer` before loading broad intelligence. Do not read all of `.engineering-intelligence/knowledge-base/` or all graph JSON by default. Build `.engineering-intelligence/context/context-manifest.md`, then load only relevant slices:
+- `.engineering-intelligence/knowledge-base/` — only H2 sections relevant to the changed modules, APIs, schemas, or risk areas
 - `.engineering-intelligence/aidlc/` — `aidlc-state.md`, active checkpoint, active unit, acceptance criteria, and execution-plan rows relevant to the request
 - `.engineering-intelligence/memory/` — only matching decisions, constraints, conventions, regression patterns, and ADR references
 - `.engineering-intelligence/context/` — module/service/runtime rows near the change scope
@@ -125,7 +125,7 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
 - Split broad changes into construction units and keep `.engineering-intelligence/aidlc/construction/cross-unit-discoveries.md` current
 - Edit only the files necessary for the request
 - Follow existing coding patterns from `.engineering-intelligence/memory/coding-patterns.md`
-- Read conventions from `knowledge-base/16-conventions.md` and `.engineering-intelligence/memory/coding-patterns.md` — match naming patterns, import style, error handling patterns, and code structure
+- Read conventions from `.engineering-intelligence/knowledge-base/16-conventions.md` and `.engineering-intelligence/memory/coding-patterns.md` — match naming patterns, import style, error handling patterns, and code structure
 - If conventions document is missing or outdated, run `convention-detector` first
 - After generating or modifying each file, compare it against `coding-patterns.md` for naming, import order, error handling, logging, folder structure, test style, and framework idioms. Auto-correct minor violations. Structural convention violations become review findings and block completion when critical.
 - Respect architectural boundaries from `.engineering-intelligence/memory/architecture-decisions.md`
@@ -194,7 +194,7 @@ Use `incremental-sync-engine` to update only affected artifacts:
 
 ### 7. Record Change
 
-Create `.changes/CHG-XXX-<summary>.md`:
+Create `.engineering-intelligence/changes/CHG-XXX-<summary>.md`:
 
 ```markdown
 # CHG-XXX: <summary>

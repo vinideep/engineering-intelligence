@@ -19,7 +19,7 @@ Store snapshots under:
 ## Procedure
 
 1. **Select Snapshot Scenarios**
-   - Read `knowledge-base/04-api-documentation.md`, `service-graph.json`, route files, and existing API tests.
+   - Read `.engineering-intelligence/knowledge-base/04-api-documentation.md`, `service-graph.json`, route files, and existing API tests.
    - Select representative requests for changed endpoints:
      - happy path
      - auth failure

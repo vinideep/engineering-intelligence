@@ -66,7 +66,7 @@ Determine the minimum sufficient test coverage for a change based on risk assess
    - Data migration and rollback tests for schema changes
 
    **For API/service integration changes**:
-   - Generate integration test stubs from `knowledge-base/04-api-documentation.md` and `service-graph.json`
+   - Generate integration test stubs from `.engineering-intelligence/knowledge-base/04-api-documentation.md` and `service-graph.json`
    - Cover happy path, auth failure, downstream timeout, and validation error
    - Match existing test framework, describe/it nesting, mock setup, assertion library, and factory style
 
@@ -90,7 +90,7 @@ Determine the minimum sufficient test coverage for a change based on risk assess
 
 ## Output
 
-### Per-Change Testing (in `.changes/CHG-XXX-*.md`)
+### Per-Change Testing (in `.engineering-intelligence/changes/CHG-XXX-*.md`)
 
 ```markdown
 ## Tests
@@ -101,7 +101,7 @@ Determine the minimum sufficient test coverage for a change based on risk assess
 - Coverage gaps: <untested areas remaining>
 ```
 
-### Broad Testing Strategy (in `knowledge-base/17-testing-strategy.md`)
+### Broad Testing Strategy (in `.engineering-intelligence/knowledge-base/17-testing-strategy.md`)
 
 Only update when documenting project-wide testing posture:
 
@@ -159,4 +159,4 @@ Only update when documenting project-wide testing posture:
 
 - Depends on: `impact-analysis-engine` (for risk assessment)
 - Used by: `engineering-intelligence-skill` (step 4: tests and validation)
-- Updates: `knowledge-base/17-testing-strategy.md` (broad posture only)
+- Updates: `.engineering-intelligence/knowledge-base/17-testing-strategy.md` (broad posture only)

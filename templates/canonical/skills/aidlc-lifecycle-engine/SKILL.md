@@ -34,7 +34,7 @@ Use `.engineering-intelligence/aidlc/` as the canonical AI-DLC root:
 | `.engineering-intelligence/aidlc/construction/<unit>/` | Unit functional design, NFR design, ADRs, code plan, build/test evidence |
 | `.engineering-intelligence/aidlc/operations/` | Deployment readiness, observability, runbooks, rollback notes |
 
-These AI-DLC files complement `knowledge-base/`, `.engineering-intelligence/memory/`, `.engineering-intelligence/context/`, `.engineering-intelligence/graph/`, `.engineering-intelligence/reports/`, and `.changes/`.
+These AI-DLC files complement `.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/memory/`, `.engineering-intelligence/context/`, `.engineering-intelligence/graph/`, `.engineering-intelligence/reports/`, and `.engineering-intelligence/changes/`.
 
 ## Embedded Agile + AI-DLC Model
 

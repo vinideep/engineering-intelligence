@@ -19,7 +19,7 @@ Epic  (a business outcome / initiative)
 ## Inputs
 
 - The user's high-level initiative or request
-- `knowledge-base/` (domain context)
+- `.engineering-intelligence/knowledge-base/` (domain context)
 - `.engineering-intelligence/graph/` (dependency, service, runtime, business-flow graphs)
 - `.engineering-intelligence/memory/` (durable architecture and business decisions)
 - `.engineering-intelligence/aidlc/discovery/vision.md` and `agile/product-backlog.md` when present

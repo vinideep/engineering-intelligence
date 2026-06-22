@@ -10,7 +10,7 @@ Use this skill when service boundaries, API clients, webhooks, events, GraphQL s
 
 ## Procedure
 
-1. Read `service-graph.json`, `knowledge-base/04-api-documentation.md`, OpenAPI/GraphQL/protobuf schemas, and existing contract tests.
+1. Read `service-graph.json`, `.engineering-intelligence/knowledge-base/04-api-documentation.md`, OpenAPI/GraphQL/protobuf schemas, and existing contract tests.
 2. Detect the project’s contract-test framework if any: Pact, Spring Cloud Contract, protobuf conformance tests, schema snapshots, custom integration harness, or plain test framework.
 3. Generate or recommend stubs matching the project’s exact test structure and assertion style.
 4. Cover canonical scenarios:

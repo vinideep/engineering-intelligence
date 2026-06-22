@@ -10,11 +10,11 @@ Produce evidence-backed PR artifacts that accelerate review cycles and improve c
 
 ## Inputs
 
-- Change records from `.changes/CHG-XXX-*.md`
+- Change records from `.engineering-intelligence/changes/CHG-XXX-*.md`
 - Git diff or commit range for the PR
 - Ownership mapping from `git-intelligence-engine` (`.engineering-intelligence/reports/GIT-intelligence.md`)
 - Impact report from `impact-analysis-engine` (when available)
-- Architecture decisions from `knowledge-base/`
+- Architecture decisions from `.engineering-intelligence/knowledge-base/`
 
 ## Procedure
 
@@ -78,8 +78,8 @@ Produce evidence-backed PR artifacts that accelerate review cycles and improve c
    - Suggest merge order if dependencies exist between splits
 
 6. **Check Architecture Compliance** — Compare changes against:
-   - `knowledge-base/05-architecture-decisions.md` (ADRs)
-   - `knowledge-base/06-conventions-and-standards.md`
+   - `.engineering-intelligence/knowledge-base/05-architecture-decisions.md` (ADRs)
+   - `.engineering-intelligence/knowledge-base/06-conventions-and-standards.md`
    - Module boundary rules from `dependency-graph.json`
 
    Flag violations with evidence:

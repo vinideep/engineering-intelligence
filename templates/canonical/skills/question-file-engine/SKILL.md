@@ -19,7 +19,7 @@ Write structured clarification question files rather than asking questions inlin
 
 - Original request or initiative description
 - Ambiguity analysis from calling skill (requirement-scoper, backlog-decomposition-engine)
-- Optional: project architecture from `knowledge-base/`, `$EI graph/`
+- Optional: project architecture from `.engineering-intelligence/knowledge-base/`, `$EI graph/`
 
 ## Procedure
 
@@ -107,4 +107,4 @@ When user signals answers are ready:
 - Never ask 3+ questions inline — always write a question file.
 - Never guess or assume answers to unresolved questions.
 - Always re-read the file from disk on resume; never trust in-memory question content.
-- Log confirmed decisions in `knowledge-base/19-requirements.md` section `## 4. Iterated QA Log`.
+- Log confirmed decisions in `.engineering-intelligence/knowledge-base/19-requirements.md` section `## 4. Iterated QA Log`.

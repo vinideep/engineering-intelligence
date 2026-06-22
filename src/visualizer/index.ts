@@ -490,7 +490,7 @@ async function scanWorkspaceFiles(dir: string, baseDir: string): Promise<Record<
 
 async function readWorkspaceIntelligence(projectRoot: string): Promise<Record<string, string>> {
   const files: Record<string, string> = {};
-  for (const sub of ["knowledge-base", ".changes", ".engineering-intelligence"]) {
+  for (const sub of [".engineering-intelligence"]) {
     const dir = path.join(projectRoot, sub);
     const scanned = await scanWorkspaceFiles(dir, projectRoot);
     Object.assign(files, scanned);

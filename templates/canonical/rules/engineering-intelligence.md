@@ -2,7 +2,7 @@
 
 ## Pre-Edit Requirements
 
-When `knowledge-base/` exists, consult relevant slices of the documents, `.engineering-intelligence/context/`, and `.engineering-intelligence/graph/` before non-trivial project edits. Do not load entire intelligence directories by default.
+When `.engineering-intelligence/knowledge-base/` exists, consult relevant slices of the documents, `.engineering-intelligence/context/`, and `.engineering-intelligence/graph/` before non-trivial project edits. Do not load entire intelligence directories by default.
 
 When `.engineering-intelligence/aidlc/` exists, also consult `aidlc-state.md`, `execution-plan.md`, `open-questions.md`, and the active construction unit before edits.
 
@@ -62,7 +62,7 @@ For every engineering change, follow this sequence:
 | 3 | Implement code changes and tests | Modified source and test files |
 | 4 | Validate honestly with environmental backpressure and safety gates — report unrun checks | Test results, lint/type/API/migration results, build/test summary |
 | 5 | Incrementally update affected intelligence and graph artifacts | Updated knowledge/memory/context/graph/aidlc |
-| 6 | Record completed work | `.changes/CHG-XXX-*.md` |
+| 6 | Record completed work | `.engineering-intelligence/changes/CHG-XXX-*.md` |
 
 ## Read-Only Workflows
 
@@ -84,14 +84,14 @@ Use these as the canonical project-intelligence paths — never invent alternati
 
 | Path | Purpose |
 |---|---|
-| `knowledge-base/` | Evidence-based project documentation |
+| `.engineering-intelligence/knowledge-base/` | Evidence-based project documentation |
 | `.engineering-intelligence/memory/` | Durable decisions, rules, patterns |
 | `.engineering-intelligence/aidlc/` | AI-DLC durable lifecycle state, plans, audit, unit artifacts, operations readiness |
 | `.engineering-intelligence/context/` | Compact AI navigation maps |
 | `.engineering-intelligence/events/` | Change-event guidance |
 | `.engineering-intelligence/graph/` | Architecture graph JSON + Mermaid maps |
 | `.engineering-intelligence/reports/` | Impact (IMP) and review (REV) reports |
-| `.changes/` | Sequential change history records |
+| `.engineering-intelligence/changes/` | Sequential change history records |
 
 ## Evidence Rules
 

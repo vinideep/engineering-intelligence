@@ -10,7 +10,7 @@ import { doctor } from "../validation/index.js";
 import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create";
+type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp";
 
 interface Options {
   command: Command;
@@ -21,6 +21,9 @@ interface Options {
   force: boolean;
   json: boolean;
   openBrowser: boolean;
+  graphType: string;
+  update_: boolean;
+  files: string[];
 }
 
 async function packageVersion(): Promise<string> {
@@ -33,6 +36,7 @@ function usage(): string {
   return `engineering-intelligence
 
 Install engineering intelligence orchestration assets for AI coding IDEs.
+Build a real dependency graph. Start an MCP server for tool-based queries.
 
 Usage:
   engineering-intelligence install [path] [--ide <id>...] [--yes] [--dry-run] [--force]
@@ -41,6 +45,8 @@ Usage:
   engineering-intelligence doctor [path] [--json]
   engineering-intelligence uninstall [path] [--dry-run] [--force]
   engineering-intelligence visualize [path] [--open]
+  engineering-intelligence map [path] [--type dependency] [--update] [--files a,b,c]
+  engineering-intelligence mcp [path]
 
 IDE ids: ${IDE_IDS.join(", ")}
 `;
@@ -49,7 +55,7 @@ IDE ids: ${IDE_IDS.join(", ")}
 function parseArgs(args: string[]): Options {
   let command: Command = "install";
   const remaining = [...args];
-  if (remaining[0] && ["install", "create", "update", "doctor", "uninstall", "visualize"].includes(remaining[0])) {
+  if (remaining[0] && ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp"].includes(remaining[0])) {
     command = remaining.shift() as Command;
   }
   if (remaining.includes("--help") || remaining.includes("-h")) {
@@ -63,25 +69,23 @@ function parseArgs(args: string[]): Options {
   let force = false;
   let json = false;
   let openBrowser = false;
+  let graphType = "dependency";
+  let update_ = false;
+  let files: string[] = [];
+
   for (let index = 0; index < remaining.length; index += 1) {
     const arg = remaining[index];
     if (arg === "--ide") {
       const value = remaining[++index];
-      if (!value) {
-        throw new Error("--ide requires a value.");
-      }
+      if (!value) throw new Error("--ide requires a value.");
       for (const ide of value.split(",")) {
-        if (!isIdeId(ide)) {
-          throw new Error(`Unknown IDE "${ide}". Supported: ${IDE_IDS.join(", ")}.`);
-        }
+        if (!isIdeId(ide)) throw new Error(`Unknown IDE "${ide}". Supported: ${IDE_IDS.join(", ")}.`);
         ides.push(ide);
       }
     } else if (arg.startsWith("--ide=")) {
       const value = arg.slice("--ide=".length);
       for (const ide of value.split(",")) {
-        if (!isIdeId(ide)) {
-          throw new Error(`Unknown IDE "${ide}". Supported: ${IDE_IDS.join(", ")}.`);
-        }
+        if (!isIdeId(ide)) throw new Error(`Unknown IDE "${ide}". Supported: ${IDE_IDS.join(", ")}.`);
         ides.push(ide);
       }
     } else if (arg === "--yes" || arg === "-y") {
@@ -94,6 +98,20 @@ function parseArgs(args: string[]): Options {
       json = true;
     } else if (arg === "--open") {
       openBrowser = true;
+    } else if (arg === "--type") {
+      const value = remaining[++index];
+      if (!value) throw new Error("--type requires a value.");
+      graphType = value;
+    } else if (arg.startsWith("--type=")) {
+      graphType = arg.slice("--type=".length);
+    } else if (arg === "--update") {
+      update_ = true;
+    } else if (arg === "--files") {
+      const value = remaining[++index];
+      if (!value) throw new Error("--files requires a value.");
+      files = value.split(",").map((f) => f.trim()).filter(Boolean);
+    } else if (arg.startsWith("--files=")) {
+      files = arg.slice("--files=".length).split(",").map((f) => f.trim()).filter(Boolean);
     } else if (arg.startsWith("-")) {
       throw new Error(`Unknown option "${arg}".`);
     } else if (!target) {
@@ -111,6 +129,9 @@ function parseArgs(args: string[]): Options {
     force,
     json,
     openBrowser,
+    graphType,
+    update_,
+    files,
   };
 }
 
@@ -127,9 +148,7 @@ async function selectIdes(options: Options, readline: any): Promise<IdeId[]> {
   const mapped = choices.map((choice: string) => {
     const numbered = Number.parseInt(choice, 10);
     const candidate = Number.isNaN(numbered) ? choice : IDE_IDS[numbered - 1];
-    if (!candidate || !isIdeId(candidate)) {
-      throw new Error(`Unknown IDE selection "${choice}".`);
-    }
+    if (!candidate || !isIdeId(candidate)) throw new Error(`Unknown IDE selection "${choice}".`);
     return candidate;
   });
   return [...new Set(mapped)] as IdeId[];
@@ -163,6 +182,26 @@ async function main(): Promise<void> {
         return answer.trim().toLowerCase() === "y";
       }
     : undefined;
+
+  if (options.command === "map") {
+    const { buildGraph } = await import("../graph/index.js");
+    const result = await buildGraph(options.root, {
+      update: options.update_,
+      files: options.files.length > 0 ? options.files : undefined,
+    });
+    output.write(`Graph built: ${result.graphPath}\n`);
+    output.write(`  ${result.nodeCount} nodes, ${result.edgeCount} edges (${result.fileCount} source files scanned)\n`);
+    if (result.wasIncremental) output.write("  [incremental update]\n");
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "mcp") {
+    const { startMcpServer } = await import("../mcp/index.js");
+    if (readline) readline.close();
+    await startMcpServer(options.root);
+    return;
+  }
 
   if (options.command === "doctor") {
     const actions = await doctor(options.root);

@@ -12,7 +12,7 @@ Determine what can break before changing code. Produce a reusable impact report 
 
 - Change scope from `change-detection-engine` (proposal description, diff, commit range, or file list)
 - Graph intelligence from `.engineering-intelligence/graph/` (when available)
-- Project intelligence from `knowledge-base/` and `.engineering-intelligence/`
+- Project intelligence from `.engineering-intelligence/knowledge-base/` and `.engineering-intelligence/`
 
 ## Procedure
 
@@ -120,7 +120,7 @@ Write `.engineering-intelligence/reports/IMP-XXX-<slug>.md`:
 ## Intelligence Artifacts Affected
 | Artifact | Reason |
 |---|---|
-| knowledge-base/04-api-documentation.md | API contract changed |
+| .engineering-intelligence/knowledge-base/04-api-documentation.md | API contract changed |
 | .engineering-intelligence/graph/service-graph.json | New service dependency |
 
 ## Evidence

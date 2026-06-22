@@ -1,7 +1,7 @@
 {
   "name": "engineering-intelligence",
-  "version": "1.7.0",
-  "description": "Install and visualize graph-backed engineering intelligence skills, agents, and workflows for AI coding IDEs.",
+  "version": "2.0.0",
+  "description": "Graph-backed engineering intelligence for AI coding IDEs. Real dependency graphs, MCP server, and installable skills/agents/workflows for 9 IDEs.",
   "type": "module",
   "homepage": "https://github.com/vinideep/engineering-intelligence#readme",
   "repository": {
@@ -12,7 +12,8 @@
     "url": "https://github.com/vinideep/engineering-intelligence/issues"
   },
   "bin": {
-    "engineering-intelligence": "./dist/cli/index.js"
+    "engineering-intelligence": "./dist/cli/index.js",
+    "ei-mcp": "./dist/mcp/cli.js"
   },
   "files": [
     "dist",
@@ -23,8 +24,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
-    "test": "npm run build && node --test test/adapters.test.mjs test/installer.test.mjs test/templates.test.mjs test/token-reduction.test.mjs test/visualizer.test.mjs",
-    "test:integration": "npm run build && node --test test/install-integration.test.mjs",
+    "test": "npm run build && node --test test/adapters.test.mjs test/installer.test.mjs test/templates.test.mjs test/token-reduction.test.mjs test/visualizer.test.mjs test/graph.test.mjs",
+    "test:integration": "npm run build && node --test test/install-integration.test.mjs test/mcp.test.mjs",
+    "test:graph": "npm run build && node --test test/graph.test.mjs",
+    "test:mcp": "npm run build && node --test test/mcp.test.mjs",
     "prepack": "npm run clean && npm run build"
   },
   "keywords": [
@@ -48,5 +51,8 @@
   "devDependencies": {
     "@types/node": "^22.15.0",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
   }
 }

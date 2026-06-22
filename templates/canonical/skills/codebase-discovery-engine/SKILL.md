@@ -423,6 +423,6 @@ Scope: <full repo | specific scope>
 - Used by: `initialize-intelligence-skill`, `engineering-orchestrator`
 - Consumed by: all sync engines, `convention-detector`, `ongoing-learning-engine`
 - Depends on: git history access, file system read access
-- Feeds into: `knowledge-base/00-project-overview.md`, `.engineering-intelligence/memory/technology-decisions.md`
+- Feeds into: `.engineering-intelligence/knowledge-base/00-project-overview.md`, `.engineering-intelligence/memory/technology-decisions.md`
 
 This capability does not modify product code.

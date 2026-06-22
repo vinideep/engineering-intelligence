@@ -12,7 +12,7 @@ Plan safe, incremental refactoring with clear migration steps, validation checkp
 
 - Refactoring goal (described by user or identified by architecture review)
 - `.engineering-intelligence/graph/` (dependency relationships)
-- `knowledge-base/12-technical-debt.md` (existing debt)
+- `.engineering-intelligence/knowledge-base/12-technical-debt.md` (existing debt)
 - `.engineering-intelligence/memory/architecture-decisions.md` (constraints)
 
 ## Refactoring Categories
@@ -72,7 +72,7 @@ Plan safe, incremental refactoring with clear migration steps, validation checkp
    - Are there data migrations that need reverse migrations?
    - What's the point of no return?
 
-6. **Write Plan** — Generate `knowledge-base/18-refactor-plan.md`
+6. **Write Plan** — Generate `.engineering-intelligence/knowledge-base/18-refactor-plan.md`
 
 ## Output Format
 
