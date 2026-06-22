@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { Server } from "@modelcontextprotocol/sdk/server";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { buildGraph, analyzeImpact, loadExistingGraph } from "../graph/index.js";
