@@ -17,6 +17,16 @@ Extract actionable intelligence from git history to reveal hidden dependencies, 
 
 ## Procedure
 
+0. **Use the CLI first (saves ~2,000 tokens)** — Before computing manually, run:
+
+   ```bash
+   npx engineering-intelligence git-analysis .
+   ```
+
+   This runs hotspot analysis, ownership mapping, change coupling, and velocity tracking using pure git commands and writes `.engineering-intelligence/reports/GIT-intelligence.md`. If the report exists and was generated within the last hour, **read it directly and skip steps 1–8**.
+
+   Only fall through to steps 1–8 if the CLI is unavailable.
+
 1. **Collect History** — Extract commit log with file-level diffs, authors, timestamps, and branch metadata. For `incremental` mode, scope to commits since the last recorded analysis timestamp.
 
 2. **Hotspot Analysis** — Identify the most frequently changed files and directories:

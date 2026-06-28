@@ -44,6 +44,22 @@ Record the depth on line 2 of the impact report header. For **Minimal** depth, l
 
 ## Procedure
 
+### 0. Pre-Flight: Load User Profile (pinned, ~50t)
+
+Before reading any project intelligence:
+
+1. Run `npx engineering-intelligence user-profile .` if the profile doesn't yet exist.
+2. Resolve identity: `git config user.email` → `.engineering-intelligence/memory/users/<slug>/user-intelligence.md`.
+3. Skip if CI environment detected (`$CI`, `$GITHUB_ACTIONS`, etc.).
+4. Load the **Active Predictions block only** (~50t) and apply immediately:
+   - Test generation policy (always / on-request / inferred-rarely)
+   - Implementation depth (spike / standard / production-hardened)
+   - Response format (terse / standard / detailed)
+   - Type safety policy (strict / follow-conventions)
+5. For any dimension not set in the personal profile, check `team-preferences.md`.
+
+This calibrates the entire workflow before a single line of code is written or read.
+
 ### 1. Pre-Flight: Read Intelligence
 
 Use `context-budget-optimizer` before loading broad intelligence. Do not read all of `.engineering-intelligence/knowledge-base/` or all graph JSON by default. Build `.engineering-intelligence/context/context-manifest.md`, then load only relevant slices:

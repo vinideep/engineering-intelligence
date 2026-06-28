@@ -48,6 +48,16 @@ Format:
 
 ## Procedure
 
+0. **Load User Intelligence Profile (pinned, ~50t, always first)**
+
+   Before ranking any other artifact:
+   - Run `npx engineering-intelligence user-profile .` if `.engineering-intelligence/memory/users/` doesn't exist yet.
+   - Resolve identity: `git config user.email` → slug → `memory/users/<slug>/user-intelligence.md`.
+   - If CI environment detected (`$CI`, `$GITHUB_ACTIONS`, etc.) → skip personal profile; load `team-preferences.md` only.
+   - Load the **Active Predictions block only** (~50t) from the personal profile.
+   - Load `team-preferences.md` (~100t) for any dimensions not set in the personal profile.
+   - Apply Active Predictions immediately: calibrate test generation, response depth, implementation depth, and type strictness before touching any other context.
+
 1. **Resolve Scope**
    - Use the user request, changed files, graph proximity, and impact report.
    - Identify candidate modules, services, APIs, schemas, tests, and risk areas.

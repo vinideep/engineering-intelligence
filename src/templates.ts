@@ -57,6 +57,7 @@ export const SKILL_NAMES = [
   "context-budget-optimizer",
   "backlog-decomposition-engine",
   "issue-tracker-sync-engine",
+  "user-intelligence-engine",
 ] as const;
 
 export const AGENT_NAMES = [

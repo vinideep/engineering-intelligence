@@ -10,7 +10,7 @@ import { doctor } from "../validation/index.js";
 import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp";
+type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile";
 
 interface Options {
   command: Command;
@@ -24,6 +24,8 @@ interface Options {
   graphType: string;
   update_: boolean;
   files: string[];
+  threshold: number;
+  window: number;
 }
 
 async function packageVersion(): Promise<string> {
@@ -47,6 +49,9 @@ Usage:
   engineering-intelligence visualize [path] [--open]
   engineering-intelligence map [path] [--type dependency] [--update] [--files a,b,c]
   engineering-intelligence mcp [path]
+  engineering-intelligence freshness [path] [--threshold 60] [--json]
+  engineering-intelligence git-analysis [path] [--window 90] [--json]
+  engineering-intelligence user-profile [path] [--json]
 
 IDE ids: ${IDE_IDS.join(", ")}
 `;
@@ -55,7 +60,7 @@ IDE ids: ${IDE_IDS.join(", ")}
 function parseArgs(args: string[]): Options {
   let command: Command = "install";
   const remaining = [...args];
-  if (remaining[0] && ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp"].includes(remaining[0])) {
+  if (remaining[0] && ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile"].includes(remaining[0])) {
     command = remaining.shift() as Command;
   }
   if (remaining.includes("--help") || remaining.includes("-h")) {
@@ -72,6 +77,8 @@ function parseArgs(args: string[]): Options {
   let graphType = "dependency";
   let update_ = false;
   let files: string[] = [];
+  let threshold = 60;
+  let window_ = 90;
 
   for (let index = 0; index < remaining.length; index += 1) {
     const arg = remaining[index];
@@ -112,6 +119,18 @@ function parseArgs(args: string[]): Options {
       files = value.split(",").map((f) => f.trim()).filter(Boolean);
     } else if (arg.startsWith("--files=")) {
       files = arg.slice("--files=".length).split(",").map((f) => f.trim()).filter(Boolean);
+    } else if (arg === "--threshold") {
+      const value = remaining[++index];
+      if (!value) throw new Error("--threshold requires a value.");
+      threshold = parseInt(value, 10);
+    } else if (arg.startsWith("--threshold=")) {
+      threshold = parseInt(arg.slice("--threshold=".length), 10);
+    } else if (arg === "--window") {
+      const value = remaining[++index];
+      if (!value) throw new Error("--window requires a value.");
+      window_ = parseInt(value, 10);
+    } else if (arg.startsWith("--window=")) {
+      window_ = parseInt(arg.slice("--window=".length), 10);
     } else if (arg.startsWith("-")) {
       throw new Error(`Unknown option "${arg}".`);
     } else if (!target) {
@@ -132,6 +151,8 @@ function parseArgs(args: string[]): Options {
     graphType,
     update_,
     files,
+    threshold,
+    window: window_,
   };
 }
 
@@ -182,6 +203,59 @@ async function main(): Promise<void> {
         return answer.trim().toLowerCase() === "y";
       }
     : undefined;
+
+  if (options.command === "freshness") {
+    const { writeFreshnessReport } = await import("../freshness/index.js");
+    const { reportPath, report } = await writeFreshnessReport(options.root, options.threshold);
+    if (options.json) {
+      output.write(`${JSON.stringify(report, null, 2)}\n`);
+    } else {
+      output.write(`Freshness report: ${reportPath}\n`);
+      output.write(`  ${report.scores.length} documents scanned\n`);
+      output.write(`  Drift decision: ${report.driftDecision}\n`);
+      const stale = report.scores.filter((s) => s.action !== "none");
+      if (stale.length > 0) {
+        output.write(`  ${stale.length} document(s) need attention:\n`);
+        for (const s of stale) output.write(`    ${s.score.toString().padStart(3)} ${s.docPath}\n`);
+      }
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "git-analysis") {
+    const { runGitAnalysis } = await import("../git-analysis/index.js");
+    const { reportPath, analysis } = await runGitAnalysis(options.root, options.window);
+    if (options.json) {
+      output.write(`${JSON.stringify(analysis, null, 2)}\n`);
+    } else {
+      output.write(`Git analysis report: ${reportPath}\n`);
+      output.write(`  ${analysis.commitsAnalyzed} commits in last ${analysis.windowDays} days\n`);
+      output.write(`  ${analysis.hotspots.length} hotspots, ${analysis.coupling.length} coupled pairs\n`);
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "user-profile") {
+    const { runUserProfile } = await import("../user-profile/index.js");
+    const { profile, profilePath, isCI } = await runUserProfile(options.root);
+    if (isCI) {
+      output.write("CI environment detected — personal profile skipped.\n");
+      output.write("Team preferences at .engineering-intelligence/memory/team-preferences.md still apply.\n");
+    } else if (options.json) {
+      output.write(`${JSON.stringify(profile, null, 2)}\n`);
+    } else {
+      output.write(`User profile: ${profilePath}\n`);
+      output.write(`  Identity: ${profile.identity.email}${profile.identity.gitHubUsername ? ` (GitHub: ${profile.identity.gitHubUsername})` : ""}\n`);
+      output.write(`  Commits analysed: ${profile.gitSignals.totalCommits}\n`);
+      output.write(`  Primary language: ${profile.gitSignals.primaryLanguage}\n`);
+      output.write(`  Test ratio: ${Math.round(profile.gitSignals.testCommitRatio * 100)}% of commits include test files\n`);
+      output.write(`  Inferred test preference: ${profile.engineeringPreferences.tests}\n`);
+    }
+    if (readline) readline.close();
+    return;
+  }
 
   if (options.command === "map") {
     const { buildGraph } = await import("../graph/index.js");
