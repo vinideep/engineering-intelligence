@@ -87,6 +87,21 @@ Generate the following artifacts in order:
 
 ## Procedure
 
+0. **Seed User Intelligence Profile (zero tokens)** — Before any discovery:
+
+   ```bash
+   npx engineering-intelligence user-profile .
+   npx engineering-intelligence freshness .
+   npx engineering-intelligence git-analysis .
+   ```
+
+   These three commands auto-populate:
+   - Developer identity, language, test philosophy, and commit style → personal profile
+   - Freshness scores for any pre-existing intelligence documents
+   - Hotspots, ownership, and coupling for the repository
+
+   Read the generated profile at `.engineering-intelligence/memory/users/<slug>/user-intelligence.md` and apply Active Predictions for the rest of this session. Skip if CI environment is detected.
+
 1. **Discover** — Scan for: package manifests, workspace configs, runtimes (`package.json`, `go.mod`, `Cargo.toml`, `pyproject.toml`, etc.), build systems, entrypoints, CI configs, Dockerfiles, deployment manifests, environment examples, database schemas/migrations, API definitions, auth configs, test suites.
 
 2. **Trace Architecture** — Follow imports, dependency injection, middleware registration, route definitions, event handlers, and service boundaries. Map the critical runtime flows from code evidence, not assumptions.

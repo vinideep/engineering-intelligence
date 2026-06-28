@@ -21,6 +21,16 @@ This capability does not modify product code.
 
 ## Procedure
 
+0. **Use the CLI first (saves ~2,000 tokens)** — Before computing freshness manually, run:
+
+   ```bash
+   npx engineering-intelligence freshness .
+   ```
+
+   This runs the deterministic staleness formula in milliseconds and writes `.engineering-intelligence/reports/FRESHNESS-report.md`. If the report exists and was generated within the last 10 minutes, **read it directly and skip steps 1–8**. The Pre-Implementation Drift Decision in the report replaces manual computation.
+
+   Only fall through to steps 1–8 if the CLI is unavailable.
+
 1. **Inventory knowledge documents** — Enumerate all documents in:
    - `.engineering-intelligence/knowledge-base/*.md` (00 through 16)
    - `.engineering-intelligence/memory/*.md`

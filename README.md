@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>Turn any AI coding IDE into a disciplined engineering team.</strong><br>
-  One install drops 45 skills, 15 specialist agents, and 11 workflows into your repo —<br>
+  One install drops 46 skills, 15 specialist agents, and 11 workflows into your repo —<br>
   teaching the agent to plan, implement, validate, and keep its own project knowledge in sync.
 </p>
 
@@ -36,6 +36,7 @@ AI coding agents forget everything between sessions. They re-read your architect
 | Ad-hoc one-shot prompts, no continuity | Autonomous Epic → Feature → Ticket backlog with a human approval gate per feature |
 | Skill and instruction files burn context on every call | Tiered loading: routing table → brief → full skill — **28–37% fewer tokens per invocation** |
 | Tied to one AI tool | One canonical toolkit, rendered natively into **9 AI IDEs** — Claude Code, Cursor, Copilot, Gemini, Codex, Antigravity, CommandCode, and more |
+| Treats every developer the same | **Per-developer intelligence** — a personal, gitignored profile seeded from your git history calibrates responses to your test philosophy and depth; a committed team layer captures shared consensus |
 
 > The installer does **not** inspect your source, call an AI model, or generate docs itself. It ships the skills, agents, and workflows — the real work happens inside your IDE when you invoke them.
 
@@ -144,7 +145,7 @@ npx engineering-intelligence install . --ide claude-code --yes
 `/initialize-engineering-intelligence` reads your codebase and creates:
 
 ```
-knowledge-base/                              ← architecture and domain knowledge
+.engineering-intelligence/knowledge-base/    ← architecture and domain knowledge
 .engineering-intelligence/graph/             ← dependency, service, and architecture graphs
 .engineering-intelligence/aidlc/             ← AI-DLC lifecycle state
 .engineering-intelligence/memory/            ← session memory
@@ -287,6 +288,18 @@ npx engineering-intelligence visualize .
 # Generate and open the dashboard in the browser
 npx engineering-intelligence visualize . --open
 
+# Score knowledge-base docs for staleness against related source files (writes a freshness report)
+npx engineering-intelligence freshness . --threshold 60
+npx engineering-intelligence freshness . --json
+
+# Extract git intelligence — hotspots, change coupling, ownership (last 90 days by default)
+npx engineering-intelligence git-analysis . --window 90
+npx engineering-intelligence git-analysis . --json
+
+# Seed/refresh your personal developer profile from git history (zero LLM tokens; gitignored)
+npx engineering-intelligence user-profile .
+npx engineering-intelligence user-profile . --json
+
 # Preview uninstall without removing anything
 npx engineering-intelligence uninstall . --dry-run
 
@@ -303,6 +316,22 @@ npx engineering-intelligence update .
 ```
 
 The update adds graph/impact skills and workflows, updates untouched managed blocks, and leaves any locally-edited managed files unchanged (reported as conflicts).
+
+---
+
+## 👤 Per-Developer Intelligence
+
+The `user-intelligence-engine` skill calibrates every workflow response to the individual developer — their test philosophy, implementation depth, communication style, and architecture preferences — **without an onboarding questionnaire**.
+
+- **Zero-token seeding.** Identity is resolved from `git config` and the profile is seeded from your git history (commit patterns, test ratio, primary language, typical change size) by the `user-profile` CLI command — no LLM context consumed.
+- **Multi-user safe.** Each developer's `user-intelligence.md` lives under `.engineering-intelligence/memory/users/<slug>/` and is **gitignored automatically** — your profile never lands in someone else's checkout.
+- **Team consensus layer.** Preferences shared across the team are promoted to a committed `.engineering-intelligence/memory/team-preferences.md`, which still applies in CI and to teammates without a personal profile.
+- **CI-aware.** In CI environments the personal profile is skipped; only the committed team layer applies.
+
+```bash
+# Seed or refresh your personal profile (run after a few commits for best signal)
+npx engineering-intelligence user-profile .
+```
 
 ---
 
@@ -330,10 +359,10 @@ The `/engineering-intelligence` workflow applies these gates automatically when 
 
 ## 📦 Toolkit Contents
 
-**45 skills** across six domains:
+**46 skills** across six domains:
 
 - **Knowledge & architecture:** codebase discovery, graph engine, knowledge extraction, architecture review, change detection, staleness detection, context sync, memory sync, knowledge sync, incremental sync, change history
-- **Planning & delivery:** AI-DLC lifecycle, backlog decomposition, issue tracker sync, requirement scoping, impact analysis, refactoring planner, greenfield architect
+- **Planning & delivery:** AI-DLC lifecycle, backlog decomposition, issue tracker sync, requirement scoping, impact analysis, refactoring planner, greenfield architect, user intelligence engine
 - **Quality & safety:** testing intelligence, type safety, API compatibility, API snapshots, database migration safety, environment variable auditor, ADR compliance, LLM prompt injection guard, MCP security governor, dead code detector, engineering change review, NFR/ADR governor
 - **Operations:** performance analysis, operations readiness, environmental backpressure, context budget optimizer, debugging engine, PR intelligence, convention detector
 - **Security & compliance:** security audit, contract test generator, API backward compatibility
@@ -350,8 +379,8 @@ The `/engineering-intelligence` workflow applies these gates automatically when 
 After regular use, a healthy project contains:
 
 ```
-knowledge-base/                                    ← architecture, domain, and API knowledge
 .engineering-intelligence/
+  knowledge-base/                                  ← architecture, domain, and API knowledge
   aidlc/
     aidlc-state.md                                 ← current AI-DLC lifecycle state
     execution-plan.md                              ← current sprint plan
@@ -366,12 +395,16 @@ knowledge-base/                                    ← architecture, domain, and
   reports/
     IMP-XXX-*.md                                   ← impact reports
     REV-XXX-*.md                                   ← engineering review reports
-  memory/                                          ← session memory
+    freshness-report.md                            ← doc staleness scores (freshness CLI)
+    git-analysis.md                                ← hotspots, coupling, ownership (git-analysis CLI)
+  memory/
+    team-preferences.md                            ← committed team consensus layer
+    users/<slug>/user-intelligence.md              ← personal developer profile (gitignored)
   context/
     context-manifest.md                            ← ranked context for the current session
   snapshots/                                       ← API response snapshots
-.changes/
-  CHG-XXX-*.md                                     ← change history
+  changes/
+    CHG-XXX-*.md                                   ← change history
 ```
 
 The installer manages only `.engineering-intelligence/install-manifest.json`. Everything else is written by the agent.

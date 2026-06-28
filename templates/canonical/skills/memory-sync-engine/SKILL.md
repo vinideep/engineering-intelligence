@@ -23,6 +23,8 @@ Maintain durable, long-lived engineering memory. Memory is for decisions and pat
 | `project-constraints.md` | Performance budgets, compatibility requirements, SLA targets, regulatory | Infrastructure changes, new compliance requirements |
 | `technology-decisions.md` | Stack choices, framework versions, deprecation timelines, migration plans | Dependency updates, technology migrations |
 | `regression-patterns.md` | Recurring bug categories and proven regression test templates | Bugfixes that reveal reusable failure patterns |
+| `team-preferences.md` | Team-wide engineering preferences promoted from ≥2 developer profiles | When `user-intelligence-engine` detects consensus across developers |
+| `users/<slug>/user-intelligence.md` | Personal developer profile (gitignored, never committed) | After each workflow session via `user-intelligence-engine`; CLI-seeded via `ei user-profile` |
 
 ## Regression Pattern Ownership
 

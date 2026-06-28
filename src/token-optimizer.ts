@@ -72,6 +72,7 @@ export const WORKFLOW_SKILL_ROUTING: Record<
       "context-budget-optimizer",
     ],
     optional: [
+      "user-intelligence-engine",
       "change-detection-engine",
       "incremental-sync-engine",
       "change-history-engine",

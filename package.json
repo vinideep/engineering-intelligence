@@ -1,6 +1,6 @@
 {
   "name": "engineering-intelligence",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Graph-backed engineering intelligence for AI coding IDEs. Real dependency graphs, MCP server, and installable skills/agents/workflows for 9 IDEs.",
   "type": "module",
   "homepage": "https://github.com/vinideep/engineering-intelligence#readme",
