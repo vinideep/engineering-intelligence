@@ -73,11 +73,20 @@ export async function analyzeImpact(root: string, changedFiles: string[]): Promi
     return { direct: [], indirect: [], unknowns: changedFiles.map((f) => `no graph found for ${f}`) };
   }
 
-  // Normalize changed files to module node IDs
+  // Normalize changed files to module node IDs, and seed with every symbol
+  // defined in those files so impact resolves at the function level too.
   const changedIds = new Set<string>();
+  const changedRels = new Set<string>();
   for (const f of changedFiles) {
-    const rel = path.relative(root, path.resolve(root, f)).replace(/\.(ts|tsx|js|mjs|cjs|py)$/, "");
+    const rel = path.relative(root, path.resolve(root, f)).replace(/\.(ts|tsx|js|mjs|cjs|py|go|rs|rb|java|kt)$/, "");
     changedIds.add(`module:${rel}`);
+    changedRels.add(rel);
+  }
+  // Add all symbol nodes belonging to the changed files (id form: symbol:<rel>#<name>)
+  for (const node of existing.nodes) {
+    if (node.kind !== "symbol") continue;
+    const rel = node.id.startsWith("symbol:") ? node.id.slice("symbol:".length).split("#")[0] : node.path;
+    if (rel && changedRels.has(rel)) changedIds.add(node.id);
   }
 
   // Build adjacency: who imports a given node (reverse edges)

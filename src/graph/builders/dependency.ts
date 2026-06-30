@@ -3,6 +3,7 @@ import path from "node:path";
 import type { DependencyGraph, GraphEdge, GraphNode } from "../schema.js";
 import { parseManifests } from "../parsers/manifest.js";
 import { extractImports } from "../parsers/imports.js";
+import { extractSymbols, resolvePendingCalls, buildGlobalSymbolTable, type PendingCall } from "../parsers/symbols.js";
 
 // Directories to skip when walking source files
 const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "coverage", "__pycache__", ".venv", "venv", "vendor", "target", ".gradle"]);
@@ -83,19 +84,34 @@ export async function buildDependencyGraph(root: string, options: BuildOptions =
   // Walk source files (or use provided file list for incremental)
   const sourceFiles = options.files ?? await walkSourceFiles(root, root);
 
-  // Extract imports from all source files in parallel (batched to avoid fd limit)
+  // Extract imports and symbols from all source files in parallel (batched to avoid fd limit)
   const BATCH = 50;
   const allNodes: GraphNode[] = [...manifestNodes];
   const allEdges: GraphEdge[] = [];
+  const symbolNodes: GraphNode[] = [];
+  const pendingCalls: PendingCall[] = [];
 
   for (let i = 0; i < sourceFiles.length; i += BATCH) {
     const batch = sourceFiles.slice(i, i + BATCH);
-    const results = await Promise.all(batch.map((f) => extractImports(f, root)));
-    for (const { nodes, edges } of results) {
+    const [importResults, symbolResults] = await Promise.all([
+      Promise.all(batch.map((f) => extractImports(f, root))),
+      Promise.all(batch.map((f) => extractSymbols(f, root))),
+    ]);
+    for (const { nodes, edges } of importResults) {
       allNodes.push(...nodes);
       allEdges.push(...edges);
     }
+    for (const { nodes, edges, pendingCalls: pc } of symbolResults) {
+      allNodes.push(...nodes);
+      symbolNodes.push(...nodes);
+      allEdges.push(...edges);
+      pendingCalls.push(...pc);
+    }
   }
+
+  // Resolve cross-file call edges against the global symbol table
+  const globalSymbols = buildGlobalSymbolTable(symbolNodes);
+  allEdges.push(...resolvePendingCalls(pendingCalls, globalSymbols));
 
   // Mark dev dependency edges
   for (const edge of allEdges) {

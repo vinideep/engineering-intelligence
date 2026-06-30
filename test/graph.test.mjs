@@ -111,6 +111,52 @@ test("all edges reference node IDs that exist in the nodes array", async () => {
   }
 });
 
+test("graph contains symbol nodes for function/class definitions", async () => {
+  const content = await readFile(GRAPH_PATH, "utf8");
+  const graph = JSON.parse(content);
+  const symbolNodes = graph.nodes.filter((n) => n.kind === "symbol");
+  assert.ok(symbolNodes.length > 0, "expected at least one symbol node");
+  // buildGraph is a top-level function in src/graph/index.ts
+  const buildGraphSym = graph.nodes.find((n) => n.id === "symbol:src/graph/index#buildGraph");
+  assert.ok(buildGraphSym, "symbol:src/graph/index#buildGraph should exist");
+  assert.equal(buildGraphSym.kind, "symbol");
+  assert.equal(buildGraphSym.metadata.symbolKind, "function");
+  assert.equal(buildGraphSym.confidence, "verified");
+});
+
+test("graph contains a defines edge from a module to its symbol", async () => {
+  const content = await readFile(GRAPH_PATH, "utf8");
+  const graph = JSON.parse(content);
+  const edge = graph.edges.find(
+    (e) => e.from === "module:src/graph/index" && e.to === "symbol:src/graph/index#buildGraph" && e.relation === "defines",
+  );
+  assert.ok(edge, "expected defines edge module:src/graph/index -> symbol:src/graph/index#buildGraph");
+  assert.equal(edge.confidence, "verified");
+});
+
+test("graph contains calls edges, including cross-file callers of buildGraph", async () => {
+  const content = await readFile(GRAPH_PATH, "utf8");
+  const graph = JSON.parse(content);
+  const callEdges = graph.edges.filter((e) => e.relation === "calls");
+  assert.ok(callEdges.length > 0, "expected at least one calls edge");
+  // src/cli/index.ts main() and src/mcp/index.ts startMcpServer() both call buildGraph
+  const callers = callEdges.filter((e) => e.to === "symbol:src/graph/index#buildGraph").map((e) => e.from);
+  assert.ok(
+    callers.length > 0,
+    `expected a cross-file caller of buildGraph, got: ${JSON.stringify(callers)}`,
+  );
+});
+
+test("analyzeImpact surfaces function-level callers of a changed file", async () => {
+  const result = await analyzeImpact(REPO_ROOT, ["src/graph/index.ts"]);
+  const all = [...result.direct, ...result.indirect];
+  const symbolImpacts = all.filter((id) => id.startsWith("symbol:"));
+  assert.ok(
+    symbolImpacts.length > 0,
+    `expected symbol-level impacted nodes, got: ${JSON.stringify(result)}`,
+  );
+});
+
 test("analyzeImpact returns direct importers for a changed source file", async () => {
   // src/types.ts is imported by multiple modules — changing it should list those modules
   const result = await analyzeImpact(REPO_ROOT, ["src/types.ts"]);
