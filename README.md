@@ -1,9 +1,9 @@
 <h1 align="center">Engineering Intelligence OS</h1>
 
 <p align="center">
-  <strong>Turn any AI coding IDE into a disciplined engineering team.</strong><br>
-  One install drops 46 skills, 15 specialist agents, and 11 workflows into your repo —<br>
-  teaching the agent to plan, implement, validate, and keep its own project knowledge in sync.
+  <strong>Your codebase's AI memory shouldn't be trapped in one tool.</strong><br>
+  Persistent, evidence-backed codebase intelligence that lives in your repo —<br>
+  a <strong>real computed dependency &amp; call graph</strong> + <strong>MCP impact analysis</strong>, portable across <strong>9 AI IDEs</strong>.
 </p>
 
 <p align="center">
@@ -27,18 +27,18 @@
 
 ## Why This Exists
 
-AI coding agents forget everything between sessions. They re-read your architecture from scratch, skip impact analysis, drift from your conventions, and have no idea what they changed yesterday. `engineering-intelligence` fixes that — it gives the agent a persistent memory of your project, a discipline to plan before touching code, and the ability to pick up exactly where it left off.
+Developers now switch between AI coding tools constantly — Cursor, Claude Code, Copilot, Gemini. Every switch means re-explaining your codebase from scratch, and every tool keeps its understanding locked inside itself. `engineering-intelligence` makes codebase intelligence a **repo artifact** — like tests or docs — computed by real code and queryable by any AI tool.
 
-| The problem | What this installs |
+| The problem | What this gives you |
 |---|---|
-| Agent re-learns your codebase from scratch every session | Evidence-based knowledge base + architecture graphs that persist across sessions |
-| Jumps straight to code, skips planning | Mandatory impact analysis + Agile planning before any non-trivial change |
-| Ad-hoc one-shot prompts, no continuity | Autonomous Epic → Feature → Ticket backlog with a human approval gate per feature |
-| Skill and instruction files burn context on every call | Tiered loading: routing table → brief → full skill — **28–37% fewer tokens per invocation** |
-| Tied to one AI tool | One canonical toolkit, rendered natively into **9 AI IDEs** — Claude Code, Cursor, Copilot, Gemini, Codex, Antigravity, CommandCode, and more |
+| Your codebase understanding is locked inside one AI tool | **One canonical intelligence layer**, rendered natively into **9 AI IDEs** — Claude Code, Cursor, Copilot, Gemini, Codex, Antigravity, CommandCode, and more. Switch tools; the knowledge follows. |
+| "What breaks if I change this?" is answered by guesswork | A **deterministic, computed dependency & call graph** (6 languages) + **function-level impact analysis** — no LLM required, schema-validated |
+| Agents can't query your repo's structure as a tool | A built-in **MCP server** exposes the graph + impact analysis + knowledge base as tool calls any MCP-compatible agent can invoke |
+| Agent re-learns your codebase from scratch every session | Evidence-based knowledge base + architecture graphs that **persist in your repo** across sessions |
+| Jumps straight to code, skips planning | Optional discipline layer: impact analysis + Agile planning before non-trivial changes |
 | Treats every developer the same | **Per-developer intelligence** — a personal, gitignored profile seeded from your git history calibrates responses to your test philosophy and depth; a committed team layer captures shared consensus |
 
-> The installer does **not** inspect your source, call an AI model, or generate docs itself. It ships the skills, agents, and workflows — the real work happens inside your IDE when you invoke them.
+> The **graph engine** and **MCP server** are real, deterministic code that runs on your repo. The skills/agents/workflows layer is structured instructions the installer renders into your IDE — the installer does not inspect your source or call an AI model itself.
 
 ### What it is — and what it isn't
 
@@ -56,6 +56,43 @@ Being precise about this up front, so you can decide if it fits:
 - The **28–37% token reduction** is measured at the rendered-file level (compression + deferred loading) by a regression-guarded test harness (`test/token-reduction.test.mjs`), not from live IDE sessions. It reflects how much less instruction text is loaded per invocation — treat it as a strong directional figure, not a per-session guarantee.
 
 If you want a low-friction start, install it and use just `/initialize-engineering-intelligence` + `/engineering-intelligence` first; adopt the deeper AI-DLC backlog and safety-gate workflows once you've seen the basics fit your team.
+
+---
+
+## 🧮 The computed core (not prose)
+
+Most "AI codebase memory" is just markdown an LLM wrote and hopes to re-read. The heart of this project is different: a **deterministic graph engine** and an **MCP server** — real code that runs on your repo, produces schema-validated output, and needs no LLM to be correct.
+
+### `engineering-intelligence map` — real dependency & call graph
+
+```bash
+npx engineering-intelligence map .
+# Graph built: .engineering-intelligence/graph/dependency-graph.json
+#   161 nodes, 409 edges (26 source files scanned)
+```
+
+- **Package + import edges** across **6 language families**: JS/TS, Python, Go, Rust, Ruby, Java/Kotlin (manifests + source-level imports).
+- **Function-level call graph** (JS/TS): every function/class/method becomes a `symbol:` node, with `defines` edges (module → symbol) and `calls` edges (symbol → symbol). Same-file calls are `verified`; cross-file calls resolve against a global symbol table and are marked `inferred` only when unambiguous — honest confidence, no hallucinated edges.
+- Every node and edge carries `evidence` (`file:line`) and a `confidence` level, validated against a fixed JSON schema before it's written. Stable IDs across runs.
+
+### Function-level impact analysis — "what breaks if I change this?"
+
+```bash
+# Reverse-BFS over import + call edges from everything defined in the changed file
+analyze_impact(["src/graph/index.ts"])
+#   direct:   symbol:src/cli/index#main, symbol:src/mcp/index#startMcpServer, module:src/mcp/index
+#   indirect: …downstream callers…
+```
+
+Change a file and immediately see which **functions and modules** call into it — computed from the graph, not guessed by a model.
+
+### MCP server — your repo's intelligence as tool calls
+
+```bash
+npx ei-mcp .          # stdio MCP server; add it to any MCP-compatible IDE
+```
+
+Exposes four tools any agent can call: **`map_dependencies`** (build the graph), **`get_graph`** (read it), **`analyze_impact`** (impact from changed files), **`read_knowledge`** (pull knowledge-base docs). The graph and knowledge become a queryable **service** — no markdown has to be installed into the IDE for an agent to use them.
 
 ---
 
