@@ -281,6 +281,16 @@ export async function analyzeImpact(root: string, changedFiles: string[]): Promi
   for (const id of direct) details.push(toDetail(id, "direct"));
   for (const id of indirect) details.push(toDetail(id, "indirect"));
 
+  // Rank details most-relevant-first so that IF the response is ever trimmed to
+  // fit a budget, the survivors are the ones a reviewer most needs: direct hops
+  // first, then highest churn (riskiest), then stable by id.
+  const hopRank = (h: "direct" | "indirect") => (h === "direct" ? 0 : 1);
+  details.sort((a, b) =>
+    hopRank(a.hop) - hopRank(b.hop) ||
+    (b.churn ?? -1) - (a.churn ?? -1) ||
+    (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  );
+
   return {
     direct: [...direct],
     indirect: [...indirect],
@@ -362,6 +372,7 @@ export async function whoCalls(root: string, name: string, options: { transitive
 
   const seen = new Set<string>();
   const callers: CallerInfo[] = [];
+  const bfsIndex = new Map<string, number>(); // arrival order (direct callers first)
   const queue: string[] = matched.map((m) => m.id);
   const targets = new Set(queue);
 
@@ -370,6 +381,7 @@ export async function whoCalls(root: string, name: string, options: { transitive
     for (const c of callersOf.get(cur) ?? []) {
       if (targets.has(c.from) || seen.has(c.from)) continue;
       seen.add(c.from);
+      bfsIndex.set(c.from, bfsIndex.size);
       const node = nodeById.get(c.from);
       callers.push({
         id: c.from,
@@ -382,6 +394,11 @@ export async function whoCalls(root: string, name: string, options: { transitive
       if (options.transitive) queue.push(c.from);
     }
   }
+
+  // Rank callers so any budget trim keeps the most trustworthy/closest first:
+  // verified before inferred, then BFS order (direct callers before transitive).
+  const confRank = (c: string) => (c === "verified" ? 0 : c === "inferred" ? 1 : 2);
+  callers.sort((a, b) => confRank(a.confidence) - confRank(b.confidence) || (bfsIndex.get(a.id)! - bfsIndex.get(b.id)!));
 
   return { target: name, matched, callers };
 }
