@@ -89,6 +89,8 @@ test("MCP server: initialize, list tools, call get_graph and analyze_impact", as
     assert.ok(toolNames.includes("get_graph"), `get_graph not in tools: ${toolNames}`);
     assert.ok(toolNames.includes("analyze_impact"), `analyze_impact not in tools: ${toolNames}`);
     assert.ok(toolNames.includes("read_knowledge"), `read_knowledge not in tools: ${toolNames}`);
+    assert.ok(toolNames.includes("find_symbol"), `find_symbol not in tools: ${toolNames}`);
+    assert.ok(toolNames.includes("who_calls"), `who_calls not in tools: ${toolNames}`);
 
     // 3. Call get_graph (graph already built by graph.test.mjs)
     sendRequest(proc, {
@@ -128,6 +130,8 @@ test("MCP server: initialize, list tools, call get_graph and analyze_impact", as
     assert.ok(Array.isArray(impactData.direct), `direct should be an array, got: ${JSON.stringify(impactData)}`);
     assert.ok(Array.isArray(impactData.indirect), "indirect should be an array");
     assert.ok(Array.isArray(impactData.unknowns), "unknowns should be an array");
+    assert.ok(Array.isArray(impactData.testsToRun), "testsToRun should be an array");
+    assert.ok(Array.isArray(impactData.details), "details should be an array");
 
     // 5. Call read_knowledge (list mode)
     sendRequest(proc, {
@@ -141,6 +145,32 @@ test("MCP server: initialize, list tools, call get_graph and analyze_impact", as
     const kbText = kbResponse.result?.content?.[0]?.text ?? "{}";
     const kbData = JSON.parse(kbText);
     assert.ok(Array.isArray(kbData.files), "files should be an array");
+
+    // 6. Call find_symbol
+    sendRequest(proc, {
+      jsonrpc: "2.0",
+      id: 6,
+      method: "tools/call",
+      params: { name: "find_symbol", arguments: { root: REPO_ROOT, name: "buildGraph" } },
+    });
+    const findResponse = await readResponse(proc, 6, 30_000);
+    assert.ok(!findResponse.error, `find_symbol call failed: ${JSON.stringify(findResponse.error)}`);
+    const findData = JSON.parse(findResponse.result?.content?.[0]?.text ?? "{}");
+    assert.ok(Array.isArray(findData.matches), "matches should be an array");
+    assert.ok(findData.matches.some((m) => m.id === "symbol:src/graph/index#buildGraph"), `expected buildGraph match, got: ${JSON.stringify(findData.matches?.map((m) => m.id))}`);
+
+    // 7. Call who_calls
+    sendRequest(proc, {
+      jsonrpc: "2.0",
+      id: 7,
+      method: "tools/call",
+      params: { name: "who_calls", arguments: { root: REPO_ROOT, name: "buildGraph" } },
+    });
+    const whoResponse = await readResponse(proc, 7, 30_000);
+    assert.ok(!whoResponse.error, `who_calls call failed: ${JSON.stringify(whoResponse.error)}`);
+    const whoData = JSON.parse(whoResponse.result?.content?.[0]?.text ?? "{}");
+    assert.ok(Array.isArray(whoData.callers), "callers should be an array");
+    assert.ok(whoData.callers.length > 0, `expected callers of buildGraph, got: ${JSON.stringify(whoData)}`);
 
   } finally {
     proc.stdin.end();

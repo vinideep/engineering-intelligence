@@ -12,7 +12,9 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { buildGraph, validateGraph, analyzeImpact } from "../dist/graph/index.js";
+import { buildGraph, validateGraph, analyzeImpact, findSymbol, whoCalls } from "../dist/graph/index.js";
+import { buildDependencyGraph } from "../dist/graph/builders/dependency.js";
+import { resolvePendingCalls, buildGlobalSymbolTable } from "../dist/graph/parsers/symbols.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -167,4 +169,103 @@ test("analyzeImpact returns direct importers for a changed source file", async (
     hasAdapters || result.direct.length > 0,
     `Expected direct importers of src/types.ts, got: ${JSON.stringify(result)}`,
   );
+});
+
+// --- v2.2: freshness stamp, test tagging, churn, richer impact --------------
+
+test("graph is stamped with the current git commit", async () => {
+  const content = await readFile(GRAPH_PATH, "utf8");
+  const graph = JSON.parse(content);
+  // This repo is a git repo, so a 40-char sha should be stamped.
+  assert.ok(typeof graph.commit === "string" && graph.commit.length >= 7, `expected commit stamp, got: ${graph.commit}`);
+});
+
+test("test files are tagged with metadata.isTest", async () => {
+  const content = await readFile(GRAPH_PATH, "utf8");
+  const graph = JSON.parse(content);
+  const tagged = graph.nodes.filter((n) => n.metadata && n.metadata.isTest === true);
+  assert.ok(tagged.length > 0, "expected at least one test-tagged node (test/*.test.mjs)");
+});
+
+test("module nodes carry a churn signal from git history", async () => {
+  const content = await readFile(GRAPH_PATH, "utf8");
+  const graph = JSON.parse(content);
+  const churned = graph.nodes.filter((n) => n.kind === "module" && typeof n.metadata.churn === "number");
+  // This repo has git history, so at least some modules should have churn.
+  assert.ok(churned.length > 0, "expected at least one module node with churn metadata");
+});
+
+test("analyzeImpact returns details, testsToRun, and riskNotes", async () => {
+  const result = await analyzeImpact(REPO_ROOT, ["src/graph/index.ts"]);
+  assert.ok(Array.isArray(result.details), "details should be an array");
+  assert.ok(Array.isArray(result.testsToRun), "testsToRun should be an array");
+  assert.ok(Array.isArray(result.riskNotes), "riskNotes should be an array");
+  // Each detail should carry evidence and a hop classification.
+  for (const d of result.details) {
+    assert.ok(d.id && d.kind && d.label, `detail missing fields: ${JSON.stringify(d)}`);
+    assert.ok(d.hop === "direct" || d.hop === "indirect", `bad hop: ${d.hop}`);
+  }
+});
+
+// --- v2.2: symbol queries ---------------------------------------------------
+
+test("findSymbol locates buildGraph by name", async () => {
+  const matches = await findSymbol(REPO_ROOT, "buildGraph");
+  assert.ok(matches.length > 0, "expected to find buildGraph");
+  assert.ok(matches.some((m) => m.id === "symbol:src/graph/index#buildGraph"), `got: ${JSON.stringify(matches.map((m) => m.id))}`);
+});
+
+test("whoCalls buildGraph returns its cross-file callers", async () => {
+  const result = await whoCalls(REPO_ROOT, "buildGraph");
+  assert.ok(result.matched.length > 0, "expected a matched definition");
+  const callerLabels = result.callers.map((c) => c.label);
+  assert.ok(result.callers.length > 0, `expected callers, got: ${JSON.stringify(callerLabels)}`);
+  // main() (cli) and startMcpServer() (mcp) both call buildGraph.
+  assert.ok(
+    callerLabels.includes("main") || callerLabels.includes("startMcpServer"),
+    `expected main/startMcpServer among callers, got: ${JSON.stringify(callerLabels)}`,
+  );
+});
+
+// --- v2.2: import-constrained resolution (unit) -----------------------------
+
+test("resolvePendingCalls uses imports to disambiguate same-named symbols", () => {
+  // Two files define a symbol named "save"; caller a imports only b.
+  const symbolNodes = [
+    { id: "symbol:a#run", kind: "symbol", label: "run", metadata: {}, evidence: [] },
+    { id: "symbol:b#save", kind: "symbol", label: "save", metadata: {}, evidence: [] },
+    { id: "symbol:c#save", kind: "symbol", label: "save", metadata: {}, evidence: [] },
+  ];
+  const table = buildGlobalSymbolTable(symbolNodes);
+  const pending = [{ from: "symbol:a#run", calleeName: "save", evidence: "a.ts:3" }];
+  const imports = new Map([["module:a", new Set(["module:b"])]]);
+  const edges = resolvePendingCalls(pending, table, imports);
+  assert.equal(edges.length, 1, "expected exactly one resolved edge");
+  assert.equal(edges[0].to, "symbol:b#save", `expected import-constrained target, got ${edges[0].to}`);
+  assert.equal(edges[0].confidence, "inferred");
+});
+
+// --- v2.2: Python symbol extraction (fixture) -------------------------------
+
+test("Python files produce symbol nodes, defines edges, and cross-file calls", async () => {
+  const pyRoot = path.join(REPO_ROOT, "test", "fixtures", "py");
+  const { graph } = await buildDependencyGraph(pyRoot);
+  const symIds = graph.nodes.filter((n) => n.kind === "symbol").map((n) => n.id);
+
+  // Top-level function + class + method symbols.
+  assert.ok(symIds.includes("symbol:helpers#compute_total"), `missing compute_total, got: ${JSON.stringify(symIds)}`);
+  assert.ok(symIds.includes("symbol:helpers#Cache"), "missing Cache class symbol");
+  assert.ok(symIds.some((id) => id === "symbol:helpers#Cache.get"), "missing Cache.get method symbol");
+
+  // defines edge module -> symbol.
+  assert.ok(
+    graph.edges.some((e) => e.relation === "defines" && e.to === "symbol:helpers#compute_total"),
+    "missing defines edge for compute_total",
+  );
+
+  // Cross-file call: service.summarize calls helpers.compute_total.
+  const callEdge = graph.edges.find(
+    (e) => e.relation === "calls" && e.from === "symbol:service#summarize" && e.to === "symbol:helpers#compute_total",
+  );
+  assert.ok(callEdge, `expected cross-file call summarize -> compute_total, got calls: ${JSON.stringify(graph.edges.filter((e) => e.relation === "calls").map((e) => e.from + "->" + e.to))}`);
 });
