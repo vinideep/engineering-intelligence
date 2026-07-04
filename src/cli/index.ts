@@ -34,6 +34,7 @@ interface Options {
   window: number;
   strict: boolean;
   transitive: boolean;
+  full: boolean;
   intent: string;
   id: string;
   positionals: string[];
@@ -56,7 +57,7 @@ Four commands do everything:
 
   ask     "<question>" | <file...>       Question the codebase. Routes automatically:
                                          "who calls X", "where is X", or a file path
-                                         → impact + which tests to run. [--json]
+                                         → impact + which tests to run. [--json] [--full]
 
   guard   "<intent>" [file...]           Before an edit: open a flight, show the
                                          predicted blast radius.
@@ -116,6 +117,7 @@ function parseArgs(args: string[]): Options {
   let window_ = 90;
   let strict = false;
   let transitive = false;
+  let full = false;
   let intent = "";
   let id = "";
   const positionals: string[] = [];
@@ -175,6 +177,8 @@ function parseArgs(args: string[]): Options {
       strict = true;
     } else if (arg === "--transitive") {
       transitive = true;
+    } else if (arg === "--full") {
+      full = true;
     } else if (arg === "--intent") {
       const value = remaining[++index];
       if (!value) throw new Error("--intent requires a value.");
@@ -212,6 +216,7 @@ function parseArgs(args: string[]): Options {
     window: window_,
     strict,
     transitive,
+    full,
     intent,
     id,
     positionals,
@@ -296,7 +301,7 @@ async function main(): Promise<void> {
       if (readline) readline.close();
       return;
     }
-    const result = await runAsk(options.root, query, options.positionals);
+    const result = await runAsk(options.root, query, options.positionals, { full: options.full });
     output.write(options.json ? `${JSON.stringify(result.json, null, 2)}\n` : result.text);
     if (readline) readline.close();
     return;
