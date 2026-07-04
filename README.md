@@ -72,19 +72,27 @@ npx engineering-intelligence map .
 ```
 
 - **Package + import edges** across **6 language families**: JS/TS, Python, Go, Rust, Ruby, Java/Kotlin (manifests + source-level imports).
-- **Function-level call graph** (JS/TS): every function/class/method becomes a `symbol:` node, with `defines` edges (module → symbol) and `calls` edges (symbol → symbol). Same-file calls are `verified`; cross-file calls resolve against a global symbol table and are marked `inferred` only when unambiguous — honest confidence, no hallucinated edges.
-- Every node and edge carries `evidence` (`file:line`) and a `confidence` level, validated against a fixed JSON schema before it's written. Stable IDs across runs.
+- **Function-level call graph** (JS/TS **and Python**): every function/class/method becomes a `symbol:` node, with `defines` edges (module → symbol) and `calls` edges (symbol → symbol). Same-file calls are `verified`; cross-file calls are resolved **import-constrained** (only against modules the caller actually imports) and marked `inferred` — honest confidence, no hallucinated edges.
+- **Git-churn overlay** — every module node is tagged with how often it changed in the last 90 days, so impact answers can flag risky, high-churn code.
+- **Test tagging** — test files are marked so impact analysis can tell you exactly which tests to run.
+- Every node and edge carries `evidence` (`file:line`) and a `confidence` level, validated against a fixed JSON schema before it's written. The graph is stamped with the git commit it was built at, so queries can **auto-refresh** it against your working tree. Stable IDs across runs.
 
-### Function-level impact analysis — "what breaks if I change this?"
+### Ask your graph — from the CLI or from chat
 
 ```bash
-# Reverse-BFS over import + call edges from everything defined in the changed file
-analyze_impact(["src/graph/index.ts"])
-#   direct:   symbol:src/cli/index#main, symbol:src/mcp/index#startMcpServer, module:src/mcp/index
-#   indirect: …downstream callers…
+# "What breaks if I change this?" — direct + indirect dependents, which tests to run, risk notes
+engineering-intelligence impact src/graph/index.ts
+#   Direct (3): module:src/mcp/index, symbol:src/cli/index#main, symbol:src/mcp/index#startMcpServer
+#   Tests to run (1): test/graph.test.mjs
+
+# "Who calls this function?" — every caller, with call-site evidence and confidence
+engineering-intelligence who-calls buildGraph
+#   ensureFreshGraph  [verified]  src/graph/index.ts:125
+#   main              [inferred]  src/cli/index.ts:284
+#   startMcpServer    [inferred]  src/mcp/index.ts:114
 ```
 
-Change a file and immediately see which **functions and modules** call into it — computed from the graph, not guessed by a model.
+Both commands **auto-refresh** the graph against your working tree first, so the answer always reflects the current code — you never query a stale graph. Computed from the graph by reverse-BFS, not guessed by a model.
 
 ### MCP server — your repo's intelligence as tool calls
 
@@ -92,7 +100,19 @@ Change a file and immediately see which **functions and modules** call into it �
 npx ei-mcp .          # stdio MCP server; add it to any MCP-compatible IDE
 ```
 
-Exposes four tools any agent can call: **`map_dependencies`** (build the graph), **`get_graph`** (read it), **`analyze_impact`** (impact from changed files), **`read_knowledge`** (pull knowledge-base docs). The graph and knowledge become a queryable **service** — no markdown has to be installed into the IDE for an agent to use them.
+Exposes **six tools** any agent can call: **`map_dependencies`** (build the graph), **`get_graph`** (read it), **`analyze_impact`** (what breaks + which tests to run), **`find_symbol`** (locate a definition by name), **`who_calls`** (find every caller of a function), **`read_knowledge`** (pull knowledge-base docs). Query tools auto-refresh the graph first. Your repo's structure becomes a queryable **service** — no markdown has to be installed into the IDE for an agent to use it.
+
+### `verify` — the knowledge base tells you when it's lying
+
+```bash
+engineering-intelligence verify --strict
+```
+
+A deterministic drift check: every file path and `file:line` citation in your `knowledge-base/` is checked against the current code. Missing files and out-of-range line numbers are reported (and fail CI with `--strict`). No LLM — just proof that the docs still match the code.
+
+### PR impact comments (GitHub Action)
+
+Drop [`templates/github-action/engineering-intelligence-impact.yml`](templates/github-action/engineering-intelligence-impact.yml) into `.github/workflows/` and every PR gets a computed impact comment — direct/indirect dependents, tests to run, high-churn risk notes. See [docs/github-action.md](docs/github-action.md).
 
 ---
 
