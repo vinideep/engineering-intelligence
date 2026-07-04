@@ -10,7 +10,9 @@ import { doctor } from "../validation/index.js";
 import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile";
+type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "impact" | "who-calls" | "verify";
+
+const COMMANDS: Command[] = ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "impact", "who-calls", "verify"];
 
 interface Options {
   command: Command;
@@ -26,6 +28,9 @@ interface Options {
   files: string[];
   threshold: number;
   window: number;
+  strict: boolean;
+  transitive: boolean;
+  positionals: string[];
 }
 
 async function packageVersion(): Promise<string> {
@@ -49,9 +54,15 @@ Usage:
   engineering-intelligence visualize [path] [--open]
   engineering-intelligence map [path] [--type dependency] [--update] [--files a,b,c]
   engineering-intelligence mcp [path]
+  engineering-intelligence impact <file...> [--json]
+  engineering-intelligence who-calls <symbol> [--transitive] [--json]
+  engineering-intelligence verify [path] [--strict] [--json]
   engineering-intelligence freshness [path] [--threshold 60] [--json]
   engineering-intelligence git-analysis [path] [--window 90] [--json]
   engineering-intelligence user-profile [path] [--json]
+
+Query commands (impact, who-calls) auto-refresh the graph against your working
+tree before answering, so results always reflect the current code.
 
 IDE ids: ${IDE_IDS.join(", ")}
 `;
@@ -60,7 +71,7 @@ IDE ids: ${IDE_IDS.join(", ")}
 function parseArgs(args: string[]): Options {
   let command: Command = "install";
   const remaining = [...args];
-  if (remaining[0] && ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile"].includes(remaining[0])) {
+  if (remaining[0] && (COMMANDS as string[]).includes(remaining[0])) {
     command = remaining.shift() as Command;
   }
   if (remaining.includes("--help") || remaining.includes("-h")) {
@@ -79,6 +90,9 @@ function parseArgs(args: string[]): Options {
   let files: string[] = [];
   let threshold = 60;
   let window_ = 90;
+  let strict = false;
+  let transitive = false;
+  const positionals: string[] = [];
 
   for (let index = 0; index < remaining.length; index += 1) {
     const arg = remaining[index];
@@ -131,17 +145,22 @@ function parseArgs(args: string[]): Options {
       window_ = parseInt(value, 10);
     } else if (arg.startsWith("--window=")) {
       window_ = parseInt(arg.slice("--window=".length), 10);
+    } else if (arg === "--strict") {
+      strict = true;
+    } else if (arg === "--transitive") {
+      transitive = true;
     } else if (arg.startsWith("-")) {
       throw new Error(`Unknown option "${arg}".`);
-    } else if (!target) {
-      target = arg;
     } else {
-      throw new Error(`Unexpected argument "${arg}".`);
+      positionals.push(arg);
+      if (!target) target = arg;
     }
   }
+  // For commands whose positionals are a payload (not a path), the root is cwd.
+  const positionalIsPayload = command === "impact" || command === "who-calls";
   return {
     command,
-    root: path.resolve(target ?? process.cwd()),
+    root: path.resolve(positionalIsPayload ? process.cwd() : (target ?? process.cwd())),
     ides: [...new Set(ides)],
     yes,
     dryRun,
@@ -153,6 +172,9 @@ function parseArgs(args: string[]): Options {
     files,
     threshold,
     window: window_,
+    strict,
+    transitive,
+    positionals,
   };
 }
 
@@ -266,6 +288,75 @@ async function main(): Promise<void> {
     output.write(`Graph built: ${result.graphPath}\n`);
     output.write(`  ${result.nodeCount} nodes, ${result.edgeCount} edges (${result.fileCount} source files scanned)\n`);
     if (result.wasIncremental) output.write("  [incremental update]\n");
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "impact") {
+    const { ensureFreshGraph, analyzeImpact } = await import("../graph/index.js");
+    const files = options.files.length > 0 ? options.files : options.positionals;
+    if (files.length === 0) {
+      output.write("Usage: engineering-intelligence impact <file...> [--json]\n");
+      process.exitCode = 1;
+      if (readline) readline.close();
+      return;
+    }
+    const fresh = await ensureFreshGraph(options.root);
+    const result = await analyzeImpact(options.root, files);
+    if (options.json) {
+      output.write(`${JSON.stringify(fresh.staleWarning ? { ...result, staleWarning: fresh.staleWarning } : result, null, 2)}\n`);
+    } else {
+      output.write(`Impact of changing: ${files.join(", ")}\n`);
+      if (fresh.staleWarning) output.write(`  ⚠ ${fresh.staleWarning}\n`);
+      output.write(`  Direct (${result.direct.length}): ${result.direct.slice(0, 20).join(", ") || "none"}\n`);
+      output.write(`  Indirect (${result.indirect.length}): ${result.indirect.slice(0, 20).join(", ") || "none"}\n`);
+      if (result.testsToRun.length > 0) output.write(`  Tests to run (${result.testsToRun.length}): ${result.testsToRun.join(", ")}\n`);
+      for (const note of result.riskNotes) output.write(`  ⚠ ${note}\n`);
+      if (result.direct.length === 0 && result.indirect.length === 0) {
+        output.write("  No dependents found (or no graph — run `map` first).\n");
+      }
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "who-calls") {
+    const { ensureFreshGraph, whoCalls } = await import("../graph/index.js");
+    const name = options.positionals[0];
+    if (!name) {
+      output.write("Usage: engineering-intelligence who-calls <symbol> [--transitive] [--json]\n");
+      process.exitCode = 1;
+      if (readline) readline.close();
+      return;
+    }
+    const fresh = await ensureFreshGraph(options.root);
+    const result = await whoCalls(options.root, name, { transitive: options.transitive });
+    if (options.json) {
+      output.write(`${JSON.stringify(fresh.staleWarning ? { ...result, staleWarning: fresh.staleWarning } : result, null, 2)}\n`);
+    } else {
+      if (result.unresolved) {
+        output.write(`${result.unresolved}\n`);
+      } else {
+        output.write(`Callers of ${name} (${result.matched.length} definition(s), ${result.callers.length} caller(s)):\n`);
+        for (const c of result.callers) {
+          output.write(`  ${c.label}  [${c.confidence}]  ${c.evidence[0] ?? ""}\n`);
+        }
+        if (result.callers.length === 0) output.write("  No callers found in the graph.\n");
+      }
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "verify") {
+    const { verifyKnowledge, renderVerifyReport } = await import("../verify/index.js");
+    const report = await verifyKnowledge(options.root);
+    if (options.json) {
+      output.write(`${JSON.stringify(report, null, 2)}\n`);
+    } else {
+      output.write(renderVerifyReport(report));
+    }
+    if (options.strict && report.drift > 0) process.exitCode = 1;
     if (readline) readline.close();
     return;
   }

@@ -4,7 +4,7 @@ import path from "node:path";
 import { Server } from "@modelcontextprotocol/sdk/server";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { buildGraph, analyzeImpact, loadExistingGraph } from "../graph/index.js";
+import { buildGraph, analyzeImpact, loadExistingGraph, ensureFreshGraph, findSymbol, whoCalls } from "../graph/index.js";
 import { readFile as readFileFn } from "node:fs/promises";
 
 const TOOLS = [
@@ -40,7 +40,7 @@ const TOOLS = [
   {
     name: "analyze_impact",
     description:
-      "Given a list of changed files, traverse the dependency graph and return which modules directly or indirectly import them. Requires a graph built by map_dependencies.",
+      "Given a list of changed files, traverse the dependency + call graph and return what breaks: modules and functions that directly or indirectly depend on them. Returns `direct`/`indirect` node ids, `details` (each impacted node with kind/label/evidence file:line/churn), `testsToRun` (test files that should be re-run), and `riskNotes` (high-churn warnings). The graph is auto-refreshed against the working tree before answering.",
     inputSchema: {
       type: "object" as const,
       required: ["changedFiles"],
@@ -51,6 +51,33 @@ const TOOLS = [
           items: { type: "string" },
           description: "List of changed file paths (relative to root or absolute).",
         },
+      },
+    },
+  },
+  {
+    name: "find_symbol",
+    description:
+      "Locate function/class/method definitions by name. Returns matching symbol nodes with their file:line evidence. Use when you know a function name but not where it lives.",
+    inputSchema: {
+      type: "object" as const,
+      required: ["name"],
+      properties: {
+        root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
+        name: { type: "string", description: "Symbol name to find (e.g. \"buildGraph\" or \"ClassName.method\")." },
+      },
+    },
+  },
+  {
+    name: "who_calls",
+    description:
+      "Answer \"what calls this function?\" — reverse-walks the call graph to find every caller of the named symbol, with call-site file:line evidence and confidence. Set transitive=true to include indirect callers. The graph is auto-refreshed before answering.",
+    inputSchema: {
+      type: "object" as const,
+      required: ["name"],
+      properties: {
+        root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
+        name: { type: "string", description: "Symbol name whose callers to find." },
+        transitive: { type: "boolean", description: "If true, include indirect (transitive) callers." },
       },
     },
   },
@@ -70,7 +97,7 @@ const TOOLS = [
 
 export async function startMcpServer(projectRoot: string): Promise<void> {
   const server = new Server(
-    { name: "engineering-intelligence", version: "2.0.0" },
+    { name: "engineering-intelligence", version: "2.2.0" },
     { capabilities: { tools: {} } },
   );
 
@@ -109,6 +136,7 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
 
       if (name === "get_graph") {
         const type = typeof args.type === "string" ? args.type : "dependency";
+        if (type === "dependency") await ensureFreshGraph(root);
         const graphPath = path.join(root, ".engineering-intelligence", "graph", `${type}-graph.json`);
         const graph = await loadExistingGraph(graphPath);
         if (!graph) {
@@ -128,8 +156,33 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
             isError: true,
           };
         }
+        const fresh = await ensureFreshGraph(root);
         const result = await analyzeImpact(root, changedFiles);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+        const payload = fresh.staleWarning ? { ...result, staleWarning: fresh.staleWarning } : result;
+        return { content: [{ type: "text", text: JSON.stringify(payload, null, 2) }] };
+      }
+
+      if (name === "find_symbol") {
+        const symName = typeof args.name === "string" ? args.name : "";
+        if (!symName) {
+          return { content: [{ type: "text", text: JSON.stringify({ error: "name is required" }) }], isError: true };
+        }
+        const fresh = await ensureFreshGraph(root);
+        const matches = await findSymbol(root, symName);
+        const payload = { matches, ...(fresh.staleWarning ? { staleWarning: fresh.staleWarning } : {}) };
+        return { content: [{ type: "text", text: JSON.stringify(payload, null, 2) }] };
+      }
+
+      if (name === "who_calls") {
+        const symName = typeof args.name === "string" ? args.name : "";
+        if (!symName) {
+          return { content: [{ type: "text", text: JSON.stringify({ error: "name is required" }) }], isError: true };
+        }
+        const transitive = args.transitive === true;
+        const fresh = await ensureFreshGraph(root);
+        const result = await whoCalls(root, symName, { transitive });
+        const payload = fresh.staleWarning ? { ...result, staleWarning: fresh.staleWarning } : result;
+        return { content: [{ type: "text", text: JSON.stringify(payload, null, 2) }] };
       }
 
       if (name === "read_knowledge") {
