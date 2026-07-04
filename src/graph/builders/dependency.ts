@@ -4,10 +4,28 @@ import type { DependencyGraph, GraphEdge, GraphNode } from "../schema.js";
 import { parseManifests } from "../parsers/manifest.js";
 import { extractImports } from "../parsers/imports.js";
 import { extractSymbols, resolvePendingCalls, buildGlobalSymbolTable, type PendingCall } from "../parsers/symbols.js";
+import { computeChurn } from "../../git-analysis/index.js";
 
 // Directories to skip when walking source files
 const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "coverage", "__pycache__", ".venv", "venv", "vendor", "target", ".gradle"]);
 const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".go", ".rs", ".rb", ".java", ".kt"]);
+
+// Node paths / ids that identify test files. Used to tag nodes so impact
+// analysis can answer "which tests should I run?".
+const TEST_PATTERNS: RegExp[] = [
+  /(^|\/)tests?\//,
+  /(^|\/)__tests__\//,
+  /(^|\/)spec\//,
+  /\.test\./,
+  /\.spec\./,
+  /_test\.(go|py|rb)$/,
+  /(^|\/)test_[^/]*\.py$/,
+  /Test\.(java|kt)$/,
+];
+
+function looksLikeTest(idOrPath: string): boolean {
+  return TEST_PATTERNS.some((re) => re.test(idOrPath));
+}
 
 async function walkSourceFiles(dir: string, root: string, files: string[] = []): Promise<string[]> {
   let entries: string[];
@@ -109,9 +127,19 @@ export async function buildDependencyGraph(root: string, options: BuildOptions =
     }
   }
 
+  // Build a module -> imported-modules map from the import edges collected so
+  // far, so cross-file call resolution can be constrained to actual imports.
+  const importsByModule = new Map<string, Set<string>>();
+  for (const edge of allEdges) {
+    if (edge.relation !== "imports") continue;
+    if (!edge.to.startsWith("module:")) continue;
+    if (!importsByModule.has(edge.from)) importsByModule.set(edge.from, new Set());
+    importsByModule.get(edge.from)!.add(edge.to);
+  }
+
   // Resolve cross-file call edges against the global symbol table
   const globalSymbols = buildGlobalSymbolTable(symbolNodes);
-  allEdges.push(...resolvePendingCalls(pendingCalls, globalSymbols));
+  allEdges.push(...resolvePendingCalls(pendingCalls, globalSymbols, importsByModule));
 
   // Mark dev dependency edges
   for (const edge of allEdges) {
@@ -132,6 +160,34 @@ export async function buildDependencyGraph(root: string, options: BuildOptions =
   for (const edge of validEdges) {
     if (!nodeIds.has(edge.to)) {
       unknowns.push(`unresolved target "${edge.to}" referenced from "${edge.from}"`);
+    }
+  }
+
+  // Tag test nodes so impact analysis can surface which tests to run.
+  for (const node of nodes) {
+    const probe = node.path ?? node.evidence[0]?.split(":")[0] ?? node.id;
+    if (looksLikeTest(probe.replace(/\\/g, "/"))) {
+      node.metadata = { ...node.metadata, isTest: true };
+    }
+  }
+
+  // Overlay git churn (change frequency) onto module nodes as a risk signal.
+  // Non-git dirs yield an empty map and are skipped silently.
+  const churn = computeChurn(root, 90);
+  if (churn.size > 0) {
+    // Index churn by extension-stripped path so module ids (which drop the
+    // extension) can be matched in O(1).
+    const churnByNoExt = new Map<string, number>();
+    for (const [file, n] of churn) {
+      const noExt = file.replace(/\.[^./]+$/, "");
+      churnByNoExt.set(noExt, Math.max(churnByNoExt.get(noExt) ?? 0, n));
+      churnByNoExt.set(file, Math.max(churnByNoExt.get(file) ?? 0, n));
+    }
+    for (const node of nodes) {
+      if (node.kind !== "module") continue;
+      const rel = node.path ?? node.id.replace(/^module:/, "");
+      const count = churnByNoExt.get(rel);
+      if (count !== undefined) node.metadata = { ...node.metadata, churn: count };
     }
   }
 
