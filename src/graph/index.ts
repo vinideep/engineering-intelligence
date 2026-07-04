@@ -63,6 +63,13 @@ export async function buildGraph(root: string, options: BuildGraphOptions = {}):
   if (options.write !== false) {
     await mkdir(graphDir, { recursive: true });
     await writeFile(graphPath, `${JSON.stringify(result.graph, null, 2)}\n`, "utf8");
+    // Regenerate the orientation brief so it never drifts from the graph.
+    try {
+      const { generateBrief } = await import("../brief/index.js");
+      await generateBrief(root);
+    } catch {
+      // Brief is best-effort; never fail a graph build over it.
+    }
   }
 
   return {

@@ -6,13 +6,33 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { buildGraph, analyzeImpact, loadExistingGraph, ensureFreshGraph, findSymbol, whoCalls } from "../graph/index.js";
 import { preflight, postflight } from "../flight/index.js";
+import { generateBrief, readBrief } from "../brief/index.js";
+import { shape, terseNode, terseEdge } from "./shaper.js";
 import { readFile as readFileFn } from "node:fs/promises";
+
+// Optional token budget from tool args (agent can raise it to see more).
+function budgetOf(args: Record<string, unknown>, fallback: number): number {
+  return typeof args.budget === "number" && args.budget > 0 ? args.budget : fallback;
+}
+
+const budgetProp = { budget: { type: "number", description: "Optional token budget for the response. Results are capped to fit; raise it to see more." } };
 
 const TOOLS = [
   {
+    name: "get_brief",
+    description:
+      "Get a ~500-token orientation digest of the repo (languages, entry points, most-depended-on modules, hotspots, test layout) — computed from the graph, not an LLM. Read this FIRST instead of opening many files to understand the codebase; it's the cheapest way to orient.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
+      },
+    },
+  },
+  {
     name: "map_dependencies",
     description:
-      "Run the deterministic dependency graph builder on a repository. Parses package manifests (package.json, pyproject.toml, go.mod, Cargo.toml) and source-file imports (JS/TS/Python) to produce a validated dependency-graph.json. Returns the graph as JSON.",
+      "Build/refresh the deterministic dependency + call graph on disk. Returns a small SUMMARY only (counts + path) — the full graph is queried lazily via get_graph, analyze_impact, find_symbol, and who_calls, so it never floods the context.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -25,53 +45,53 @@ const TOOLS = [
   {
     name: "get_graph",
     description:
-      "Read an existing graph file from .engineering-intelligence/graph/ and return it as JSON. Use map_dependencies first if no graph exists yet.",
+      "Query the dependency graph with filters — returns a COMPACT, capped view, not the whole file. Filter with `pattern` (regex over node ids/labels or edge endpoints), `kind` (module/symbol/package), `relation` (imports/defines/calls), and `limit`. Over-budget results are truncated with a `truncated` marker telling you how to expand. Use `full:true` only when you truly need the raw graph.",
     inputSchema: {
       type: "object" as const,
       properties: {
         root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
-        type: {
-          type: "string",
-          enum: ["dependency", "service", "runtime", "business-flow", "data-flow"],
-          description: "Graph type to read. Defaults to 'dependency'.",
-        },
+        type: { type: "string", enum: ["dependency", "service", "runtime", "business-flow", "data-flow"], description: "Graph type. Defaults to 'dependency'." },
+        pattern: { type: "string", description: "Regex to match node id/label or edge from/to. Omit to match all." },
+        kind: { type: "string", description: "Filter nodes by kind (module, symbol, package)." },
+        relation: { type: "string", description: "Filter edges by relation (imports, defines, calls)." },
+        limit: { type: "number", description: "Max nodes and max edges to return (default 100)." },
+        full: { type: "boolean", description: "Return the raw, unfiltered graph (large). Default false." },
+        ...budgetProp,
       },
     },
   },
   {
     name: "analyze_impact",
     description:
-      "Given a list of changed files, traverse the dependency + call graph and return what breaks: modules and functions that directly or indirectly depend on them. Returns `direct`/`indirect` node ids, `details` (each impacted node with kind/label/evidence file:line/churn), `testsToRun` (test files that should be re-run), and `riskNotes` (high-churn warnings). The graph is auto-refreshed against the working tree before answering.",
+      "What breaks if I change these files? Traverses the dependency + call graph and returns impacted modules/functions (`direct`/`indirect`), `details` (with file:line evidence + churn), `testsToRun`, and `riskNotes`. Auto-refreshes the graph first. Long lists are capped with a `truncated` marker — narrow with fewer files or expand a node via get_graph.",
     inputSchema: {
       type: "object" as const,
       required: ["changedFiles"],
       properties: {
         root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
-        changedFiles: {
-          type: "array",
-          items: { type: "string" },
-          description: "List of changed file paths (relative to root or absolute).",
-        },
+        changedFiles: { type: "array", items: { type: "string" }, description: "Changed file paths (relative or absolute)." },
+        ...budgetProp,
       },
     },
   },
   {
     name: "find_symbol",
     description:
-      "Locate function/class/method definitions by name. Returns matching symbol nodes with their file:line evidence. Use when you know a function name but not where it lives.",
+      "Locate function/class/method definitions by name. Returns matching symbol nodes with file:line evidence. Use when you know a name but not where it lives.",
     inputSchema: {
       type: "object" as const,
       required: ["name"],
       properties: {
         root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
-        name: { type: "string", description: "Symbol name to find (e.g. \"buildGraph\" or \"ClassName.method\")." },
+        name: { type: "string", description: "Symbol name (e.g. \"buildGraph\" or \"ClassName.method\")." },
+        ...budgetProp,
       },
     },
   },
   {
     name: "who_calls",
     description:
-      "Answer \"what calls this function?\" — reverse-walks the call graph to find every caller of the named symbol, with call-site file:line evidence and confidence. Set transitive=true to include indirect callers. The graph is auto-refreshed before answering.",
+      "What calls this function? Reverse-walks the call graph to find every caller of the named symbol, with call-site file:line evidence and confidence. transitive=true includes indirect callers. Auto-refreshes first.",
     inputSchema: {
       type: "object" as const,
       required: ["name"],
@@ -79,13 +99,14 @@ const TOOLS = [
         root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
         name: { type: "string", description: "Symbol name whose callers to find." },
         transitive: { type: "boolean", description: "If true, include indirect (transitive) callers." },
+        ...budgetProp,
       },
     },
   },
   {
     name: "preflight",
     description:
-      "Before editing: declare what you are about to change (intent + target files). Returns a flight id and the predicted blast radius (dependents that may be affected) computed from the graph. Call postflight afterwards to audit that your actual changes stayed within scope.",
+      "Before editing: declare intent + target files. Returns a flight id and the predicted blast radius from the graph. Call postflight afterwards to audit that your changes stayed in scope.",
     inputSchema: {
       type: "object" as const,
       required: ["intent"],
@@ -93,13 +114,14 @@ const TOOLS = [
         root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
         intent: { type: "string", description: "One-line summary of the change you are about to make." },
         files: { type: "array", items: { type: "string" }, description: "The files you intend to modify." },
+        ...budgetProp,
       },
     },
   },
   {
     name: "postflight",
     description:
-      "After editing: audit what actually changed against the preflight declaration. Returns a report flagging any files changed that were neither declared nor in the predicted radius (out-of-bounds), with a clean/flagged verdict. Omit id to close the most recent open flight.",
+      "After editing: audit actual changes vs. the preflight declaration. Flags files changed that were neither declared nor in the predicted radius (out-of-bounds), with a clean/flagged verdict. Omit id to close the latest open flight.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -111,7 +133,7 @@ const TOOLS = [
   {
     name: "read_knowledge",
     description:
-      "List or read files from the knowledge-base/ directory. Omit 'file' to list all knowledge files. Provide 'file' (relative path within knowledge-base/) to read its contents.",
+      "List or read files from the knowledge-base/ directory. Omit 'file' to list all knowledge files (the repo brief is listed first). Provide 'file' to read its contents.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -122,9 +144,18 @@ const TOOLS = [
   },
 ];
 
+function safeRegex(pattern: string | undefined): RegExp | null {
+  if (!pattern) return null;
+  try {
+    return new RegExp(pattern, "i");
+  } catch {
+    return null;
+  }
+}
+
 export async function startMcpServer(projectRoot: string): Promise<void> {
   const server = new Server(
-    { name: "engineering-intelligence", version: "2.3.0" },
+    { name: "engineering-intelligence", version: "2.4.0" },
     { capabilities: { tools: {} } },
   );
 
@@ -133,32 +164,28 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args = {} } = request.params;
     const root = (typeof args.root === "string" ? args.root : projectRoot);
+    const text = (t: string, isError = false) => ({ content: [{ type: "text", text: t }], ...(isError ? { isError: true } : {}) });
 
     try {
+      if (name === "get_brief") {
+        await ensureFreshGraph(root);
+        let brief = await readBrief(root);
+        if (!brief) brief = (await generateBrief(root)).markdown;
+        return text(brief);
+      }
+
       if (name === "map_dependencies") {
         const update = args.update === true;
         const files = Array.isArray(args.files) ? (args.files as string[]) : undefined;
         const result = await buildGraph(root, { update, files, write: true });
-        const graph = await loadExistingGraph(
-          path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json"),
-        );
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({
-                summary: {
-                  nodeCount: result.nodeCount,
-                  edgeCount: result.edgeCount,
-                  fileCount: result.fileCount,
-                  wasIncremental: result.wasIncremental,
-                  graphPath: result.graphPath,
-                },
-                graph,
-              }, null, 2),
-            },
-          ],
-        };
+        return text(shape({
+          nodeCount: result.nodeCount,
+          edgeCount: result.edgeCount,
+          fileCount: result.fileCount,
+          wasIncremental: result.wasIncremental,
+          graphPath: result.graphPath,
+          note: "Graph written to disk. Query it with get_graph / analyze_impact / who_calls / find_symbol.",
+        }));
       }
 
       if (name === "get_graph") {
@@ -166,70 +193,92 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
         if (type === "dependency") await ensureFreshGraph(root);
         const graphPath = path.join(root, ".engineering-intelligence", "graph", `${type}-graph.json`);
         const graph = await loadExistingGraph(graphPath);
-        if (!graph) {
-          return {
-            content: [{ type: "text", text: JSON.stringify({ error: `No ${type}-graph.json found. Run map_dependencies first.` }) }],
-            isError: true,
-          };
+        if (!graph) return text(JSON.stringify({ error: `No ${type}-graph.json found. Run map_dependencies first.` }), true);
+
+        if (args.full === true) {
+          return text(shape({ scope: graph.scope, nodes: graph.nodes, edges: graph.edges, unknowns: graph.unknowns }, { budget: budgetOf(args, 100_000) }));
         }
-        return { content: [{ type: "text", text: JSON.stringify(graph, null, 2) }] };
+
+        const re = safeRegex(typeof args.pattern === "string" ? args.pattern : undefined);
+        const kind = typeof args.kind === "string" ? args.kind : undefined;
+        const relation = typeof args.relation === "string" ? args.relation : undefined;
+        const limit = typeof args.limit === "number" && args.limit > 0 ? args.limit : 100;
+
+        const nodes = graph.nodes
+          .filter((n) => (kind ? n.kind === kind : true) && (re ? re.test(n.id) || re.test(n.label) : true))
+          .slice(0, limit)
+          .map(terseNode);
+        const edges = graph.edges
+          .filter((e) => (relation ? e.relation === relation : true) && (re ? re.test(e.from) || re.test(e.to) : true))
+          .slice(0, limit)
+          .map(terseEdge);
+
+        return text(shape(
+          { scope: graph.scope, nodeCount: graph.nodes.length, edgeCount: graph.edges.length, nodes, edges },
+          { budget: budgetOf(args, 2500), hints: { nodes: { hint: "get_graph pattern=<id> kind=<kind>", priority: 6 }, edges: { hint: "get_graph relation=<rel> pattern=<id>", priority: 4 } } },
+        ));
       }
 
       if (name === "analyze_impact") {
         const changedFiles = Array.isArray(args.changedFiles) ? (args.changedFiles as string[]) : [];
-        if (changedFiles.length === 0) {
-          return {
-            content: [{ type: "text", text: JSON.stringify({ error: "changedFiles is required and must be non-empty" }) }],
-            isError: true,
-          };
-        }
+        if (changedFiles.length === 0) return text(JSON.stringify({ error: "changedFiles is required and must be non-empty" }), true);
         const fresh = await ensureFreshGraph(root);
         const result = await analyzeImpact(root, changedFiles);
-        const payload = fresh.staleWarning ? { ...result, staleWarning: fresh.staleWarning } : result;
-        return { content: [{ type: "text", text: JSON.stringify(payload, null, 2) }] };
+        return text(shape(
+          { ...result, ...(fresh.staleWarning ? { staleWarning: fresh.staleWarning } : {}) },
+          {
+            budget: budgetOf(args, 1500),
+            hints: {
+              details: { hint: "get_graph pattern=<id>", priority: 7 },
+              indirect: { hint: "get_graph pattern=<id>", priority: 3 },
+              direct: { hint: "get_graph pattern=<id>", priority: 8 },
+              testsToRun: { hint: "run these test files", priority: 9 },
+              riskNotes: { hint: "", priority: 9 },
+            },
+          },
+        ));
       }
 
       if (name === "find_symbol") {
         const symName = typeof args.name === "string" ? args.name : "";
-        if (!symName) {
-          return { content: [{ type: "text", text: JSON.stringify({ error: "name is required" }) }], isError: true };
-        }
+        if (!symName) return text(JSON.stringify({ error: "name is required" }), true);
         const fresh = await ensureFreshGraph(root);
         const matches = await findSymbol(root, symName);
-        const payload = { matches, ...(fresh.staleWarning ? { staleWarning: fresh.staleWarning } : {}) };
-        return { content: [{ type: "text", text: JSON.stringify(payload, null, 2) }] };
+        return text(shape(
+          { matches, ...(fresh.staleWarning ? { staleWarning: fresh.staleWarning } : {}) },
+          { budget: budgetOf(args, 1500), hints: { matches: { hint: "who_calls <name>", priority: 8 } } },
+        ));
       }
 
       if (name === "who_calls") {
         const symName = typeof args.name === "string" ? args.name : "";
-        if (!symName) {
-          return { content: [{ type: "text", text: JSON.stringify({ error: "name is required" }) }], isError: true };
-        }
+        if (!symName) return text(JSON.stringify({ error: "name is required" }), true);
         const transitive = args.transitive === true;
         const fresh = await ensureFreshGraph(root);
         const result = await whoCalls(root, symName, { transitive });
-        const payload = fresh.staleWarning ? { ...result, staleWarning: fresh.staleWarning } : result;
-        return { content: [{ type: "text", text: JSON.stringify(payload, null, 2) }] };
+        return text(shape(
+          { ...result, ...(fresh.staleWarning ? { staleWarning: fresh.staleWarning } : {}) },
+          { budget: budgetOf(args, 1500), hints: { callers: { hint: "who_calls <caller> transitive=true", priority: 8 }, matched: { hint: "find_symbol <name>", priority: 6 } } },
+        ));
       }
 
       if (name === "preflight") {
         const intent = typeof args.intent === "string" ? args.intent : "";
-        if (!intent) {
-          return { content: [{ type: "text", text: JSON.stringify({ error: "intent is required" }) }], isError: true };
-        }
+        if (!intent) return text(JSON.stringify({ error: "intent is required" }), true);
         const files = Array.isArray(args.files) ? (args.files as string[]) : undefined;
         await ensureFreshGraph(root);
         const record = await preflight(root, { intent, files });
-        return { content: [{ type: "text", text: JSON.stringify(record, null, 2) }] };
+        return text(shape(record as unknown as Record<string, unknown>, {
+          budget: budgetOf(args, 1500),
+          hints: { "predictedRadius.files": { hint: "get_graph pattern=<id>", priority: 6 } },
+        }));
       }
 
       if (name === "postflight") {
         const id = typeof args.id === "string" ? args.id : undefined;
         const result = await postflight(root, { id });
-        if ("error" in result) {
-          return { content: [{ type: "text", text: JSON.stringify(result) }], isError: true };
-        }
-        return { content: [{ type: "text", text: JSON.stringify({ id: result.record.id, verdict: result.report.verdict, report: result.report }, null, 2) }] };
+        if ("error" in result) return text(JSON.stringify(result), true);
+        return text(shape({ id: result.record.id, verdict: result.report.verdict, report: result.report }, { budget: budgetOf(args, 1500) }));
       }
 
       if (name === "read_knowledge") {
@@ -237,35 +286,24 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
         if (typeof args.file === "string" && args.file) {
           const filePath = path.join(kbDir, args.file);
           try {
-            const content = await readFileFn(filePath, "utf8");
-            return { content: [{ type: "text", text: content }] };
+            return text(await readFileFn(filePath, "utf8"));
           } catch {
-            return {
-              content: [{ type: "text", text: JSON.stringify({ error: `.engineering-intelligence/knowledge-base/${args.file} not found` }) }],
-              isError: true,
-            };
+            return text(JSON.stringify({ error: `.engineering-intelligence/knowledge-base/${args.file} not found` }), true);
           }
         }
-        // List files
         try {
           const entries = await readdir(kbDir, { recursive: true });
           const files = (entries as string[]).filter((e) => e.endsWith(".md") || e.endsWith(".json"));
-          return { content: [{ type: "text", text: JSON.stringify({ files }) }] };
+          return text(shape({ brief: "call get_brief for a ~500-token repo orientation", files }));
         } catch {
-          return { content: [{ type: "text", text: JSON.stringify({ files: [], note: ".engineering-intelligence/knowledge-base/ not found. Run /initialize-engineering-intelligence first." }) }] };
+          return text(JSON.stringify({ files: [], note: "knowledge-base/ not found. Run setup or /initialize-engineering-intelligence first." }));
         }
       }
 
-      return {
-        content: [{ type: "text", text: JSON.stringify({ error: `Unknown tool: ${name}` }) }],
-        isError: true,
-      };
+      return text(JSON.stringify({ error: `Unknown tool: ${name}` }), true);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return {
-        content: [{ type: "text", text: JSON.stringify({ error: message }) }],
-        isError: true,
-      };
+      return text(JSON.stringify({ error: message }), true);
     }
   });
 
