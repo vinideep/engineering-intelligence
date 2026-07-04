@@ -141,33 +141,51 @@ A deterministic drift check: every file path and `file:line` citation in your `k
 
 Drop [`templates/github-action/engineering-intelligence-impact.yml`](templates/github-action/engineering-intelligence-impact.yml) into `.github/workflows/` and every PR gets a computed impact comment — direct/indirect dependents, tests to run, high-churn risk notes. See [docs/github-action.md](docs/github-action.md).
 
+### 💸 Token frugality — cheaper than exploring by hand
+
+Most of an agent's token spend is *orientation*: opening 10–15 files to learn the repo, then re-reading more to answer "what else uses this?". We replace that with computed, **shaped** answers — measured on this repo:
+
+| Tool | Before | After |
+|---|---|---|
+| `get_graph` | ~74,600 tokens (full graph) | **~2,450** (−97%) |
+| `map_dependencies` | ~74,600 (embedded graph) | **~60** |
+| repo brief (replaces reading 10–15 files to orient) | ~10–40k | **~370** |
+
+How: a ~370-token **repo brief** instead of the orientation phase; **budget-capped** tool responses (minified, empty fields pruned, long lists truncated with an explicit `+K more` marker — nothing silently hidden); **reversible drill-down** (`get_graph pattern=<id>` expands just the node you need); and **cache-aligned** deterministic output for provider prompt-cache hits. Regression-guarded in `test/token-budget.test.mjs`. Complementary to transport-level compressors like [Headroom](https://github.com/headroomlabs-ai/headroom) — they compress the wire, we make the source of truth cheap to query. Details: [docs/token-frugality.md](docs/token-frugality.md).
+
 ---
 
 ## ⚡ Quick Start
 
-**Step 1 — Install into your project** (run once per project, from the project root):
+**Four commands do everything.** You don't need to learn a toolbox — these orchestrate the rest.
 
 ```bash
-# Interactive — the CLI will ask which IDE you use
-npx engineering-intelligence
+# 1. Stand it up (or bring it current). Detects your IDE, installs adapters,
+#    builds the graph, seeds git signals + a repo brief. Idempotent.
+npx engineering-intelligence setup
 
-# Or install for a specific IDE directly (no prompt)
-npx engineering-intelligence install . --ide claude-code --yes
+# 2. Question the codebase — routing is automatic.
+engineering-intelligence ask "who calls chargeCard"
+engineering-intelligence ask src/payments/charge.ts     # → impact + which tests to run
+
+# 3. Guard an AI edit (accountability loop).
+engineering-intelligence guard "add retry to charge()" src/payments/charge.ts
+#    …agent edits…
+engineering-intelligence guard                          # audits: CLEAN or FLAGGED
+
+# 4. One trust sweep (great in CI).
+engineering-intelligence health --strict
 ```
 
-**Step 2 — Initialize** (run once inside your AI IDE after installing):
+| You want to… | Command |
+|---|---|
+| Set up / upgrade a project | `setup` |
+| Ask "who calls this / what breaks / where is X" | `ask` |
+| Make an AI change accountable | `guard` (before) → `guard` (after) |
+| Check everything is healthy | `health` |
+| Let your IDE's agent do all the above as tools | `mcp` |
 
-```
-/initialize-engineering-intelligence
-```
-
-**Step 3 — Start building:**
-
-```
-/engineering-intelligence Add rate limiting to the authentication endpoints
-```
-
-That's it. The agent now plans, implements, validates, and self-documents.
+> Prefer chat? Inside your IDE it's just two: `/initialize-engineering-intelligence` once, then `/engineering-intelligence <your request>` — the workflow runs impact analysis → implement → validate → document for you. Advanced/low-level commands still exist under `engineering-intelligence --help --all`.
 
 ---
 

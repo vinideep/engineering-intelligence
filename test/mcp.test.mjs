@@ -91,6 +91,7 @@ test("MCP server: initialize, list tools, call get_graph and analyze_impact", as
     assert.ok(toolNames.includes("read_knowledge"), `read_knowledge not in tools: ${toolNames}`);
     assert.ok(toolNames.includes("find_symbol"), `find_symbol not in tools: ${toolNames}`);
     assert.ok(toolNames.includes("who_calls"), `who_calls not in tools: ${toolNames}`);
+    assert.ok(toolNames.includes("get_brief"), `get_brief not in tools: ${toolNames}`);
 
     // 3. Call get_graph (graph already built by graph.test.mjs)
     sendRequest(proc, {
@@ -103,14 +104,14 @@ test("MCP server: initialize, list tools, call get_graph and analyze_impact", as
     assert.ok(!graphResponse.error, `get_graph call failed: ${JSON.stringify(graphResponse.error)}`);
     const graphText = graphResponse.result?.content?.[0]?.text ?? "{}";
     const graphData = JSON.parse(graphText);
-    // If the graph was built by graph.test.mjs it will have schemaVersion; if not it will have error
+    // v2.4: get_graph returns a COMPACT filtered view, not the raw graph.
     if (graphData.error) {
-      // Graph not found — acceptable if tests run in isolation; just verify the error format
       assert.ok(graphData.error.includes("dependency-graph.json"), `Unexpected error: ${graphData.error}`);
     } else {
-      assert.equal(graphData.schemaVersion, 1);
-      assert.equal(graphData.graphType, "dependency");
-      assert.ok(Array.isArray(graphData.nodes));
+      assert.equal(typeof graphData.nodeCount, "number", "compact get_graph should report nodeCount");
+      assert.ok(Array.isArray(graphData.nodes), "compact get_graph should return a nodes array");
+      // Terse node format: "id <kind> @evidence".
+      if (graphData.nodes.length > 0) assert.ok(typeof graphData.nodes[0] === "string", "nodes should be terse strings");
     }
 
     // 4. Call analyze_impact
@@ -127,11 +128,12 @@ test("MCP server: initialize, list tools, call get_graph and analyze_impact", as
     assert.ok(!impactResponse.error, `analyze_impact call failed: ${JSON.stringify(impactResponse.error)}`);
     const impactText = impactResponse.result?.content?.[0]?.text ?? "{}";
     const impactData = JSON.parse(impactText);
-    assert.ok(Array.isArray(impactData.direct), `direct should be an array, got: ${JSON.stringify(impactData)}`);
-    assert.ok(Array.isArray(impactData.indirect), "indirect should be an array");
-    assert.ok(Array.isArray(impactData.unknowns), "unknowns should be an array");
-    assert.ok(Array.isArray(impactData.testsToRun), "testsToRun should be an array");
-    assert.ok(Array.isArray(impactData.details), "details should be an array");
+    // v2.4: shaper prunes empty arrays, so absent = empty. Present fields must be arrays.
+    // src/types.ts has many importers, so `direct` must be present and non-empty.
+    assert.ok(Array.isArray(impactData.direct) && impactData.direct.length > 0, `direct should be a non-empty array, got: ${JSON.stringify(impactData)}`);
+    for (const field of ["indirect", "details", "testsToRun", "riskNotes", "unknowns"]) {
+      if (impactData[field] !== undefined) assert.ok(Array.isArray(impactData[field]), `${field} should be an array when present`);
+    }
 
     // 5. Call read_knowledge (list mode)
     sendRequest(proc, {
