@@ -10,9 +10,9 @@ import { doctor } from "../validation/index.js";
 import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "impact" | "who-calls" | "verify";
+type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "impact" | "who-calls" | "verify" | "preflight" | "postflight" | "evidence-record" | "evidence-check";
 
-const COMMANDS: Command[] = ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "impact", "who-calls", "verify"];
+const COMMANDS: Command[] = ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "impact", "who-calls", "verify", "preflight", "postflight", "evidence-record", "evidence-check"];
 
 interface Options {
   command: Command;
@@ -30,6 +30,8 @@ interface Options {
   window: number;
   strict: boolean;
   transitive: boolean;
+  intent: string;
+  id: string;
   positionals: string[];
 }
 
@@ -57,6 +59,10 @@ Usage:
   engineering-intelligence impact <file...> [--json]
   engineering-intelligence who-calls <symbol> [--transitive] [--json]
   engineering-intelligence verify [path] [--strict] [--json]
+  engineering-intelligence preflight --intent "<summary>" [file...] [--json]
+  engineering-intelligence postflight [--id <flight>] [--strict] [--json]
+  engineering-intelligence evidence-record [path]
+  engineering-intelligence evidence-check [path] [--strict] [--json]
   engineering-intelligence freshness [path] [--threshold 60] [--json]
   engineering-intelligence git-analysis [path] [--window 90] [--json]
   engineering-intelligence user-profile [path] [--json]
@@ -92,6 +98,8 @@ function parseArgs(args: string[]): Options {
   let window_ = 90;
   let strict = false;
   let transitive = false;
+  let intent = "";
+  let id = "";
   const positionals: string[] = [];
 
   for (let index = 0; index < remaining.length; index += 1) {
@@ -149,6 +157,18 @@ function parseArgs(args: string[]): Options {
       strict = true;
     } else if (arg === "--transitive") {
       transitive = true;
+    } else if (arg === "--intent") {
+      const value = remaining[++index];
+      if (!value) throw new Error("--intent requires a value.");
+      intent = value;
+    } else if (arg.startsWith("--intent=")) {
+      intent = arg.slice("--intent=".length);
+    } else if (arg === "--id") {
+      const value = remaining[++index];
+      if (!value) throw new Error("--id requires a value.");
+      id = value;
+    } else if (arg.startsWith("--id=")) {
+      id = arg.slice("--id=".length);
     } else if (arg.startsWith("-")) {
       throw new Error(`Unknown option "${arg}".`);
     } else {
@@ -157,7 +177,7 @@ function parseArgs(args: string[]): Options {
     }
   }
   // For commands whose positionals are a payload (not a path), the root is cwd.
-  const positionalIsPayload = command === "impact" || command === "who-calls";
+  const positionalIsPayload = command === "impact" || command === "who-calls" || command === "preflight";
   return {
     command,
     root: path.resolve(positionalIsPayload ? process.cwd() : (target ?? process.cwd())),
@@ -174,6 +194,8 @@ function parseArgs(args: string[]): Options {
     window: window_,
     strict,
     transitive,
+    intent,
+    id,
     positionals,
   };
 }
@@ -357,6 +379,69 @@ async function main(): Promise<void> {
       output.write(renderVerifyReport(report));
     }
     if (options.strict && report.drift > 0) process.exitCode = 1;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "preflight") {
+    const { preflight } = await import("../flight/index.js");
+    if (!options.intent) {
+      output.write("Usage: engineering-intelligence preflight --intent \"<what you're changing>\" [file...]\n");
+      process.exitCode = 1;
+      if (readline) readline.close();
+      return;
+    }
+    const files = options.files.length > 0 ? options.files : options.positionals;
+    const record = await preflight(options.root, { intent: options.intent, files });
+    if (options.json) {
+      output.write(`${JSON.stringify(record, null, 2)}\n`);
+    } else {
+      output.write(`Flight opened: ${record.id}\n`);
+      output.write(`  Intent: ${record.intent}\n`);
+      output.write(`  Declared files (${record.declaredFiles.length}): ${record.declaredFiles.join(", ") || "none"}\n`);
+      output.write(`  Predicted radius: ${record.predictedRadius.files.length} file(s), ${record.predictedRadius.direct.length} direct / ${record.predictedRadius.indirect.length} indirect dependents\n`);
+      output.write(`  Run \`engineering-intelligence postflight --id ${record.id}\` after editing.\n`);
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "postflight") {
+    const { postflight, renderFlightReport } = await import("../flight/index.js");
+    const result = await postflight(options.root, { id: options.id || undefined });
+    if ("error" in result) {
+      output.write(`${result.error}\n`);
+      process.exitCode = 1;
+      if (readline) readline.close();
+      return;
+    }
+    if (options.json) {
+      output.write(`${JSON.stringify(result.record, null, 2)}\n`);
+    } else {
+      output.write(renderFlightReport(result.record, result.report));
+    }
+    if (options.strict && result.report.verdict === "flagged") process.exitCode = 1;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "evidence-record") {
+    const { recordEvidenceHashes } = await import("../evidence/index.js");
+    const snapshot = await recordEvidenceHashes(options.root);
+    output.write(`Recorded ${snapshot.hashes.length} evidence hash(es) to .engineering-intelligence/knowledge-base/.evidence-hashes.json\n`);
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "evidence-check") {
+    const { checkEvidenceHashes, renderEvidenceReport } = await import("../evidence/index.js");
+    const report = await checkEvidenceHashes(options.root);
+    if (options.json) {
+      output.write(`${JSON.stringify(report, null, 2)}\n`);
+    } else {
+      output.write(renderEvidenceReport(report));
+    }
+    if (options.strict && report.stale > 0) process.exitCode = 1;
     if (readline) readline.close();
     return;
   }

@@ -100,7 +100,34 @@ Both commands **auto-refresh** the graph against your working tree first, so the
 npx ei-mcp .          # stdio MCP server; add it to any MCP-compatible IDE
 ```
 
-Exposes **six tools** any agent can call: **`map_dependencies`** (build the graph), **`get_graph`** (read it), **`analyze_impact`** (what breaks + which tests to run), **`find_symbol`** (locate a definition by name), **`who_calls`** (find every caller of a function), **`read_knowledge`** (pull knowledge-base docs). Query tools auto-refresh the graph first. Your repo's structure becomes a queryable **service** — no markdown has to be installed into the IDE for an agent to use it.
+Exposes tools any agent can call: **`map_dependencies`** (build the graph), **`get_graph`** (read it), **`analyze_impact`** (what breaks + which tests to run), **`find_symbol`** (locate a definition by name), **`who_calls`** (find every caller of a function), **`read_knowledge`** (pull knowledge-base docs), plus the **`preflight`/`postflight`** accountability pair (below). Query tools auto-refresh the graph first. Your repo's structure becomes a queryable **service** — no markdown has to be installed into the IDE for an agent to use it.
+
+### 🛫 The Agent Flight Recorder — accountability for AI changes
+
+AI agents write the code. This makes them **show their work**. Before an edit, the agent declares intent + target files; we compute the predicted blast radius from the graph and snapshot the working tree. After the edit, we diff what *actually* changed against that prediction and flag anything out of scope — deterministically, no LLM judging an LLM.
+
+```bash
+# Before editing — declare intent, get the predicted blast radius
+engineering-intelligence preflight --intent "add retry to charge()" src/pay.js
+#   Flight opened: flt-… (predicted radius: 2 files, 2 direct dependents)
+
+# …agent makes its edits…
+
+# After editing — audit actual changes vs. the declaration
+engineering-intelligence postflight --strict
+#   ⚠ FLAGGED — Out-of-bounds changes (1): src/other.js
+```
+
+`postflight --strict` exits non-zero, so it drops straight into a CI gate: **no merge unless the change stayed within its declared scope.** Also available as MCP tools (`preflight`/`postflight`) so the agent runs the whole loop itself.
+
+### 🧾 Memory with receipts — self-invalidating knowledge
+
+Every AI memory product rots silently. This one doesn't: each `file:line` citation in the knowledge base is hashed against the code it points at. When that line changes, the citation flags itself **stale**.
+
+```bash
+engineering-intelligence evidence-record          # snapshot cited lines
+engineering-intelligence evidence-check --strict  # …later: flag citations whose code moved
+```
 
 ### `verify` — the knowledge base tells you when it's lying
 

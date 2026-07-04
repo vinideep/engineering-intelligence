@@ -5,6 +5,7 @@ import { Server } from "@modelcontextprotocol/sdk/server";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { buildGraph, analyzeImpact, loadExistingGraph, ensureFreshGraph, findSymbol, whoCalls } from "../graph/index.js";
+import { preflight, postflight } from "../flight/index.js";
 import { readFile as readFileFn } from "node:fs/promises";
 
 const TOOLS = [
@@ -82,6 +83,32 @@ const TOOLS = [
     },
   },
   {
+    name: "preflight",
+    description:
+      "Before editing: declare what you are about to change (intent + target files). Returns a flight id and the predicted blast radius (dependents that may be affected) computed from the graph. Call postflight afterwards to audit that your actual changes stayed within scope.",
+    inputSchema: {
+      type: "object" as const,
+      required: ["intent"],
+      properties: {
+        root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
+        intent: { type: "string", description: "One-line summary of the change you are about to make." },
+        files: { type: "array", items: { type: "string" }, description: "The files you intend to modify." },
+      },
+    },
+  },
+  {
+    name: "postflight",
+    description:
+      "After editing: audit what actually changed against the preflight declaration. Returns a report flagging any files changed that were neither declared nor in the predicted radius (out-of-bounds), with a clean/flagged verdict. Omit id to close the most recent open flight.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
+        id: { type: "string", description: "Flight id from preflight. Omit to use the latest open flight." },
+      },
+    },
+  },
+  {
     name: "read_knowledge",
     description:
       "List or read files from the knowledge-base/ directory. Omit 'file' to list all knowledge files. Provide 'file' (relative path within knowledge-base/) to read its contents.",
@@ -97,7 +124,7 @@ const TOOLS = [
 
 export async function startMcpServer(projectRoot: string): Promise<void> {
   const server = new Server(
-    { name: "engineering-intelligence", version: "2.2.0" },
+    { name: "engineering-intelligence", version: "2.3.0" },
     { capabilities: { tools: {} } },
   );
 
@@ -183,6 +210,26 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
         const result = await whoCalls(root, symName, { transitive });
         const payload = fresh.staleWarning ? { ...result, staleWarning: fresh.staleWarning } : result;
         return { content: [{ type: "text", text: JSON.stringify(payload, null, 2) }] };
+      }
+
+      if (name === "preflight") {
+        const intent = typeof args.intent === "string" ? args.intent : "";
+        if (!intent) {
+          return { content: [{ type: "text", text: JSON.stringify({ error: "intent is required" }) }], isError: true };
+        }
+        const files = Array.isArray(args.files) ? (args.files as string[]) : undefined;
+        await ensureFreshGraph(root);
+        const record = await preflight(root, { intent, files });
+        return { content: [{ type: "text", text: JSON.stringify(record, null, 2) }] };
+      }
+
+      if (name === "postflight") {
+        const id = typeof args.id === "string" ? args.id : undefined;
+        const result = await postflight(root, { id });
+        if ("error" in result) {
+          return { content: [{ type: "text", text: JSON.stringify(result) }], isError: true };
+        }
+        return { content: [{ type: "text", text: JSON.stringify({ id: result.record.id, verdict: result.report.verdict, report: result.report }, null, 2) }] };
       }
 
       if (name === "read_knowledge") {
