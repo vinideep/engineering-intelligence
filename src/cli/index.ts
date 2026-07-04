@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -10,9 +11,12 @@ import { doctor } from "../validation/index.js";
 import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "impact" | "who-calls" | "verify" | "preflight" | "postflight" | "evidence-record" | "evidence-check";
+type Command = "setup" | "ask" | "guard" | "health" | "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "impact" | "who-calls" | "verify" | "preflight" | "postflight" | "evidence-record" | "evidence-check";
 
-const COMMANDS: Command[] = ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "impact", "who-calls", "verify", "preflight", "postflight", "evidence-record", "evidence-check"];
+// The 4 headline verbs users are meant to reach for, plus `mcp`.
+const PRIMARY_COMMANDS: Command[] = ["setup", "ask", "guard", "health", "mcp"];
+
+const COMMANDS: Command[] = ["setup", "ask", "guard", "health", "install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "impact", "who-calls", "verify", "preflight", "postflight", "evidence-record", "evidence-check"];
 
 interface Options {
   command: Command;
@@ -41,36 +45,50 @@ async function packageVersion(): Promise<string> {
   return parsed.version;
 }
 
-function usage(): string {
-  return `engineering-intelligence
+function usage(all = false): string {
+  const core = `engineering-intelligence — codebase intelligence that lives in your repo.
 
-Install engineering intelligence orchestration assets for AI coding IDEs.
-Build a real dependency graph. Start an MCP server for tool-based queries.
+Four commands do everything:
 
-Usage:
-  engineering-intelligence install [path] [--ide <id>...] [--yes] [--dry-run] [--force]
-  engineering-intelligence create [path] [--ide <id>...] [--yes]
-  engineering-intelligence update [path] [--dry-run] [--force]
-  engineering-intelligence doctor [path] [--json]
-  engineering-intelligence uninstall [path] [--dry-run] [--force]
-  engineering-intelligence visualize [path] [--open]
-  engineering-intelligence map [path] [--type dependency] [--update] [--files a,b,c]
-  engineering-intelligence mcp [path]
-  engineering-intelligence impact <file...> [--json]
-  engineering-intelligence who-calls <symbol> [--transitive] [--json]
-  engineering-intelligence verify [path] [--strict] [--json]
-  engineering-intelligence preflight --intent "<summary>" [file...] [--json]
-  engineering-intelligence postflight [--id <flight>] [--strict] [--json]
-  engineering-intelligence evidence-record [path]
-  engineering-intelligence evidence-check [path] [--strict] [--json]
-  engineering-intelligence freshness [path] [--threshold 60] [--json]
-  engineering-intelligence git-analysis [path] [--window 90] [--json]
-  engineering-intelligence user-profile [path] [--json]
+  setup   [path] [--ide <id>...]         Install/refresh everything: adapters, graph,
+                                         git signals, repo brief, evidence snapshot.
+                                         Idempotent — run any time to bring current.
 
-Query commands (impact, who-calls) auto-refresh the graph against your working
-tree before answering, so results always reflect the current code.
+  ask     "<question>" | <file...>       Question the codebase. Routes automatically:
+                                         "who calls X", "where is X", or a file path
+                                         → impact + which tests to run. [--json]
+
+  guard   "<intent>" [file...]           Before an edit: open a flight, show the
+                                         predicted blast radius.
+  guard                                  After the edit: audit actual vs. declared,
+                                         print CLEAN/FLAGGED. [--strict for CI]
+
+  health  [path] [--strict] [--open]     One trust sweep: install, graph, knowledge
+                                         drift, stale evidence — one exit code.
+
+  mcp     [path]                         Start the MCP server so your IDE's agent can
+                                         call all of the above as tools.
+
+Examples:
+  npx engineering-intelligence setup
+  engineering-intelligence ask "who calls chargeCard"
+  engineering-intelligence ask src/payments/charge.ts
+  engineering-intelligence guard "add retry to charge()" src/payments/charge.ts
+  engineering-intelligence health --strict
 
 IDE ids: ${IDE_IDS.join(", ")}
+`;
+  if (!all) return core + "\nRun `engineering-intelligence --help --all` for the full advanced command list.\n";
+  return core + `
+Advanced commands (the 4 verbs above orchestrate these; use directly if you want):
+  install / create / update / uninstall [path] [--ide <id>...] [--dry-run] [--force]
+  map [path] [--type dependency] [--update] [--files a,b,c]
+  impact <file...> [--json]            who-calls <symbol> [--transitive] [--json]
+  verify [path] [--strict] [--json]    visualize [path] [--open]
+  preflight --intent "<s>" [file...]   postflight [--id <flight>] [--strict]
+  evidence-record [path]               evidence-check [path] [--strict] [--json]
+  freshness [path] [--threshold 60]    git-analysis [path] [--window 90]
+  user-profile [path] [--json]
 `;
 }
 
@@ -81,7 +99,7 @@ function parseArgs(args: string[]): Options {
     command = remaining.shift() as Command;
   }
   if (remaining.includes("--help") || remaining.includes("-h")) {
-    output.write(usage());
+    output.write(usage(remaining.includes("--all")));
     process.exit(0);
   }
   const ides: IdeId[] = [];
@@ -177,7 +195,7 @@ function parseArgs(args: string[]): Options {
     }
   }
   // For commands whose positionals are a payload (not a path), the root is cwd.
-  const positionalIsPayload = command === "impact" || command === "who-calls" || command === "preflight";
+  const positionalIsPayload = command === "impact" || command === "who-calls" || command === "preflight" || command === "ask" || command === "guard";
   return {
     command,
     root: path.resolve(positionalIsPayload ? process.cwd() : (target ?? process.cwd())),
@@ -247,6 +265,95 @@ async function main(): Promise<void> {
         return answer.trim().toLowerCase() === "y";
       }
     : undefined;
+
+  if (options.command === "setup") {
+    const { runSetup, mcpRegistrationHint } = await import("../orchestrators/setup.js");
+    const ides = options.ides.length > 0 ? options.ides : undefined;
+    const result = await runSetup(options.root, {
+      ides,
+      packageVersion: version,
+      dryRun: options.dryRun,
+      force: options.force,
+      promptOverwrite,
+    });
+    if (options.json) {
+      output.write(`${JSON.stringify(result, null, 2)}\n`);
+    } else {
+      for (const line of result.logs) output.write(`  ${line}\n`);
+      if (!options.dryRun) output.write(mcpRegistrationHint(options.root, result.ides));
+    }
+    process.exitCode = result.installOp.conflicts > 0 ? 1 : 0;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "ask") {
+    const { runAsk } = await import("../orchestrators/ask.js");
+    const query = options.positionals.join(" ").trim();
+    if (!query) {
+      output.write("Usage: engineering-intelligence ask \"<question>\" | <file...>\n");
+      process.exitCode = 1;
+      if (readline) readline.close();
+      return;
+    }
+    const result = await runAsk(options.root, query, options.positionals);
+    output.write(options.json ? `${JSON.stringify(result.json, null, 2)}\n` : result.text);
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "guard") {
+    const { preflight, postflight, renderFlightReport } = await import("../flight/index.js");
+    const intent = options.intent || options.positionals[0];
+    const isPreflight = options.positionals.length > 0 || !!options.intent;
+    if (isPreflight) {
+      const files = options.intent ? options.positionals : options.positionals.slice(1);
+      const { ensureFreshGraph } = await import("../graph/index.js");
+      await ensureFreshGraph(options.root);
+      const record = await preflight(options.root, { intent, files });
+      try {
+        const { recordEvidenceHashes } = await import("../evidence/index.js");
+        if (existsSync(path.join(options.root, ".engineering-intelligence", "knowledge-base"))) await recordEvidenceHashes(options.root);
+      } catch { /* best-effort */ }
+      if (options.json) {
+        output.write(`${JSON.stringify(record, null, 2)}\n`);
+      } else {
+        output.write(`Flight opened: ${record.id}\n  Intent: ${record.intent}\n`);
+        output.write(`  Declared files (${record.declaredFiles.length}): ${record.declaredFiles.join(", ") || "none"}\n`);
+        output.write(`  Predicted radius: ${record.predictedRadius.files.length} file(s), ${record.predictedRadius.direct.length} direct dependent(s)\n`);
+        output.write("  …make your edits, then run `engineering-intelligence guard` to audit.\n");
+      }
+    } else {
+      const result = await postflight(options.root, {});
+      if ("error" in result) {
+        output.write(`${result.error}\n`);
+        process.exitCode = 1;
+        if (readline) readline.close();
+        return;
+      }
+      output.write(options.json ? `${JSON.stringify(result.record, null, 2)}\n` : renderFlightReport(result.record, result.report));
+      if (options.strict && result.report.verdict === "flagged") process.exitCode = 1;
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "health") {
+    const { runHealth } = await import("../orchestrators/health.js");
+    const result = await runHealth(options.root);
+    output.write(options.json ? `${JSON.stringify(result.json, null, 2)}\n` : result.text);
+    if (options.openBrowser) {
+      const { generateDashboardHTML } = await import("../visualizer/index.js");
+      const html = await generateDashboardHTML(options.root);
+      const outPath = path.join(options.root, ".engineering-intelligence", "dashboard.html");
+      await mkdir(path.dirname(outPath), { recursive: true });
+      await writeFile(outPath, html, "utf8");
+      output.write(`  Dashboard: ${outPath}\n`);
+    }
+    if (options.strict && !result.ok) process.exitCode = 1;
+    if (readline) readline.close();
+    return;
+  }
 
   if (options.command === "freshness") {
     const { writeFreshnessReport } = await import("../freshness/index.js");
