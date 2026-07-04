@@ -151,7 +151,9 @@ Most of an agent's token spend is *orientation*: opening 10–15 files to learn 
 | `map_dependencies` | ~74,600 (embedded graph) | **~60** |
 | repo brief (replaces reading 10–15 files to orient) | ~10–40k | **~370** |
 
-How: a ~370-token **repo brief** instead of the orientation phase; **budget-capped** tool responses (minified, empty fields pruned, long lists truncated with an explicit `+K more` marker — nothing silently hidden); **reversible drill-down** (`get_graph pattern=<id>` expands just the node you need); and **cache-aligned** deterministic output for provider prompt-cache hits. Regression-guarded in `test/token-budget.test.mjs`. Complementary to transport-level compressors like [Headroom](https://github.com/headroomlabs-ai/headroom) — they compress the wire, we make the source of truth cheap to query. Details: [docs/token-frugality.md](docs/token-frugality.md).
+How: a ~370-token **repo brief** instead of the orientation phase; **budget-capped** tool responses (minified, empty fields pruned, big object arrays packed losslessly as `{cols,rows}`); **reversible drill-down** (`get_graph pattern=<id>` expands just the node you need); and **cache-aligned** deterministic output for provider prompt-cache hits.
+
+**Accuracy is never sacrificed for size.** Answer fields (impact `direct` + `testsToRun`, `who_calls` callers, audit verdicts) are marked `mustKeep` and are *never* truncated — if they'd exceed the budget it soft-expands instead. Only *exploration* fields are trimmed, always ranked most-relevant-first and marked with an explicit `+K more` pointer (never silent), and always one drill-down call from the full data. Unlike a neural summarizer, our trimming is explicit, bounded, and reversible. Proven in `test/accuracy.test.mjs`. Escape hatches: `budget: 0`, per-project `config.json` budgets, or `ask --full`. Complementary to transport compressors like [Headroom](https://github.com/headroomlabs-ai/headroom) — they compress the wire, we make the source of truth cheap *and* complete. Details: [docs/token-frugality.md](docs/token-frugality.md).
 
 ---
 

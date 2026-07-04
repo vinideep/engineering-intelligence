@@ -56,6 +56,43 @@ where you use it.
 nodes/edges and volatile fields stripped from responses, so identical repo state
 produces byte-identical tool output → provider prompt-cache hits across turns.
 
+## Accuracy guarantees — shaping never changes an answer
+
+A fair worry: "if you cap the response, won't the agent get an incomplete — and
+therefore wrong — answer?" We designed against exactly this. Three rules, all
+regression-tested in `test/accuracy.test.mjs`:
+
+1. **Answer fields are never truncated.** Each tool marks its *answer* fields
+   `mustKeep` — `analyze_impact.direct` + `testsToRun` + `riskNotes`,
+   `who_calls.callers`, `find_symbol.matches`, the `postflight` verdict. Only
+   *exploration* fields (`indirect`, `details`, `unknowns`) can be trimmed. If
+   the answer alone exceeds the budget, the budget **soft-expands** and the
+   response carries `budgetNote: "budget expanded to preserve complete results"`.
+   Completeness wins over frugality, every time.
+
+2. **What we do trim is ranked, marked, and reversible.** Trimmable lists are
+   ordered most-relevant-first *before* any cut (impact `details`: direct hops →
+   highest churn → id; `who_calls` callers: verified → closest → id), so
+   survivors are the items you'd most want. Every cut adds an explicit
+   `truncated: {field: "+K more (expand via …)"}` marker — nothing is silently
+   dropped — and the omitted items are one `get_graph pattern=<id>` call away.
+
+3. **Denser, not lossier.** Before anything is trimmed, big object arrays are
+   packed into `{cols, rows}` — the *same data* with the repeated JSON keys
+   removed (~35–45% smaller). This is lossless (round-trip tested); it makes room
+   so trimming rarely triggers at all.
+
+Escape hatches: pass `budget: 0` to any tool for an uncapped response, set
+per-project caps in `.engineering-intelligence/config.json`
+(`{ "tokenBudgets": { "analyze_impact": 3000 } }`), or use `ask --full` on the
+CLI. And every tool's `--json` / raw output is always complete.
+
+**Why not neural compression?** A learned summarizer (Headroom-style) that turns
+17k tokens into 1.4k is *also* lossy — but you can't prove what it dropped. Our
+loss is explicit (a marker), bounded (only exploration), and reversible (fetch
+the original). For an *evidence-backed* tool, auditable trimming beats opaque
+compression. That's a deliberate design choice, not a limitation.
+
 ## Honest framing
 
 - These are **structural** savings (fewer/cheaper reads), measured at the

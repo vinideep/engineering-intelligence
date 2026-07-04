@@ -129,10 +129,14 @@ test("MCP server: initialize, list tools, call get_graph and analyze_impact", as
     const impactText = impactResponse.result?.content?.[0]?.text ?? "{}";
     const impactData = JSON.parse(impactText);
     // v2.4: shaper prunes empty arrays, so absent = empty. Present fields must be arrays.
-    // src/types.ts has many importers, so `direct` must be present and non-empty.
+    // src/types.ts has many importers, so `direct` (the answer) must be present + non-empty.
     assert.ok(Array.isArray(impactData.direct) && impactData.direct.length > 0, `direct should be a non-empty array, got: ${JSON.stringify(impactData)}`);
-    for (const field of ["indirect", "details", "testsToRun", "riskNotes", "unknowns"]) {
+    for (const field of ["indirect", "testsToRun", "riskNotes", "unknowns"]) {
       if (impactData[field] !== undefined) assert.ok(Array.isArray(impactData[field]), `${field} should be an array when present`);
+    }
+    // v2.4.1: `details` is packed losslessly as {cols, rows}.
+    if (impactData.details !== undefined) {
+      assert.ok(Array.isArray(impactData.details.cols) && Array.isArray(impactData.details.rows), "details should be packed {cols, rows}");
     }
 
     // 5. Call read_knowledge (list mode)
@@ -171,8 +175,10 @@ test("MCP server: initialize, list tools, call get_graph and analyze_impact", as
     const whoResponse = await readResponse(proc, 7, 30_000);
     assert.ok(!whoResponse.error, `who_calls call failed: ${JSON.stringify(whoResponse.error)}`);
     const whoData = JSON.parse(whoResponse.result?.content?.[0]?.text ?? "{}");
-    assert.ok(Array.isArray(whoData.callers), "callers should be an array");
-    assert.ok(whoData.callers.length > 0, `expected callers of buildGraph, got: ${JSON.stringify(whoData)}`);
+    // v2.4.1: callers packed losslessly as {cols, rows}; never truncated (mustKeep).
+    assert.ok(whoData.callers && Array.isArray(whoData.callers.rows), "callers should be packed {cols, rows}");
+    assert.ok(whoData.callers.rows.length > 0, `expected callers of buildGraph, got: ${JSON.stringify(whoData)}`);
+    assert.ok(whoData.callers.cols.includes("label"), "packed callers should carry a label column");
 
   } finally {
     proc.stdin.end();
