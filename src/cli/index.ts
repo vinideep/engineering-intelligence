@@ -37,6 +37,7 @@ interface Options {
   confidence?: string;
   budget: number;
   strict: boolean;
+  host: string;
 }
 
 async function packageVersion(): Promise<string> {
@@ -108,6 +109,7 @@ function parseArgs(args: string[]): Options {
   let confidence: string | undefined;
   let budget = 2000;
   let strict = false;
+  let host = "claude-code";
 
   for (let index = 0; index < remaining.length; index += 1) {
     const arg = remaining[index];
@@ -184,6 +186,10 @@ function parseArgs(args: string[]): Options {
       budget = parseInt(arg.slice("--budget=".length), 10);
     } else if (arg === "--strict") {
       strict = true;
+    } else if (arg === "--host") {
+      host = remaining[++index] ?? host;
+    } else if (arg.startsWith("--host=")) {
+      host = arg.slice("--host=".length);
     } else if (arg.startsWith("-")) {
       throw new Error(`Unknown option "${arg}".`);
     } else if (command === "hook" && hookEvent === undefined) {
@@ -221,6 +227,7 @@ function parseArgs(args: string[]): Options {
     confidence,
     budget: Number.isNaN(budget) ? 2000 : budget,
     strict,
+    host,
   };
 }
 
@@ -267,17 +274,18 @@ async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
 
   if (options.command === "hook") {
-    const { runHook, parseHookInput, isHookEvent } = await import("../hooks/index.js");
+    const { runHook, normalizeInput, isHookEvent, isHookHost } = await import("../hooks/index.js");
     const event = options.hookEvent ?? "";
     if (!isHookEvent(event)) {
       // Unknown event — fail safe (allow) rather than break the host session.
       process.exitCode = 0;
       return;
     }
-    const payload = parseHookInput(await readStdin());
+    const host = isHookHost(options.host) ? options.host : "claude-code";
+    const payload = normalizeInput(host, await readStdin());
     // The host passes the project directory as cwd; honour it over the process cwd.
     const root = path.resolve(options.root !== process.cwd() ? options.root : (payload.cwd ?? process.cwd()));
-    const result = await runHook(event, root, payload);
+    const result = await runHook(event, root, payload, host);
     if (result.stdout) output.write(`${result.stdout}\n`);
     process.exitCode = result.exitCode;
     return;

@@ -17,11 +17,14 @@ import test from "node:test";
 import {
   runHook,
   parseHookInput,
+  normalizeInput,
   isSourceFile,
   isValidationCommand,
+  isHookHost,
   loadHookConfig,
   DEFAULT_HOOK_CONFIG,
   claudeCodeHookSettings,
+  cursorHookSettings,
   defaultConfigFile,
 } from "../dist/hooks/index.js";
 
@@ -165,4 +168,72 @@ test("rendered Claude settings and default config are valid JSON with hook wirin
   const config = JSON.parse(defaultConfigFile());
   assert.equal(config.hooks.blockStaleEdits, false);
   assert.equal(config.hooks.requireValidationOnStop, false);
+});
+
+// --- Cross-IDE: Cursor host --------------------------------------------------
+
+test("isHookHost recognizes claude-code and cursor only", () => {
+  assert.equal(isHookHost("claude-code"), true);
+  assert.equal(isHookHost("cursor"), true);
+  assert.equal(isHookHost("copilot"), false);
+});
+
+test("cursorHookSettings renders Cursor's schema with --host cursor commands", () => {
+  const s = JSON.parse(cursorHookSettings());
+  assert.equal(s.version, 1);
+  // Cursor's granular edit/shell events both route to our post-tool-use handler.
+  for (const e of ["sessionStart", "preToolUse", "afterFileEdit", "afterShellExecution", "stop"]) {
+    assert.ok(Array.isArray(s.hooks[e]), `missing cursor event ${e}`);
+  }
+  assert.match(s.hooks.sessionStart[0].command, /hook session-start --host cursor/);
+  assert.match(s.hooks.afterShellExecution[0].command, /hook post-tool-use --host cursor/);
+});
+
+test("normalizeInput maps Cursor field names and granular events to the neutral shape", () => {
+  const edit = normalizeInput("cursor", JSON.stringify({
+    conversation_id: "c1", workspace_roots: ["/repo"], hook_event_name: "afterFileEdit", file_path: "/repo/src/a.ts",
+  }));
+  assert.equal(edit.session_id, "c1");
+  assert.equal(edit.cwd, "/repo");
+  assert.equal(edit.tool_name, "Edit");
+  assert.equal(edit.tool_input.file_path, "/repo/src/a.ts");
+
+  const shellOk = normalizeInput("cursor", JSON.stringify({ conversation_id: "c1", hook_event_name: "afterShellExecution", command: "npm test", exit_code: 0 }));
+  assert.equal(shellOk.tool_name, "Bash");
+  assert.equal(shellOk.tool_response.success, true);
+  const shellFail = normalizeInput("cursor", JSON.stringify({ hook_event_name: "afterShellExecution", command: "npm test", exit_code: 1 }));
+  assert.equal(shellFail.tool_response.success, false);
+
+  // Claude passthrough is unchanged.
+  const claude = normalizeInput("claude-code", JSON.stringify({ session_id: "s", tool_name: "Write" }));
+  assert.equal(claude.session_id, "s");
+  assert.equal(claude.tool_name, "Write");
+});
+
+test("runHook formats output in Cursor's contract (agent_message / followup_message / permission)", async () => {
+  const root = await tmpRoot({ requireValidationOnStop: true, blockStaleEdits: true });
+  await writeFile(path.join(root, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }), "utf8");
+  const sid = "cur";
+
+  // session-start → Cursor uses agent_message, not Claude's hookSpecificOutput.
+  const start = await runHook("session-start", root, { session_id: sid }, "cursor");
+  const startOut = JSON.parse(start.stdout);
+  assert.ok("agent_message" in startOut, "cursor session-start should use agent_message");
+  assert.ok(!("hookSpecificOutput" in startOut));
+
+  // Record a source change (Cursor afterFileEdit → Edit), then stop must block via followup_message.
+  const edit = normalizeInput("cursor", JSON.stringify({ session_id: sid, hook_event_name: "afterFileEdit", file_path: path.join(root, "src/a.ts") }));
+  await runHook("post-tool-use", root, edit, "cursor");
+  const stop = await runHook("stop", root, { session_id: sid }, "cursor");
+  const stopOut = JSON.parse(stop.stdout);
+  assert.ok(typeof stopOut.followup_message === "string", "cursor stop-block uses followup_message");
+  assert.match(stopOut.followup_message, /npm test/);
+});
+
+test("Cursor edits with no discoverable file path fail safe (no false block)", async () => {
+  const root = await tmpRoot();
+  // preToolUse without a resolvable file path → allow, never a spurious deny.
+  const input = normalizeInput("cursor", JSON.stringify({ session_id: "x", hook_event_name: "preToolUse" }));
+  const res = await runHook("pre-tool-use", root, input, "cursor");
+  assert.equal(res.stdout, undefined, "no file path → allow (fail-safe)");
 });

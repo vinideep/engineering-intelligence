@@ -8,7 +8,7 @@ import {
   smartCrush,
   withPathOptimizations,
 } from "../token-optimizer.js";
-import { claudeCodeHookSettings, defaultConfigFile } from "../hooks/index.js";
+import { claudeCodeHookSettings, cursorHookSettings, defaultConfigFile } from "../hooks/index.js";
 import { IDE_IDS, type IdeId, type RenderedFile } from "../types.js";
 
 const BLOCK_ID = "engineering-intelligence";
@@ -404,6 +404,8 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
       return [
         file(".cursor/rules/engineering-intelligence.mdc", rule, ide),
         ...(await workflowsAt(".cursor/commands", ide)),
+        file(".cursor/hooks.json", cursorHookSettings(), ide),
+        file(".engineering-intelligence/ei.config.json", defaultConfigFile(), ide),
       ];
     }
     case "github-copilot": {

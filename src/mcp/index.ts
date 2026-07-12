@@ -114,7 +114,7 @@ const TOOLS = [
 
 export async function startMcpServer(projectRoot: string): Promise<void> {
   const server = new Server(
-    { name: "engineering-intelligence", version: "2.2.0" },
+    { name: "engineering-intelligence", version: "2.3.0" },
     { capabilities: { tools: {} } },
   );
 

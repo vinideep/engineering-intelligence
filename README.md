@@ -51,7 +51,7 @@ Being precise about this up front, so you can decide if it fits:
 - **Conflict-aware tooling**: install/update tracks content hashes, preserves your own edits, and removes only what it added on uninstall.
 
 **What it isn't**
-- The *skills* are guidance, not interception — their effect depends on the model following them (strong models more, smaller ones less). But the toolkit is **no longer pure prose**: for Claude Code it installs real lifecycle hooks and deterministic `gate` commands (freshness, validation-on-stop, env-vars, dead-exports, api-diff, migration-lint) that actually warn, block, or fail CI. See [Enforcement Hooks](#-enforcement-hooks-claude-code) and [Safety Gates](#-safety-gates).
+- The *skills* are guidance, not interception — their effect depends on the model following them (strong models more, smaller ones less). But the toolkit is **no longer pure prose**: deterministic `gate` commands and MCP tools run in **every IDE and in CI** (env-vars, dead-exports, api-diff, migration-lint, claim verification), and automatic local lifecycle hooks (freshness inject, validation-on-stop) are wired for **Claude Code and Cursor**. See [Enforcement Across IDEs](#-enforcement-across-ides) and [Safety Gates](#-safety-gates). Local auto-blocking is Claude/Cursor-only today; CI is the universal enforcement layer.
 - It is **not** a replacement for review. It makes the agent more thorough and consistent; you still own the final call.
 - **It does not claim to use fewer tokens than raw prompting.** The tiered loading saves tokens *relative to loading the whole toolkit* — routing + brief + one skill instead of all 43 skill files (measured at the rendered-file level by `test/token-reduction.test.mjs`). For a small one-off change, a raw prompt is cheaper. The real saving is not re-deriving your architecture every session: the agent reuses the persisted knowledge base and graphs instead of re-reading your codebase from scratch.
 
@@ -377,22 +377,44 @@ most important guarantees — *fresh intelligence* and *validated changes* —
 
 ---
 
-## 🪝 Enforcement Hooks (Claude Code)
+## 🛂 Enforcement Across IDEs
 
-Installing for `claude-code` wires four lifecycle hooks into `.claude/settings.json`.
-Each is a deterministic call to `engineering-intelligence hook <event>`:
+Enforcement is **not** one mechanism — it's a tiering, because a "hook" only exists
+if the host IDE exposes a lifecycle-hook API. The value (fresh intelligence,
+validated changes) reaches every IDE through host-independent layers; automatic
+*local* blocking is added per-host where the host supports it.
 
-| Event | What it does |
-|-------|-------------|
-| `SessionStart` | Injects the current freshness / drift summary so the session starts from real intelligence state. |
-| `PreToolUse` | Before editing source, warns (or, opt-in, **denies**) when the documentation covering that area is stale. |
-| `PostToolUse` | Silently records changed source files and the validation commands that actually ran. |
-| `Stop` | Opt-in: **blocks "done"** when source changed but no test / type-check / lint command was run this session. |
+| Layer | Works in | Strength |
+|-------|----------|----------|
+| **CI** — `gate` commands + the [drift-check Action](templates/canonical/ci/ei-drift-check.yml) | **Any repo, any IDE** | **Strongest — blocks the merge, unskippable** |
+| **MCP tools** — `get_context`, `run_gate`, `verify_claims`, `analyze_impact` | Any MCP-capable IDE (Cursor, Copilot, Windsurf, Gemini…) | Agent can call them everywhere |
+| **CLI** — the same commands by hand or in scripts | Everywhere | Manual |
+| **Local lifecycle hooks** — SessionStart inject / PreToolUse warn-or-deny / Stop validation gate | **Claude Code + Cursor** | Automatic (skippable per-dev) |
+
+The honest takeaway: **CI is the universal, unskippable enforcement spine** (a local
+hook stops *you*; a CI gate stops the *merge*). Local hooks are a per-host
+enhancement on top.
+
+### Local lifecycle hooks — Claude Code & Cursor
+
+Installing for `claude-code` writes `.claude/settings.json`; installing for
+`cursor` writes `.cursor/hooks.json`. Both wire the **same** deterministic engine
+(`engineering-intelligence hook <event>`), just translated to each host's hook
+contract:
+
+| Moment | What it does |
+|--------|-------------|
+| Session start | Injects the current freshness / drift summary so the session starts from real intelligence state. |
+| Before an edit | Warns (or, opt-in, **denies**) when the documentation covering that source is stale. |
+| After edits / shell | Silently records changed source files and the validation commands that actually ran. |
+| Stop | Opt-in: **blocks "done"** when source changed but no test / type-check / lint command was run this session. |
 
 This turns the *environmental backpressure* principle ("never report validation
 as passed unless the command actually ran") from a request into an enforced gate.
+The other IDEs don't get this local auto-blocking — they rely on the CI + MCP
+layers above. Adding another host is a small adapter: the engine is host-neutral.
 
-Behaviour is tuned in `.engineering-intelligence/ei.config.json`:
+Behaviour is tuned in `.engineering-intelligence/ei.config.json` (shared by both hosts):
 
 ```json
 {

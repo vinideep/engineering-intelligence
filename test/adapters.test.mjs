@@ -361,3 +361,25 @@ test("antigravity-cli adapter writes agents to .agents/ (plural) matching CLI wo
   assert.ok(!paths.has(".agent/agents/engineering-orchestrator/agent.json"), "CLI must not write to .agent/ (singular)");
 });
 
+
+test("Cursor adapter renders .cursor/hooks.json wired to the cursor host", async () => {
+  const files = await renderAdapters(["cursor"]);
+  const hooks = files.find((f) => f.path === ".cursor/hooks.json");
+  assert.ok(hooks, "cursor must ship .cursor/hooks.json");
+  const parsed = JSON.parse(hooks.content);
+  assert.equal(parsed.version, 1);
+  assert.match(parsed.hooks.stop[0].command, /engineering-intelligence hook stop --host cursor/);
+  // Shared config seeded for cursor too.
+  assert.ok(files.some((f) => f.path === ".engineering-intelligence/ei.config.json"), "cursor must seed ei.config.json");
+  assert.deepEqual(await validateRender(["cursor"]), []);
+});
+
+test("Installing claude-code + cursor together dedups ei.config.json without conflict", async () => {
+  const files = await renderAdapters(["claude-code", "cursor"]);
+  const configs = files.filter((f) => f.path === ".engineering-intelligence/ei.config.json");
+  assert.equal(configs.length, 1, "ei.config.json must be merged to a single entry");
+  assert.deepEqual([...configs[0].owners].sort(), ["claude-code", "cursor"]);
+  // Both IDE-specific hook files coexist.
+  assert.ok(files.some((f) => f.path === ".claude/settings.json"));
+  assert.ok(files.some((f) => f.path === ".cursor/hooks.json"));
+});

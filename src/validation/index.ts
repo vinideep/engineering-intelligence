@@ -98,5 +98,25 @@ export async function doctor(root: string): Promise<FileAction[]> {
     }
   }
 
+  // Cursor enforcement hooks: same pre-existing-file edge case for .cursor/hooks.json.
+  if (manifest.adapters.includes("cursor")) {
+    const hooksPath = path.join(root, ".cursor", "hooks.json");
+    const managed = manifest.files.some((entry) => entry.path === ".cursor/hooks.json");
+    if (!managed) {
+      let hasHooks = false;
+      try {
+        hasHooks = (await readFile(hooksPath, "utf8")).includes("engineering-intelligence hook");
+      } catch { /* missing */ }
+      if (!hasHooks) {
+        actions.push({
+          path: ".cursor/hooks.json",
+          status: "warning",
+          message:
+            "Enforcement hooks are not wired. Merge the `hooks` block (sessionStart/preToolUse/afterFileEdit/afterShellExecution/stop → `npx engineering-intelligence hook <event> --host cursor`) into your existing .cursor/hooks.json.",
+        });
+      }
+    }
+  }
+
   return actions;
 }

@@ -52,7 +52,20 @@ export interface HookResult {
   stdout?: string;
 }
 
-const ALLOW: HookResult = { exitCode: 0 };
+/** Hosts whose lifecycle-hook systems we can wire to. Everything else uses CI + MCP. */
+export type HookHost = "claude-code" | "cursor";
+
+export function isHookHost(value: string): value is HookHost {
+  return value === "claude-code" || value === "cursor";
+}
+
+// Handlers produce a host-NEUTRAL decision; it is formatted to each host's hook
+// contract at the edge (formatDecision). This keeps one enforcement engine that
+// serves any host with a hook API.
+type DecisionKind = "allow" | "context" | "deny" | "block";
+interface HookDecision { kind: DecisionKind; message?: string; }
+
+const ALLOW: HookDecision = { kind: "allow" };
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -85,8 +98,10 @@ export async function loadHookConfig(root: string): Promise<HookConfig> {
 }
 
 /** Base command the host invokes for a hook event (matches the repo's `npx` convention). */
-export function hookCommand(event: HookEvent): string {
-  return `npx engineering-intelligence hook ${event}`;
+export function hookCommand(event: HookEvent, host: HookHost = "claude-code"): string {
+  return host === "claude-code"
+    ? `npx engineering-intelligence hook ${event}`
+    : `npx engineering-intelligence hook ${event} --host ${host}`;
 }
 
 /**
@@ -106,6 +121,31 @@ export function claudeCodeHookSettings(): string {
           { matcher: "Edit|Write|NotebookEdit|MultiEdit|Bash", hooks: [{ type: "command", command: hookCommand("post-tool-use") }] },
         ],
         Stop: [{ hooks: [{ type: "command", command: hookCommand("stop") }] }],
+      },
+    },
+    null,
+    2,
+  ) + "\n";
+}
+
+/**
+ * `.cursor/hooks.json` wiring the same enforcement to Cursor's agent-hooks system.
+ * Cursor uses granular events — `afterFileEdit` / `afterShellExecution` stand in
+ * for Claude's single PostToolUse — so both route to our `post-tool-use` handler,
+ * which distinguishes them via the normalized tool name. `--host cursor` tells the
+ * CLI to translate Cursor's input/output contract.
+ */
+export function cursorHookSettings(): string {
+  const cmd = (event: HookEvent) => ({ command: hookCommand(event, "cursor") });
+  return JSON.stringify(
+    {
+      version: 1,
+      hooks: {
+        sessionStart: [cmd("session-start")],
+        preToolUse: [cmd("pre-tool-use")],
+        afterFileEdit: [cmd("post-tool-use")],
+        afterShellExecution: [cmd("post-tool-use")],
+        stop: [cmd("stop")],
       },
     },
     null,
@@ -237,56 +277,72 @@ async function ensureStateGitignored(root: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Output helpers (Claude Code hook JSON contract)
+// Decision constructors + per-host output formatting
 // ---------------------------------------------------------------------------
 
-function sessionStartContext(text: string): HookResult {
-  return {
-    exitCode: 0,
-    stdout: JSON.stringify({
-      hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: text },
-    }),
-  };
-}
+const context = (message: string): HookDecision => ({ kind: "context", message });
+const deny = (message: string): HookDecision => ({ kind: "deny", message });
+const block = (message: string): HookDecision => ({ kind: "block", message });
 
-function preToolUseContext(text: string): HookResult {
-  return {
-    exitCode: 0,
-    stdout: JSON.stringify({
-      hookSpecificOutput: { hookEventName: "PreToolUse", additionalContext: text },
-    }),
-  };
-}
+/** Translate a neutral decision into the concrete hook output contract of the host. */
+function formatDecision(host: HookHost, event: HookEvent, decision: HookDecision): HookResult {
+  if (decision.kind === "allow") return { exitCode: 0 };
+  const message = decision.message ?? "";
 
-function preToolUseDeny(reason: string): HookResult {
-  return {
-    exitCode: 0,
-    stdout: JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: "PreToolUse",
-        permissionDecision: "deny",
-        permissionDecisionReason: reason,
-      },
-    }),
-  };
-}
+  if (host === "cursor") {
+    // Cursor: permission hooks use { permission, agent_message }; stop uses followup_message.
+    switch (decision.kind) {
+      case "context":
+        return {
+          exitCode: 0,
+          stdout: JSON.stringify(
+            event === "pre-tool-use" ? { permission: "allow", agent_message: message } : { agent_message: message },
+          ),
+        };
+      case "deny":
+        return { exitCode: 0, stdout: JSON.stringify({ permission: "deny", agent_message: message }) };
+      case "block":
+        return { exitCode: 0, stdout: JSON.stringify({ followup_message: message }) };
+    }
+  }
 
-function stopBlock(reason: string): HookResult {
-  return { exitCode: 0, stdout: JSON.stringify({ decision: "block", reason }) };
+  // Claude Code
+  switch (decision.kind) {
+    case "context":
+      return {
+        exitCode: 0,
+        stdout: JSON.stringify({
+          hookSpecificOutput: {
+            hookEventName: event === "session-start" ? "SessionStart" : "PreToolUse",
+            additionalContext: message,
+          },
+        }),
+      };
+    case "deny":
+      return {
+        exitCode: 0,
+        stdout: JSON.stringify({
+          hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: message },
+        }),
+      };
+    case "block":
+      return { exitCode: 0, stdout: JSON.stringify({ decision: "block", reason: message }) };
+  }
+  return { exitCode: 0 };
 }
 
 // ---------------------------------------------------------------------------
 // Event handlers
 // ---------------------------------------------------------------------------
 
-async function onSessionStart(root: string, input: HookInput, config: HookConfig): Promise<HookResult> {
+async function onSessionStart(root: string, input: HookInput, config: HookConfig): Promise<HookDecision> {
   // Fresh session: clear any stale evidence from a previous session id collision.
   await writeState(root, input, { changedFiles: [], validationCommands: [] }).catch(() => {});
 
   const report = await computeFreshness(root, config.freshnessThreshold);
   if (report.scores.length === 0) {
     // No intelligence initialized — nudge, but never block.
-    return sessionStartContext(
+    return context(
       "Engineering Intelligence: no persisted intelligence found. Run `initialize-engineering-intelligence` to document this codebase so future work reuses it instead of re-exploring.",
     );
   }
@@ -303,10 +359,10 @@ async function onSessionStart(root: string, input: HookInput, config: HookConfig
   } else {
     lines.push("All intelligence is fresh — prefer it over re-reading source.");
   }
-  return sessionStartContext(lines.join("\n"));
+  return context(lines.join("\n"));
 }
 
-async function onPreToolUse(root: string, input: HookInput, config: HookConfig): Promise<HookResult> {
+async function onPreToolUse(root: string, input: HookInput, config: HookConfig): Promise<HookDecision> {
   const targetPath = input.tool_input?.file_path;
   if (!targetPath) return ALLOW;
   const rel = path.relative(root, path.resolve(root, targetPath));
@@ -328,12 +384,12 @@ async function onPreToolUse(root: string, input: HookInput, config: HookConfig):
   ].join("\n");
 
   if (config.blockStaleEdits && report.driftDecision === "Block implementation") {
-    return preToolUseDeny(detail);
+    return deny(detail);
   }
-  return preToolUseContext(detail);
+  return context(detail);
 }
 
-async function onPostToolUse(root: string, input: HookInput): Promise<HookResult> {
+async function onPostToolUse(root: string, input: HookInput): Promise<HookDecision> {
   const tool = input.tool_name ?? "";
   const state = await readState(root, input);
   let dirty = false;
@@ -364,7 +420,7 @@ async function onPostToolUse(root: string, input: HookInput): Promise<HookResult
   return ALLOW; // tracking is invisible
 }
 
-async function onStop(root: string, input: HookInput, config: HookConfig): Promise<HookResult> {
+async function onStop(root: string, input: HookInput, config: HookConfig): Promise<HookDecision> {
   // Always record real token telemetry at session end (best-effort, never blocks).
   if (typeof input.transcript_path === "string" && input.transcript_path) {
     try {
@@ -386,7 +442,7 @@ async function onStop(root: string, input: HookInput, config: HookConfig): Promi
     ? `Run one of: ${checks.join(", ")}.`
     : "Run this project's tests / type-check / lint before finishing.";
   const changed = state.changedFiles.slice(0, 8).map((f) => `  - ${f}`).join("\n");
-  return stopBlock(
+  return block(
     [
       "Engineering Intelligence: source files changed but no validation command ran this session.",
       "Environmental backpressure requires the environment — not inspection — to confirm the change.",
@@ -412,20 +468,60 @@ export function parseHookInput(raw: string): HookInput {
 }
 
 /**
- * Run a single hook event. Never throws: on any failure it resolves to ALLOW so
- * the host session is never broken by the intelligence layer.
+ * Normalize a host's raw hook stdin JSON into the neutral HookInput shape.
+ * Claude Code already matches. Cursor uses different field names and *granular*
+ * events (afterFileEdit / afterShellExecution), which we translate into the
+ * generic tool_name/tool_input the handlers expect. Field mappings unknown to us
+ * fail safe (absent → the relevant enforcement no-ops, never a false block).
  */
-export async function runHook(event: HookEvent, root: string, input: HookInput): Promise<HookResult> {
+export function normalizeInput(host: HookHost, raw: string): HookInput {
+  const obj = parseHookInput(raw) as Record<string, unknown>;
+  if (host !== "cursor") return obj as HookInput;
+
+  const eventName = typeof obj.hook_event_name === "string" ? obj.hook_event_name : undefined;
+  const roots = obj.workspace_roots;
+  const cwd = Array.isArray(roots) && typeof roots[0] === "string" ? (roots[0] as string) : (obj.cwd as string | undefined);
+  const base: HookInput = {
+    session_id: (obj.conversation_id ?? obj.generation_id ?? obj.session_id) as string | undefined,
+    cwd,
+    hook_event_name: eventName,
+    transcript_path: typeof obj.transcript_path === "string" ? obj.transcript_path : undefined,
+    stop_hook_active: obj.stop_hook_active === true,
+  };
+  const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
+  if (eventName === "afterFileEdit" || eventName === "afterTabFileEdit") {
+    base.tool_name = "Edit";
+    base.tool_input = { file_path: str(obj.file_path) ?? str(obj.path) };
+  } else if (eventName === "afterShellExecution") {
+    base.tool_name = "Bash";
+    base.tool_input = { command: str(obj.command) };
+    base.tool_response = { success: typeof obj.exit_code === "number" ? obj.exit_code === 0 : true };
+  } else if (eventName === "preToolUse" || eventName === "postToolUse") {
+    const tool = obj.tool as Record<string, unknown> | undefined;
+    const args = obj.args as Record<string, unknown> | undefined;
+    base.tool_name = str(obj.tool_name) ?? str(tool?.name);
+    base.tool_input = { file_path: str(obj.file_path) ?? str(obj.path) ?? str(args?.file_path), command: str(obj.command) };
+  }
+  return base;
+}
+
+/**
+ * Run a single hook event for a host. Never throws: on any failure it resolves to
+ * ALLOW so the host session is never broken by the intelligence layer.
+ */
+export async function runHook(event: HookEvent, root: string, input: HookInput, host: HookHost = "claude-code"): Promise<HookResult> {
   try {
     const config = await loadHookConfig(root);
+    let decision: HookDecision;
     switch (event) {
-      case "session-start": return await onSessionStart(root, input, config);
-      case "pre-tool-use":  return await onPreToolUse(root, input, config);
-      case "post-tool-use": return await onPostToolUse(root, input);
-      case "stop":          return await onStop(root, input, config);
-      default:              return ALLOW;
+      case "session-start": decision = await onSessionStart(root, input, config); break;
+      case "pre-tool-use":  decision = await onPreToolUse(root, input, config); break;
+      case "post-tool-use": decision = await onPostToolUse(root, input); break;
+      case "stop":          decision = await onStop(root, input, config); break;
+      default:              decision = ALLOW;
     }
+    return formatDecision(host, event, decision);
   } catch {
-    return ALLOW;
+    return { exitCode: 0 };
   }
 }
