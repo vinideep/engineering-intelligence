@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>Turn any AI coding IDE into a disciplined engineering team.</strong><br>
-  One install drops 46 skills, 15 specialist agents, and 11 workflows into your repo —<br>
+  One install drops 43 skills, 15 specialist agents, and 11 workflows into your repo —<br>
   teaching the agent to plan, implement, validate, and keep its own project knowledge in sync.
 </p>
 
@@ -34,7 +34,7 @@ AI coding agents forget everything between sessions. They re-read your architect
 | Agent re-learns your codebase from scratch every session | Evidence-based knowledge base + architecture graphs that persist across sessions |
 | Jumps straight to code, skips planning | Mandatory impact analysis + Agile planning before any non-trivial change |
 | Ad-hoc one-shot prompts, no continuity | Autonomous Epic → Feature → Ticket backlog with a human approval gate per feature |
-| Skill and instruction files burn context on every call | Tiered loading: routing table → brief → full skill — loads only the **1–3 skills a task needs, not all 46** |
+| Skill and instruction files burn context on every call | Tiered loading: routing table → brief → full skill — loads only the **1–3 skills a task needs, not all 43** |
 | Tied to one AI tool | One canonical toolkit, rendered natively into **9 AI IDEs** — Claude Code, Cursor, Copilot, Gemini, Codex, Antigravity, CommandCode, and more |
 | Treats every developer the same | **Per-developer intelligence** — a personal, gitignored profile seeded from your git history calibrates responses to your test philosophy and depth; a committed team layer captures shared consensus |
 
@@ -53,7 +53,7 @@ Being precise about this up front, so you can decide if it fits:
 **What it isn't**
 - The *skills* are guidance, not interception — their effect depends on the model following them (strong models more, smaller ones less). But the toolkit is **no longer pure prose**: for Claude Code it installs real lifecycle hooks and deterministic `gate` commands (freshness, validation-on-stop, env-vars, dead-exports, api-diff, migration-lint) that actually warn, block, or fail CI. See [Enforcement Hooks](#-enforcement-hooks-claude-code) and [Safety Gates](#-safety-gates).
 - It is **not** a replacement for review. It makes the agent more thorough and consistent; you still own the final call.
-- **It does not claim to use fewer tokens than raw prompting.** The tiered loading saves tokens *relative to loading the whole toolkit* — routing + brief + one skill instead of all 46 skill files (measured at the rendered-file level by `test/token-reduction.test.mjs`). For a small one-off change, a raw prompt is cheaper. The real saving is not re-deriving your architecture every session: the agent reuses the persisted knowledge base and graphs instead of re-reading your codebase from scratch.
+- **It does not claim to use fewer tokens than raw prompting.** The tiered loading saves tokens *relative to loading the whole toolkit* — routing + brief + one skill instead of all 43 skill files (measured at the rendered-file level by `test/token-reduction.test.mjs`). For a small one-off change, a raw prompt is cheaper. The real saving is not re-deriving your architecture every session: the agent reuses the persisted knowledge base and graphs instead of re-reading your codebase from scratch.
 
 If you want a low-friction start, install it and use just `/initialize-engineering-intelligence` + `/engineering-intelligence` first; adopt the deeper AI-DLC backlog and safety-gate workflows once you've seen the basics fit your team.
 
@@ -455,9 +455,9 @@ the old synthetic estimate with data you can actually cite.
 
 ## 📦 Toolkit Contents
 
-**46 skills** across six domains:
+**43 skills** across six domains:
 
-- **Knowledge & architecture:** codebase discovery, graph engine, knowledge extraction, architecture review, change detection, staleness detection, context sync, memory sync, knowledge sync, incremental sync, change history
+- **Knowledge & architecture:** codebase discovery, graph engine, knowledge extraction, architecture review, change detection, staleness detection, incremental sync (unified knowledge/memory/context/graph/claims sync), change history
 - **Planning & delivery:** AI-DLC lifecycle, backlog decomposition, issue tracker sync, requirement scoping, impact analysis, refactoring planner, greenfield architect, user intelligence engine
 - **Quality & safety:** testing intelligence, type safety, API compatibility, API snapshots, database migration safety, environment variable auditor, ADR compliance, LLM prompt injection guard, MCP security governor, dead code detector, engineering change review, NFR/ADR governor
 - **Operations:** performance analysis, operations readiness, environmental backpressure, context budget optimizer, debugging engine, PR intelligence, convention detector

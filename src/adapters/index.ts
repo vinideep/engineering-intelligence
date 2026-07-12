@@ -246,7 +246,7 @@ const AGENT_METADATA: Record<
   },
   "knowledge-agent": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/memory", ".engineering-intelligence/changes"],
-    skills: ["knowledge-sync-engine", "memory-sync-engine", "context-sync-engine", "context-budget-optimizer", "graph-engine", "change-history-engine", "dead-code-detector"],
+    skills: ["incremental-sync-engine", "context-budget-optimizer", "graph-engine", "change-history-engine", "dead-code-detector"],
   },
   "product-analyst": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/graph"],
@@ -290,7 +290,7 @@ const AGENT_METADATA: Record<
   },
   "documentation-writer": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/memory", ".engineering-intelligence/changes"],
-    skills: ["knowledge-sync-engine", "memory-sync-engine", "context-sync-engine", "change-history-engine"],
+    skills: ["incremental-sync-engine", "change-history-engine"],
   },
 };
 

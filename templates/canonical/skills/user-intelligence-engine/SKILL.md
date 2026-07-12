@@ -224,6 +224,6 @@ coding-patterns   →  applies when both above are silent
 - CLI: `npx engineering-intelligence user-profile .` — seeds profile from git history
 - Used by: `context-budget-optimizer` (loads Active Predictions at rank-0), `engineering-intelligence-skill` (pre-flight)
 - Feeds into: `.engineering-intelligence/memory/users/<slug>/user-intelligence.md`, `team-preferences.md`
-- Related: `memory-sync-engine` (manages team-preferences.md), `ongoing-learning-engine` (uncertainty tracking)
+- Related: `incremental-sync-engine` (Memory sync manages team-preferences.md), `ongoing-learning-engine` (uncertainty tracking)
 
 This capability does not modify product code.

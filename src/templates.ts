@@ -18,9 +18,6 @@ export const SKILL_NAMES = [
   "knowledge-base-validator",
   "impact-analysis-engine",
   "testing-intelligence-engine",
-  "knowledge-sync-engine",
-  "memory-sync-engine",
-  "context-sync-engine",
   "change-history-engine",
   "architecture-review-engine",
   "refactoring-planner",
@@ -260,10 +257,10 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
       errors.push(`convention-detector does not define required convention contract: ${requiredContract}`);
     }
   }
-  const memory = await readTemplate("skills", "memory-sync-engine").catch(() => "");
-  for (const requiredContract of ["regression-patterns.md", "Testing Intelligence Engine owns detection", "Memory Sync owns durable persistence"]) {
-    if (!memory.includes(requiredContract)) {
-      errors.push(`memory-sync-engine does not define required regression-pattern ownership contract: ${requiredContract}`);
+  const sync = await readTemplate("skills", "incremental-sync-engine").catch(() => "");
+  for (const requiredContract of ["Knowledge Base sync", "Memory sync", "Context sync", "regression-patterns.md", "claims verify"]) {
+    if (!sync.includes(requiredContract)) {
+      errors.push(`incremental-sync-engine does not define required unified-sync contract: ${requiredContract}`);
     }
   }
   const contextBudget = await readTemplate("skills", "context-budget-optimizer").catch(() => "");

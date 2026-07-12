@@ -86,7 +86,7 @@ Determine the minimum sufficient test coverage for a change based on risk assess
 
 6. **Verify Acceptance Criteria** — Produce an Acceptance Criteria Verification Matrix mapping every criterion to automated tests, manual verification, or an unavailable check. Missing mappings block Definition of Done.
 
-7. **Propose Regression Patterns** — For bugfixes, compare against `.engineering-intelligence/memory/regression-patterns.md`. Reuse matching templates. If a new recurring bug category is found, propose a durable pattern to `memory-sync-engine`; Memory Sync owns durable persistence.
+7. **Propose Regression Patterns** — For bugfixes, compare against `.engineering-intelligence/memory/regression-patterns.md`. Reuse matching templates. If a new recurring bug category is found, propose a durable pattern to `incremental-sync-engine` (Memory sync), which owns durable persistence to `regression-patterns.md`.
 
 ## Output
 

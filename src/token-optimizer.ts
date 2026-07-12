@@ -112,7 +112,7 @@ export const WORKFLOW_SKILL_ROUTING: Record<
   },
   "sync-engineering-intelligence": {
     primary: ["change-detection-engine", "incremental-sync-engine"],
-    optional: ["knowledge-sync-engine", "memory-sync-engine", "context-sync-engine"],
+    optional: ["knowledge-base-validator", "graph-engine"],
   },
   "review-engineering-change": {
     primary: ["change-detection-engine", "engineering-change-review"],

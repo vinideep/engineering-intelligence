@@ -214,7 +214,7 @@ Derive Mermaid diagrams from the JSON graphs. Include:
 
 - Used by: `initialize-intelligence-skill`, `impact-analysis-engine`, `incremental-sync-engine`
 - Supports: `map-architecture` workflow, `analyze-impact` workflow
-- Feeds context to: `context-sync-engine`
+- Feeds context to: `incremental-sync-engine` (Context sync)
 - Integrates data from: `git-intelligence-engine`
 
 This capability may write intelligence artifacts. It must not modify product code.
