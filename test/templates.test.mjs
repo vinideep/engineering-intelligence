@@ -60,7 +60,7 @@ test("V2 canonical templates define graph, report, and read-only workflow contra
   assert.match(apiCompatibility, /additive/);
   assert.match(apiCompatibility, /deprecated/);
   assert.match(apiCompatibility, /breaking/);
-  const snapshot = await readTemplate("skills", "api-snapshot-testing-engine");
+  const snapshot = await readTemplate("skills", "api-backward-compatibility-engine");
   assert.match(snapshot, /\.engineering-intelligence\/snapshots\//);
   assert.match(snapshot, /replay/);
   const staleness = await readTemplate("skills", "staleness-detector");

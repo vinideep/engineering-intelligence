@@ -238,7 +238,7 @@ const AGENT_METADATA: Record<
   },
   "change-agent": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/changes"],
-    skills: ["engineering-intelligence-skill", "context-budget-optimizer", "aidlc-lifecycle-engine", "impact-analysis-engine", "change-detection-engine", "type-safety-engine", "api-backward-compatibility-engine", "api-snapshot-testing-engine", "environment-variable-auditor", "adr-compliance-checker", "llm-prompt-injection-guard"],
+    skills: ["engineering-intelligence-skill", "context-budget-optimizer", "aidlc-lifecycle-engine", "impact-analysis-engine", "change-detection-engine", "type-safety-engine", "api-backward-compatibility-engine", "environment-variable-auditor", "adr-compliance-checker", "llm-prompt-injection-guard"],
   },
   "quality-agent": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
@@ -266,7 +266,7 @@ const AGENT_METADATA: Record<
   },
   "test-engineer": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
-    skills: ["testing-intelligence-engine", "environmental-backpressure-engine", "type-safety-engine", "api-snapshot-testing-engine", "contract-test-generator"],
+    skills: ["testing-intelligence-engine", "environmental-backpressure-engine", "type-safety-engine", "api-backward-compatibility-engine", "contract-test-generator"],
   },
   "adversary": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],

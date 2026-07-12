@@ -38,7 +38,6 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.ok(paths.has(".commandcode/skills/type-safety-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/database-migration-safety-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/api-backward-compatibility-engine/SKILL.md"));
-  assert.ok(paths.has(".commandcode/skills/api-snapshot-testing-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/adr-compliance-checker/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/environment-variable-auditor/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/llm-prompt-injection-guard/SKILL.md"));
@@ -81,7 +80,6 @@ test("CommandCode adapter writes native project skills and commands", async () =
   assert.ok(paths.has(".commandcode/skills/type-safety-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/database-migration-safety-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/api-backward-compatibility-engine/SKILL.md"));
-  assert.ok(paths.has(".commandcode/skills/api-snapshot-testing-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/contract-test-generator/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/dead-code-detector/SKILL.md"));
   assert.ok(paths.has(".commandcode/commands/engineering-intelligence.md"));

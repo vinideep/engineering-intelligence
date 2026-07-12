@@ -172,8 +172,7 @@ When TDD delivery mode is selected:
 - Run linters, type checks, and test suites available in the project
 - Use environmental backpressure: analyze failed diagnostics, fix, and rerun the relevant command until it passes or a blocker is recorded
 - Run `type-safety-engine` for typed projects or record why no type system applies
-- Run `api-backward-compatibility-engine` when API, event, webhook, SDK, route, or schema contracts changed
-- Run `api-snapshot-testing-engine` when API response behavior can be replayed or sampled
+- Run `api-backward-compatibility-engine` when API, event, webhook, SDK, route, or schema contracts changed — it also captures/replays response snapshots when API behavior can be sampled
 - Run `database-migration-safety-engine` when schema, ORM model, migration, index, or data persistence contracts changed
 - Run `security-audit-engine` in targeted dependency-risk mode when package manifests add or upgrade dependencies; critical CVEs block completion
 - Run `environment-variable-auditor` when environment variable reads, validation schemas, deployment config, or CI secrets change
@@ -314,5 +313,5 @@ Summarize to the user:
 ## Cross-References
 
 - Depends on: `initialize-intelligence-skill` (prerequisite), `context-budget-optimizer`, `change-detection-engine`, `impact-analysis-engine`, `graph-engine`, `staleness-detector`
-- Uses during execution: `testing-intelligence-engine`, `api-snapshot-testing-engine`, `type-safety-engine`, `api-backward-compatibility-engine`, `database-migration-safety-engine`, `security-audit-engine`, `environment-variable-auditor`, `adr-compliance-checker`, `llm-prompt-injection-guard`, `incremental-sync-engine`, `change-history-engine`
+- Uses during execution: `testing-intelligence-engine`, `type-safety-engine`, `api-backward-compatibility-engine`, `database-migration-safety-engine`, `security-audit-engine`, `environment-variable-auditor`, `adr-compliance-checker`, `llm-prompt-injection-guard`, `incremental-sync-engine`, `change-history-engine`
 - Optional: `engineering-change-review` (for high-risk), `refactoring-planner` (for refactors), `convention-detector` (for convention compliance)

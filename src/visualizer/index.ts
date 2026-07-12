@@ -231,16 +231,9 @@ const SKILL_CATALOG: Record<string, SkillInfo> = {
   "api-backward-compatibility-engine": {
     name: "API Compatibility",
     category: "implementation",
-    description: "Classifies API changes and blocks unversioned breaking changes",
-    usedBy: ["engineering-intelligence-skill"],
-    dependsOn: [],
-  },
-  "api-snapshot-testing-engine": {
-    name: "API Snapshot Testing",
-    category: "implementation",
-    description: "Captures and replays API response snapshots",
+    description: "Classifies API changes, blocks unversioned breaking changes, and replays response snapshots",
     usedBy: ["engineering-intelligence-skill", "testing-intelligence-engine"],
-    dependsOn: ["api-backward-compatibility-engine"],
+    dependsOn: [],
   },
   "adr-compliance-checker": {
     name: "ADR Compliance",
