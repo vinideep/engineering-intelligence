@@ -8,6 +8,8 @@ version: 1.0.0
 
 Use this skill before broad intelligence reads in implementation, analysis, review, and synchronization workflows. The goal is to produce the same engineering output with fewer tokens by loading only the most relevant evidence.
 
+**Prefer the deterministic context pack.** Instead of reading knowledge, memory, and context files yourself, run `npx engineering-intelligence context "<task>" --files <touched files> --budget <N>` (or call the `get_context` MCP tool). It assembles — within your token budget — the graph neighborhood of the touched files, the **verified** claims about that code (hash-checked against current source, so stale facts are excluded), and the relevant conventions and dangerous areas. This is cheaper and more trustworthy than loading prose files, and it is what makes small models viable. Fall back to the manual budget policy below only for evidence the pack does not cover.
+
 ## Token Budget Policy
 
 Default budget allocation:

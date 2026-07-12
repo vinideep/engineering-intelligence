@@ -302,6 +302,16 @@ npx engineering-intelligence gate dead-exports .        # JS/TS exports never im
 npx engineering-intelligence gate api-diff . --base origin/main   # removed/changed endpoints
 npx engineering-intelligence gate migration-lint . --json         # destructive/locking migrations
 
+# Assemble a token-budgeted context pack for a task (graph neighborhood + verified claims)
+npx engineering-intelligence context "add rate limiting" --files src/auth.ts --budget 2000
+
+# Record and verify hash-pinned claims about the code
+npx engineering-intelligence claims add --statement "auth uses JWT" --evidence "src/auth.ts:12-40"
+npx engineering-intelligence claims verify --strict     # exits 1 if any claim is stale/missing
+
+# Report observed token usage from real sessions (populated by the Stop hook)
+npx engineering-intelligence telemetry --json
+
 # Seed/refresh your personal developer profile from git history (zero LLM tokens; gitignored)
 npx engineering-intelligence user-profile .
 npx engineering-intelligence user-profile . --json
@@ -401,6 +411,45 @@ allow the action and never break the session. The hard gates (`blockStaleEdits`,
 **CI counterpart:** copy [`templates/canonical/ci/ei-drift-check.yml`](templates/canonical/ci/ei-drift-check.yml)
 to `.github/workflows/` to fail pull requests whose committed intelligence has
 drifted below the freshness threshold.
+
+---
+
+## 🧠 Queryable Context & Verifiable Claims
+
+The knowledge base is only useful if a model can trust it and reach it cheaply.
+Two computed capabilities make that real — and are what let **small models** work
+from retrieved facts instead of re-reading source.
+
+**Verifiable claims.** A *claim* is one factual statement bound to the exact
+evidence spans that justify it, each pinned by a content hash. Re-hashing the
+spans proves — deterministically, no LLM — whether the fact still holds:
+
+```bash
+npx engineering-intelligence claims add --statement "auth uses JWT verified in middleware" --evidence "src/auth/mw.ts:12-40"
+npx engineering-intelligence claims verify --strict   # verified ✅ / stale 🔄 / missing ❌
+```
+
+Unlike mtime-based freshness, editing the cited lines flips exactly that claim
+stale; unrelated edits don't. The `initialize`/`validate` skills author claims as
+they build the knowledge base.
+
+**`get_context` — one query instead of ten file reads.** Ask for what a task
+needs and get a token-budgeted pack back: the graph neighborhood of the touched
+files (what they depend on, what depends on them), the **verified** claims about
+that code (stale ones excluded), plus conventions and dangerous areas.
+
+```bash
+npx engineering-intelligence context "add refunds to charge()" --files src/pay.ts --budget 2000
+```
+
+Also exposed as the `get_context` and `verify_claims` MCP tools, so the agent
+retrieves trustworthy facts rather than inferring them from raw code.
+
+**Honest, measured token numbers.** The Stop hook reads the session transcript
+and records *real* billed input/output tokens — including whether the session
+used `get_context` — to a local log. `npx engineering-intelligence telemetry`
+reports observed averages and a with-vs-without-context comparison. This replaces
+the old synthetic estimate with data you can actually cite.
 
 ---
 

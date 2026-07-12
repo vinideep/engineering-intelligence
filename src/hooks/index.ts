@@ -41,6 +41,7 @@ export interface HookInput {
   tool_input?: { file_path?: string; command?: string; [k: string]: unknown };
   tool_response?: { success?: boolean; [k: string]: unknown };
   stop_hook_active?: boolean;
+  transcript_path?: string;
   [k: string]: unknown;
 }
 
@@ -364,6 +365,14 @@ async function onPostToolUse(root: string, input: HookInput): Promise<HookResult
 }
 
 async function onStop(root: string, input: HookInput, config: HookConfig): Promise<HookResult> {
+  // Always record real token telemetry at session end (best-effort, never blocks).
+  if (typeof input.transcript_path === "string" && input.transcript_path) {
+    try {
+      const { recordFromTranscript } = await import("../telemetry/index.js");
+      await recordFromTranscript(root, input.transcript_path, sessionId(input));
+    } catch { /* best-effort */ }
+  }
+
   if (!config.requireValidationOnStop) return ALLOW;
   // Avoid infinite loops: if we already blocked and the model is re-stopping, let it go.
   if (input.stop_hook_active) return ALLOW;

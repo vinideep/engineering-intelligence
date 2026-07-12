@@ -10,7 +10,9 @@ import { doctor } from "../validation/index.js";
 import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate";
+type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "claims" | "context" | "telemetry";
+
+const COMMANDS: Command[] = ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "claims", "context", "telemetry"];
 
 interface Options {
   command: Command;
@@ -29,6 +31,12 @@ interface Options {
   hookEvent?: string;
   gateName?: string;
   base: string;
+  positional?: string;   // action (claims) or task (context)
+  statement?: string;
+  evidence?: string;
+  confidence?: string;
+  budget: number;
+  strict: boolean;
 }
 
 async function packageVersion(): Promise<string> {
@@ -57,6 +65,11 @@ Usage:
   engineering-intelligence user-profile [path] [--json]
   engineering-intelligence hook <event> [path]   (internal: driven by IDE lifecycle hooks)
   engineering-intelligence gate <name> [path] [--base <ref>] [--json]
+  engineering-intelligence claims verify [path] [--json] [--strict]
+  engineering-intelligence claims add --statement "..." --evidence "src/a.ts:10-20,src/b.ts" [path]
+  engineering-intelligence claims list [path] [--json]
+  engineering-intelligence context "<task>" [path] [--files a,b] [--budget 2000] [--json]
+  engineering-intelligence telemetry [path] [--json]
 
 IDE ids: ${IDE_IDS.join(", ")}
 Hook events: session-start, pre-tool-use, post-tool-use, stop
@@ -67,7 +80,7 @@ Gates: env-vars, dead-exports, api-diff, migration-lint
 function parseArgs(args: string[]): Options {
   let command: Command = "install";
   const remaining = [...args];
-  if (remaining[0] && ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate"].includes(remaining[0])) {
+  if (remaining[0] && (COMMANDS as string[]).includes(remaining[0])) {
     command = remaining.shift() as Command;
   }
   if (remaining.includes("--help") || remaining.includes("-h")) {
@@ -89,6 +102,12 @@ function parseArgs(args: string[]): Options {
   let hookEvent: string | undefined;
   let gateName: string | undefined;
   let base = "HEAD";
+  let positional: string | undefined;
+  let statement: string | undefined;
+  let evidence: string | undefined;
+  let confidence: string | undefined;
+  let budget = 2000;
+  let strict = false;
 
   for (let index = 0; index < remaining.length; index += 1) {
     const arg = remaining[index];
@@ -147,12 +166,32 @@ function parseArgs(args: string[]): Options {
       base = value;
     } else if (arg.startsWith("--base=")) {
       base = arg.slice("--base=".length);
+    } else if (arg === "--statement") {
+      statement = remaining[++index];
+    } else if (arg.startsWith("--statement=")) {
+      statement = arg.slice("--statement=".length);
+    } else if (arg === "--evidence") {
+      evidence = remaining[++index];
+    } else if (arg.startsWith("--evidence=")) {
+      evidence = arg.slice("--evidence=".length);
+    } else if (arg === "--confidence") {
+      confidence = remaining[++index];
+    } else if (arg.startsWith("--confidence=")) {
+      confidence = arg.slice("--confidence=".length);
+    } else if (arg === "--budget") {
+      budget = parseInt(remaining[++index] ?? "", 10);
+    } else if (arg.startsWith("--budget=")) {
+      budget = parseInt(arg.slice("--budget=".length), 10);
+    } else if (arg === "--strict") {
+      strict = true;
     } else if (arg.startsWith("-")) {
       throw new Error(`Unknown option "${arg}".`);
     } else if (command === "hook" && hookEvent === undefined) {
       hookEvent = arg;
     } else if (command === "gate" && gateName === undefined) {
       gateName = arg;
+    } else if ((command === "claims" || command === "context") && positional === undefined) {
+      positional = arg;
     } else if (!target) {
       target = arg;
     } else {
@@ -176,6 +215,12 @@ function parseArgs(args: string[]): Options {
     hookEvent,
     gateName,
     base,
+    positional,
+    statement,
+    evidence,
+    confidence,
+    budget: Number.isNaN(budget) ? 2000 : budget,
+    strict,
   };
 }
 
@@ -291,6 +336,71 @@ async function main(): Promise<void> {
       }
     }
     process.exitCode = result.status === "fail" ? 1 : 0;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "claims") {
+    const claims = await import("../claims/index.js");
+    const action = options.positional ?? "verify";
+    if (action === "add") {
+      if (!options.statement || !options.evidence) {
+        output.write('claims add requires --statement "..." and --evidence "path:start-end,path2".\n');
+        process.exitCode = 2;
+        if (readline) readline.close();
+        return;
+      }
+      try {
+        const claim = await claims.addClaim(options.root, {
+          statement: options.statement,
+          evidence: claims.parseEvidenceSpec(options.evidence),
+          confidence: (options.confidence as "verified" | "inferred" | "unknown" | undefined) ?? "verified",
+        });
+        output.write(options.json ? `${JSON.stringify(claim, null, 2)}\n` : `Added ${claim.id}: ${claim.statement}\n`);
+      } catch (error) {
+        output.write(`${error instanceof Error ? error.message : String(error)}\n`);
+        process.exitCode = 1;
+      }
+    } else if (action === "list") {
+      const store = await claims.loadClaims(options.root);
+      if (options.json) output.write(`${JSON.stringify(store, null, 2)}\n`);
+      else {
+        output.write(`${store.claims.length} claim(s):\n`);
+        for (const c of store.claims) output.write(`  ${c.id} [${c.confidence}] ${c.statement}\n`);
+      }
+    } else { // verify
+      const report = await claims.verifyClaims(options.root);
+      output.write(options.json ? `${JSON.stringify(report, null, 2)}\n` : claims.renderVerifyReport(report));
+      if (options.strict && report.stale + report.missing > 0) process.exitCode = 1;
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "context") {
+    const { getContext } = await import("../context/index.js");
+    const task = options.positional ?? "";
+    if (!task) {
+      output.write('context requires a task, e.g. context "add rate limiting" --files src/auth.ts\n');
+      process.exitCode = 2;
+      if (readline) readline.close();
+      return;
+    }
+    const pack = await getContext(options.root, { task, files: options.files, budget: options.budget });
+    if (options.json) {
+      output.write(`${JSON.stringify(pack, null, 2)}\n`);
+    } else {
+      output.write(pack.markdown);
+      output.write(`\n<!-- ~${pack.tokensEstimated}/${pack.budget} tokens; included: ${pack.included.join(", ") || "none"}${pack.omitted.length ? `; omitted (budget): ${pack.omitted.join(", ")}` : ""} -->\n`);
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "telemetry") {
+    const { aggregate, renderReport } = await import("../telemetry/index.js");
+    const report = await aggregate(options.root);
+    output.write(options.json ? `${JSON.stringify(report, null, 2)}\n` : renderReport(report));
     if (readline) readline.close();
     return;
   }
