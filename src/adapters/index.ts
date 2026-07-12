@@ -8,6 +8,7 @@ import {
   smartCrush,
   withPathOptimizations,
 } from "../token-optimizer.js";
+import { claudeCodeHookSettings, defaultConfigFile } from "../hooks/index.js";
 import { IDE_IDS, type IdeId, type RenderedFile } from "../types.js";
 
 const BLOCK_ID = "engineering-intelligence";
@@ -82,6 +83,16 @@ Load **optional** skills only when the request explicitly requires that capabili
 Path aliases used in skill and command files (expand before writing file paths):
 - \`$AIDLC\` = \`.engineering-intelligence/aidlc/\`
 - \`$EI\` = \`.engineering-intelligence/\`
+
+## Enforcement Hooks (Claude Code)
+
+\`.claude/settings.json\` wires four lifecycle hooks to \`engineering-intelligence hook <event>\`:
+- **SessionStart** injects the current intelligence freshness/drift summary.
+- **PreToolUse** warns before editing source while documentation is stale.
+- **PostToolUse** records changed source files and validation commands for the session.
+- **Stop** can require that a validation command actually ran before finishing.
+
+Tune behaviour in \`.engineering-intelligence/ei.config.json\` (\`blockStaleEdits\`, \`requireValidationOnStop\`, \`freshnessThreshold\`). Hooks are fail-safe: with no intelligence installed they do nothing.
 `;
 
 function file(path: string, content: string, owner: IdeId): RenderedFile {
@@ -382,6 +393,8 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
         ...bundle,
         ...agents,
         ...commands,
+        file(".claude/settings.json", claudeCodeHookSettings(), ide),
+        file(".engineering-intelligence/ei.config.json", defaultConfigFile(), ide),
         block("CLAUDE.md", sharedInstructions + claudeCodeInstructions, ide),
       ];
     }

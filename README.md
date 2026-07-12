@@ -355,6 +355,47 @@ The `/engineering-intelligence` workflow applies these gates automatically when 
 | Rollback planning | Medium, high, or critical risk changes |
 | Observability | New endpoints, jobs, services, or production paths |
 
+The gates above are applied by the workflow prose. The hooks below make the two
+most important guarantees — *fresh intelligence* and *validated changes* —
+**enforced by code**, not left to the model's diligence.
+
+---
+
+## 🪝 Enforcement Hooks (Claude Code)
+
+Installing for `claude-code` wires four lifecycle hooks into `.claude/settings.json`.
+Each is a deterministic call to `engineering-intelligence hook <event>`:
+
+| Event | What it does |
+|-------|-------------|
+| `SessionStart` | Injects the current freshness / drift summary so the session starts from real intelligence state. |
+| `PreToolUse` | Before editing source, warns (or, opt-in, **denies**) when the documentation covering that area is stale. |
+| `PostToolUse` | Silently records changed source files and the validation commands that actually ran. |
+| `Stop` | Opt-in: **blocks "done"** when source changed but no test / type-check / lint command was run this session. |
+
+This turns the *environmental backpressure* principle ("never report validation
+as passed unless the command actually ran") from a request into an enforced gate.
+
+Behaviour is tuned in `.engineering-intelligence/ei.config.json`:
+
+```json
+{
+  "hooks": {
+    "freshnessThreshold": 60,
+    "blockStaleEdits": false,
+    "requireValidationOnStop": false
+  }
+}
+```
+
+Hooks are **fail-safe**: with no intelligence installed, or on any error, they
+allow the action and never break the session. The hard gates (`blockStaleEdits`,
+`requireValidationOnStop`) are opt-in — flip them on when your team is ready.
+
+**CI counterpart:** copy [`templates/canonical/ci/ei-drift-check.yml`](templates/canonical/ci/ei-drift-check.yml)
+to `.github/workflows/` to fail pull requests whose committed intelligence has
+drifted below the freshness threshold.
+
 ---
 
 ## 📦 Toolkit Contents

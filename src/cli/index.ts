@@ -10,7 +10,7 @@ import { doctor } from "../validation/index.js";
 import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile";
+type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook";
 
 interface Options {
   command: Command;
@@ -26,6 +26,7 @@ interface Options {
   files: string[];
   threshold: number;
   window: number;
+  hookEvent?: string;
 }
 
 async function packageVersion(): Promise<string> {
@@ -52,15 +53,17 @@ Usage:
   engineering-intelligence freshness [path] [--threshold 60] [--json]
   engineering-intelligence git-analysis [path] [--window 90] [--json]
   engineering-intelligence user-profile [path] [--json]
+  engineering-intelligence hook <event> [path]   (internal: driven by IDE lifecycle hooks)
 
 IDE ids: ${IDE_IDS.join(", ")}
+Hook events: session-start, pre-tool-use, post-tool-use, stop
 `;
 }
 
 function parseArgs(args: string[]): Options {
   let command: Command = "install";
   const remaining = [...args];
-  if (remaining[0] && ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile"].includes(remaining[0])) {
+  if (remaining[0] && ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook"].includes(remaining[0])) {
     command = remaining.shift() as Command;
   }
   if (remaining.includes("--help") || remaining.includes("-h")) {
@@ -79,6 +82,7 @@ function parseArgs(args: string[]): Options {
   let files: string[] = [];
   let threshold = 60;
   let window_ = 90;
+  let hookEvent: string | undefined;
 
   for (let index = 0; index < remaining.length; index += 1) {
     const arg = remaining[index];
@@ -133,6 +137,8 @@ function parseArgs(args: string[]): Options {
       window_ = parseInt(arg.slice("--window=".length), 10);
     } else if (arg.startsWith("-")) {
       throw new Error(`Unknown option "${arg}".`);
+    } else if (command === "hook" && hookEvent === undefined) {
+      hookEvent = arg;
     } else if (!target) {
       target = arg;
     } else {
@@ -153,6 +159,7 @@ function parseArgs(args: string[]): Options {
     files,
     threshold,
     window: window_,
+    hookEvent,
   };
 }
 
@@ -188,8 +195,33 @@ function printResult(label: string, result: OperationResult, dryRun: boolean): v
   output.write(`${prefix} ${result.changed} changed, ${result.conflicts} conflict(s).\n`);
 }
 
+async function readStdin(): Promise<string> {
+  if (input.isTTY) return ""; // no piped payload
+  const chunks: Buffer[] = [];
+  for await (const chunk of input) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks).toString("utf8");
+}
+
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
+
+  if (options.command === "hook") {
+    const { runHook, parseHookInput, isHookEvent } = await import("../hooks/index.js");
+    const event = options.hookEvent ?? "";
+    if (!isHookEvent(event)) {
+      // Unknown event — fail safe (allow) rather than break the host session.
+      process.exitCode = 0;
+      return;
+    }
+    const payload = parseHookInput(await readStdin());
+    // The host passes the project directory as cwd; honour it over the process cwd.
+    const root = path.resolve(options.root !== process.cwd() ? options.root : (payload.cwd ?? process.cwd()));
+    const result = await runHook(event, root, payload);
+    if (result.stdout) output.write(`${result.stdout}\n`);
+    process.exitCode = result.exitCode;
+    return;
+  }
+
   const version = await packageVersion();
   let readline: any = null;
   const usePrompt = !options.yes && input.isTTY;

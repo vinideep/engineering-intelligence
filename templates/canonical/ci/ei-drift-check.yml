@@ -1,0 +1,53 @@
+# Engineering Intelligence — documentation drift gate.
+#
+# Fails a pull request when the committed intelligence in `.engineering-intelligence/`
+# has drifted below the freshness threshold relative to the source it documents.
+# This is the CI-side counterpart to the local Stop/PreToolUse enforcement hooks:
+# it stops stale documentation from merging even when contributors skip the hooks.
+#
+# Adopt it by copying this file to `.github/workflows/ei-drift-check.yml`.
+# It is intentionally NOT installed automatically — a merge-blocking gate should
+# be a deliberate choice. Fail-safe: repos with no committed intelligence pass.
+
+name: EI Drift Check
+
+on:
+  pull_request:
+
+jobs:
+  drift:
+    name: Documentation freshness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: freshness compares each doc's evidence paths against the
+          # git commit dates of the source files they cite.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Evaluate intelligence freshness
+        run: |
+          npx --yes engineering-intelligence freshness . --threshold "${EI_FRESHNESS_THRESHOLD:-60}" --json > freshness.json
+          node -e '
+            const r = JSON.parse(require("node:fs").readFileSync("freshness.json", "utf8"));
+            if (!r.scores || r.scores.length === 0) {
+              console.log("No committed intelligence to check — passing.");
+              process.exit(0);
+            }
+            const stale = r.scores.filter((s) => s.action !== "none").sort((a, b) => a.score - b.score);
+            for (const s of stale) console.log(`  ${s.score}\t${s.status}\t${s.docPath}`);
+            console.log(`Drift decision: ${r.driftDecision}`);
+            if (r.driftDecision === "Block implementation") {
+              console.error("::error::Intelligence has drifted below the block threshold. Run `npx engineering-intelligence` sync workflows and commit the refreshed docs.");
+              process.exit(1);
+            }
+            if (r.driftDecision === "Sync before implementation") {
+              console.log("::warning::Intelligence is aging; consider syncing before merge.");
+            }
+          '
+        env:
+          EI_FRESHNESS_THRESHOLD: "60"
