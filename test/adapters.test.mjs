@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { renderAdapters } from "../dist/adapters/index.js";
 import { validateRender } from "../dist/validation/index.js";
+import { SKILL_NAMES } from "../dist/templates.js";
 
 test("all V2 IDE adapters render internally valid native destinations and workflows", async () => {
   const ides = ["antigravity", "antigravity-cli", "codex", "claude-code", "cursor", "github-copilot", "gemini-cli", "commandcode", "generic"];
@@ -187,6 +188,22 @@ test("Claude Code adapter generates skills index and workflow routing table with
   assert.match(claudeMd, /WORKFLOW-ROUTING/);
 
   assert.deepEqual(await validateRender(["claude-code"]), []);
+});
+
+test("CLAUDE.md skill count is derived from SKILL_NAMES, not hardcoded", async () => {
+  const files = await renderAdapters(["claude-code"]);
+  const claudeMd = files.find((item) => item.path === "CLAUDE.md").content;
+  // The three-tier protocol advertises the true number of installed skills.
+  assert.match(
+    claudeMd,
+    new RegExp(`description of all ${SKILL_NAMES.length} skills`),
+    `CLAUDE.md must report the real skill count (${SKILL_NAMES.length})`,
+  );
+  // Guard against the count drifting out of sync with the template payload again.
+  assert.ok(
+    !/description of all 44 skills/.test(claudeMd),
+    "CLAUDE.md must not carry a stale hardcoded '44 skills' count",
+  );
 });
 
 test("backlog decomposition and delivery ship as skills and commands for Claude Code", async () => {

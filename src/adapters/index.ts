@@ -67,7 +67,7 @@ const claudeCodeInstructions = `
 
 **Tier 1 — Routing (load once, always pinned)**
 1. \`.claude/WORKFLOW-ROUTING.md\` — primary/optional skill map per command (~400t)
-2. \`.claude/skills/SKILLS-INDEX.md\` — one-line description of all 44 skills (~1,500t)
+2. \`.claude/skills/SKILLS-INDEX.md\` — one-line description of all ${SKILL_NAMES.length} skills (~1,500t)
 
 **Tier 2 — Brief (load per identified skill, ~150t each)**
 Load \`.claude/skills/<name>/SKILL-BRIEF.md\` for each primary skill identified in the routing table.

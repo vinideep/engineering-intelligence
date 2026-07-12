@@ -167,7 +167,7 @@ function parseFrontmatterDescription(content: string): string {
 
 /**
  * Generate a compact one-line-per-skill index.
- * ~1,500 tokens total vs ~62,700 to read all 44 full skill files.
+ * ~1,500 tokens total vs ~62,700 to read all 46 full skill files.
  * The AI reads this index to identify which 1-3 skills to load in full.
  */
 export async function generateSkillsIndex(
