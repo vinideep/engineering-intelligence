@@ -8,6 +8,8 @@ version: 1.0.0
 
 Use this skill when code adds, removes, or changes environment variables, configuration schemas, deployment manifests, or CI/CD secrets.
 
+**Run the deterministic gate first:** `npx engineering-intelligence gate env-vars .` (add `--json` for structured output). It reports variables referenced in code but missing from `.env.example`, and declared-but-unused variables, with file:line evidence. Use the steps below only to extend the audit to validation schemas, CI secrets, and deploy config the gate does not cover.
+
 ## Procedure
 
 1. Detect environment variable reads:

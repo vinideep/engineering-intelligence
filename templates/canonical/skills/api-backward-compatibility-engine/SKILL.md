@@ -8,6 +8,8 @@ version: 1.0.0
 
 Use this skill when routes, handlers, request schemas, response schemas, GraphQL schemas, RPC contracts, events, SDKs, webhooks, or public service interfaces change.
 
+**Run the deterministic gate first:** `npx engineering-intelligence gate api-diff . --base <ref>` (e.g. `--base origin/main`; add `--json`). It extracts HTTP route registrations, method decorators, and OpenAPI path/method pairs from the working tree and the base ref, and fails on any endpoint removed or method-changed (breaking). Use the steps below to classify request/response schema, GraphQL, and RPC contract changes the gate does not yet parse.
+
 ## Procedure
 
 1. **Load Current API Contract**

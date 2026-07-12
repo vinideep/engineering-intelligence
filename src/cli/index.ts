@@ -10,7 +10,7 @@ import { doctor } from "../validation/index.js";
 import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook";
+type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate";
 
 interface Options {
   command: Command;
@@ -27,6 +27,8 @@ interface Options {
   threshold: number;
   window: number;
   hookEvent?: string;
+  gateName?: string;
+  base: string;
 }
 
 async function packageVersion(): Promise<string> {
@@ -54,16 +56,18 @@ Usage:
   engineering-intelligence git-analysis [path] [--window 90] [--json]
   engineering-intelligence user-profile [path] [--json]
   engineering-intelligence hook <event> [path]   (internal: driven by IDE lifecycle hooks)
+  engineering-intelligence gate <name> [path] [--base <ref>] [--json]
 
 IDE ids: ${IDE_IDS.join(", ")}
 Hook events: session-start, pre-tool-use, post-tool-use, stop
+Gates: env-vars, dead-exports, api-diff, migration-lint
 `;
 }
 
 function parseArgs(args: string[]): Options {
   let command: Command = "install";
   const remaining = [...args];
-  if (remaining[0] && ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook"].includes(remaining[0])) {
+  if (remaining[0] && ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate"].includes(remaining[0])) {
     command = remaining.shift() as Command;
   }
   if (remaining.includes("--help") || remaining.includes("-h")) {
@@ -83,6 +87,8 @@ function parseArgs(args: string[]): Options {
   let threshold = 60;
   let window_ = 90;
   let hookEvent: string | undefined;
+  let gateName: string | undefined;
+  let base = "HEAD";
 
   for (let index = 0; index < remaining.length; index += 1) {
     const arg = remaining[index];
@@ -135,10 +141,18 @@ function parseArgs(args: string[]): Options {
       window_ = parseInt(value, 10);
     } else if (arg.startsWith("--window=")) {
       window_ = parseInt(arg.slice("--window=".length), 10);
+    } else if (arg === "--base") {
+      const value = remaining[++index];
+      if (!value) throw new Error("--base requires a value.");
+      base = value;
+    } else if (arg.startsWith("--base=")) {
+      base = arg.slice("--base=".length);
     } else if (arg.startsWith("-")) {
       throw new Error(`Unknown option "${arg}".`);
     } else if (command === "hook" && hookEvent === undefined) {
       hookEvent = arg;
+    } else if (command === "gate" && gateName === undefined) {
+      gateName = arg;
     } else if (!target) {
       target = arg;
     } else {
@@ -160,6 +174,8 @@ function parseArgs(args: string[]): Options {
     threshold,
     window: window_,
     hookEvent,
+    gateName,
+    base,
   };
 }
 
@@ -251,6 +267,30 @@ async function main(): Promise<void> {
         for (const s of stale) output.write(`    ${s.score.toString().padStart(3)} ${s.docPath}\n`);
       }
     }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "gate") {
+    const { runGate, isGateName, GATE_NAMES } = await import("../gates/index.js");
+    if (!options.gateName || !isGateName(options.gateName)) {
+      output.write(`Unknown gate "${options.gateName ?? ""}". Available: ${GATE_NAMES.join(", ")}.\n`);
+      process.exitCode = 2;
+      if (readline) readline.close();
+      return;
+    }
+    const result = await runGate(options.gateName, options.root, { base: options.base });
+    if (options.json) {
+      output.write(`${JSON.stringify(result, null, 2)}\n`);
+    } else {
+      const icon = { error: "🔴", warning: "🟡", info: "🔵" } as const;
+      output.write(`Gate ${result.gate}: ${result.status.toUpperCase()} — ${result.summary}\n`);
+      for (const f of result.findings) {
+        const loc = f.file ? ` (${f.file}${f.line ? `:${f.line}` : ""})` : "";
+        output.write(`  ${icon[f.severity]} ${f.message}${loc}\n`);
+      }
+    }
+    process.exitCode = result.status === "fail" ? 1 : 0;
     if (readline) readline.close();
     return;
   }

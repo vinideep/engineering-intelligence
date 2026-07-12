@@ -55,6 +55,24 @@ const TOOLS = [
     },
   },
   {
+    name: "run_gate",
+    description:
+      "Run a deterministic safety gate and return structured findings (severity error/warning/info). Gates: 'env-vars' (code env references vs .env.example), 'dead-exports' (JS/TS exports never imported), 'api-diff' (routes/contracts removed vs a git base ref), 'migration-lint' (destructive/locking DB migration ops). Prefer this over reviewing the code by hand for these checks.",
+    inputSchema: {
+      type: "object" as const,
+      required: ["gate"],
+      properties: {
+        root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
+        gate: {
+          type: "string",
+          enum: ["env-vars", "dead-exports", "api-diff", "migration-lint"],
+          description: "Which gate to run.",
+        },
+        base: { type: "string", description: "Git base ref for api-diff/migration-lint. Defaults to HEAD." },
+      },
+    },
+  },
+  {
     name: "read_knowledge",
     description:
       "List or read files from the knowledge-base/ directory. Omit 'file' to list all knowledge files. Provide 'file' (relative path within knowledge-base/) to read its contents.",
@@ -129,6 +147,20 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
           };
         }
         const result = await analyzeImpact(root, changedFiles);
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      }
+
+      if (name === "run_gate") {
+        const { runGate, isGateName } = await import("../gates/index.js");
+        const gate = typeof args.gate === "string" ? args.gate : "";
+        if (!isGateName(gate)) {
+          return {
+            content: [{ type: "text", text: JSON.stringify({ error: `Unknown gate: ${gate}` }) }],
+            isError: true,
+          };
+        }
+        const base = typeof args.base === "string" ? args.base : undefined;
+        const result = await runGate(gate, root, { base });
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       }
 

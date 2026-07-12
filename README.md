@@ -34,7 +34,7 @@ AI coding agents forget everything between sessions. They re-read your architect
 | Agent re-learns your codebase from scratch every session | Evidence-based knowledge base + architecture graphs that persist across sessions |
 | Jumps straight to code, skips planning | Mandatory impact analysis + Agile planning before any non-trivial change |
 | Ad-hoc one-shot prompts, no continuity | Autonomous Epic → Feature → Ticket backlog with a human approval gate per feature |
-| Skill and instruction files burn context on every call | Tiered loading: routing table → brief → full skill — **28–37% fewer tokens per invocation** |
+| Skill and instruction files burn context on every call | Tiered loading: routing table → brief → full skill — loads only the **1–3 skills a task needs, not all 46** |
 | Tied to one AI tool | One canonical toolkit, rendered natively into **9 AI IDEs** — Claude Code, Cursor, Copilot, Gemini, Codex, Antigravity, CommandCode, and more |
 | Treats every developer the same | **Per-developer intelligence** — a personal, gitignored profile seeded from your git history calibrates responses to your test philosophy and depth; a committed team layer captures shared consensus |
 
@@ -51,9 +51,9 @@ Being precise about this up front, so you can decide if it fits:
 - **Conflict-aware tooling**: install/update tracks content hashes, preserves your own edits, and removes only what it added on uninstall.
 
 **What it isn't**
-- It is **not** a runtime enforcement engine. The skills guide the agent; they don't intercept or block its actions. Their effectiveness depends on your IDE's model following the instructions — strong models follow them well, smaller ones less so.
+- The *skills* are guidance, not interception — their effect depends on the model following them (strong models more, smaller ones less). But the toolkit is **no longer pure prose**: for Claude Code it installs real lifecycle hooks and deterministic `gate` commands (freshness, validation-on-stop, env-vars, dead-exports, api-diff, migration-lint) that actually warn, block, or fail CI. See [Enforcement Hooks](#-enforcement-hooks-claude-code) and [Safety Gates](#-safety-gates).
 - It is **not** a replacement for review. It makes the agent more thorough and consistent; you still own the final call.
-- The **28–37% token reduction** is measured at the rendered-file level (compression + deferred loading) by a regression-guarded test harness (`test/token-reduction.test.mjs`), not from live IDE sessions. It reflects how much less instruction text is loaded per invocation — treat it as a strong directional figure, not a per-session guarantee.
+- **It does not claim to use fewer tokens than raw prompting.** The tiered loading saves tokens *relative to loading the whole toolkit* — routing + brief + one skill instead of all 46 skill files (measured at the rendered-file level by `test/token-reduction.test.mjs`). For a small one-off change, a raw prompt is cheaper. The real saving is not re-deriving your architecture every session: the agent reuses the persisted knowledge base and graphs instead of re-reading your codebase from scratch.
 
 If you want a low-friction start, install it and use just `/initialize-engineering-intelligence` + `/engineering-intelligence` first; adopt the deeper AI-DLC backlog and safety-gate workflows once you've seen the basics fit your team.
 
@@ -295,6 +295,12 @@ npx engineering-intelligence freshness . --json
 # Extract git intelligence — hotspots, change coupling, ownership (last 90 days by default)
 npx engineering-intelligence git-analysis . --window 90
 npx engineering-intelligence git-analysis . --json
+
+# Run a deterministic safety gate (exits 1 on a hard failure — usable in CI)
+npx engineering-intelligence gate env-vars .            # env refs vs .env.example
+npx engineering-intelligence gate dead-exports .        # JS/TS exports never imported
+npx engineering-intelligence gate api-diff . --base origin/main   # removed/changed endpoints
+npx engineering-intelligence gate migration-lint . --json         # destructive/locking migrations
 
 # Seed/refresh your personal developer profile from git history (zero LLM tokens; gitignored)
 npx engineering-intelligence user-profile .

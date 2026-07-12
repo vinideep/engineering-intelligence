@@ -8,6 +8,8 @@ version: 1.0.0
 
 Use this skill during initialization, major refactors, dependency cleanup, and technical-debt reviews.
 
+**Run the deterministic gate first:** `npx engineering-intelligence gate dead-exports .` (add `--json`). It reports JS/TS exports that are never imported anywhere, conservatively (namespace, dynamic, and re-export usage are treated as live, entry points and tests are exempt). Use the steps below to extend detection to unreachable branches, zombie dependencies, and git-history staleness the gate does not cover.
+
 ## Procedure
 
 1. Scan imports/exports, route registrations, job registrations, dependency injection containers, and public entry points.
