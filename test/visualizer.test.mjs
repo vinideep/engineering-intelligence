@@ -26,7 +26,6 @@ test("generateDashboardHTML returns dashboard HTML content with key components",
   assert.match(html, /type-safety-engine/);
   assert.match(html, /database-migration-safety-engine/);
   assert.match(html, /api-backward-compatibility-engine/);
-  assert.match(html, /api-snapshot-testing-engine/);
   assert.match(html, /adr-compliance-checker/);
   assert.match(html, /environment-variable-auditor/);
   assert.match(html, /llm-prompt-injection-guard/);

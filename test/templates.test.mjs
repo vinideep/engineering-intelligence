@@ -60,15 +60,20 @@ test("V2 canonical templates define graph, report, and read-only workflow contra
   assert.match(apiCompatibility, /additive/);
   assert.match(apiCompatibility, /deprecated/);
   assert.match(apiCompatibility, /breaking/);
-  const snapshot = await readTemplate("skills", "api-snapshot-testing-engine");
+  const snapshot = await readTemplate("skills", "api-backward-compatibility-engine");
   assert.match(snapshot, /\.engineering-intelligence\/snapshots\//);
   assert.match(snapshot, /replay/);
   const staleness = await readTemplate("skills", "staleness-detector");
   assert.match(staleness, /Pre-Implementation Drift Trigger/);
   const convention = await readTemplate("skills", "convention-detector");
   assert.match(convention, /Convention Severity/);
-  const memory = await readTemplate("skills", "memory-sync-engine");
-  assert.match(memory, /Testing Intelligence Engine owns detection/);
+  // The four sync engines are consolidated into incremental-sync-engine.
+  const sync = await readTemplate("skills", "incremental-sync-engine");
+  assert.match(sync, /Knowledge Base sync/);
+  assert.match(sync, /Memory sync/);
+  assert.match(sync, /Context sync/);
+  assert.match(sync, /regression-patterns\.md/);
+  assert.match(sync, /claims verify/);
   const contextBudget = await readTemplate("skills", "context-budget-optimizer");
   assert.match(contextBudget, /Token Budget/);
   assert.match(contextBudget, /Context Manifest/);

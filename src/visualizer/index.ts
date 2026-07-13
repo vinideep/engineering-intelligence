@@ -61,11 +61,11 @@ const SKILL_CATALOG: Record<string, SkillInfo> = {
     dependsOn: [],
   },
   "incremental-sync-engine": {
-    name: "Incremental Sync",
+    name: "Sync Engine",
     category: "sync",
-    description: "Synchronizes only affected intelligence artifacts",
+    description: "Synchronizes only affected knowledge, memory, context, graph, and claims",
     usedBy: ["engineering-intelligence-skill"],
-    dependsOn: ["change-detection-engine", "impact-analysis-engine", "graph-engine", "knowledge-sync-engine", "memory-sync-engine", "context-sync-engine"],
+    dependsOn: ["change-detection-engine", "impact-analysis-engine", "graph-engine"],
   },
   "testing-intelligence-engine": {
     name: "Testing Intelligence",
@@ -73,27 +73,6 @@ const SKILL_CATALOG: Record<string, SkillInfo> = {
     description: "Determines risk-based testing needs",
     usedBy: ["engineering-intelligence-skill"],
     dependsOn: ["impact-analysis-engine"],
-  },
-  "knowledge-sync-engine": {
-    name: "Knowledge Sync",
-    category: "sync",
-    description: "Updates knowledge-base documents",
-    usedBy: ["incremental-sync-engine"],
-    dependsOn: ["impact-analysis-engine"],
-  },
-  "memory-sync-engine": {
-    name: "Memory Sync",
-    category: "sync",
-    description: "Maintains durable engineering memory",
-    usedBy: ["incremental-sync-engine"],
-    dependsOn: ["impact-analysis-engine"],
-  },
-  "context-sync-engine": {
-    name: "Context Sync",
-    category: "sync",
-    description: "Maintains AI navigation context maps",
-    usedBy: ["incremental-sync-engine"],
-    dependsOn: ["impact-analysis-engine", "graph-engine"],
   },
   "change-history-engine": {
     name: "Change History",
@@ -252,16 +231,9 @@ const SKILL_CATALOG: Record<string, SkillInfo> = {
   "api-backward-compatibility-engine": {
     name: "API Compatibility",
     category: "implementation",
-    description: "Classifies API changes and blocks unversioned breaking changes",
-    usedBy: ["engineering-intelligence-skill"],
-    dependsOn: [],
-  },
-  "api-snapshot-testing-engine": {
-    name: "API Snapshot Testing",
-    category: "implementation",
-    description: "Captures and replays API response snapshots",
+    description: "Classifies API changes, blocks unversioned breaking changes, and replays response snapshots",
     usedBy: ["engineering-intelligence-skill", "testing-intelligence-engine"],
-    dependsOn: ["api-backward-compatibility-engine"],
+    dependsOn: [],
   },
   "adr-compliance-checker": {
     name: "ADR Compliance",
@@ -302,7 +274,7 @@ const SKILL_CATALOG: Record<string, SkillInfo> = {
     name: "Context Budget Optimizer",
     category: "planning",
     description: "Ranks and slices context to reduce AI IDE token usage",
-    usedBy: ["engineering-intelligence-skill", "context-sync-engine"],
+    usedBy: ["engineering-intelligence-skill", "incremental-sync-engine"],
     dependsOn: ["graph-engine"],
   },
   "backlog-decomposition-engine": {

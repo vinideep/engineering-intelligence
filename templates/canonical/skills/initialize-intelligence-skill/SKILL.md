@@ -8,6 +8,8 @@ version: 3.0.0
 
 Create a trustworthy, evidence-backed project intelligence baseline. Analyze only artifacts present in source code, configuration, tests, infrastructure, and existing documentation. Mark unknowns and uncertainties explicitly — never invent architecture, APIs, schemas, or business rules.
 
+**Record durable facts as verifiable claims.** For each material, code-backed statement you would put in the knowledge base, also record it as a claim bound to its exact evidence span: `npx engineering-intelligence claims add --statement "<fact>" --evidence "<path>:<start>-<end>"` (writes `.engineering-intelligence/claims/claims.json`, pinning a content hash of the cited lines). This lets `claims verify` and `get_context` later prove — deterministically, with no LLM — whether each fact still holds against the current source. Prefer line-scoped evidence for precise, low-noise staleness detection.
+
 ## Inputs
 
 - Repository root path (current working directory by default)

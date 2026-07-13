@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>Turn any AI coding IDE into a disciplined engineering team.</strong><br>
-  One install drops 46 skills, 15 specialist agents, and 11 workflows into your repo —<br>
+  One install drops 42 skills, 15 specialist agents, and 11 workflows into your repo —<br>
   teaching the agent to plan, implement, validate, and keep its own project knowledge in sync.
 </p>
 
@@ -34,7 +34,7 @@ AI coding agents forget everything between sessions. They re-read your architect
 | Agent re-learns your codebase from scratch every session | Evidence-based knowledge base + architecture graphs that persist across sessions |
 | Jumps straight to code, skips planning | Mandatory impact analysis + Agile planning before any non-trivial change |
 | Ad-hoc one-shot prompts, no continuity | Autonomous Epic → Feature → Ticket backlog with a human approval gate per feature |
-| Skill and instruction files burn context on every call | Tiered loading: routing table → brief → full skill — **28–37% fewer tokens per invocation** |
+| Skill and instruction files burn context on every call | Tiered loading: routing table → brief → full skill — loads only the **1–3 skills a task needs, not all 42** |
 | Tied to one AI tool | One canonical toolkit, rendered natively into **9 AI IDEs** — Claude Code, Cursor, Copilot, Gemini, Codex, Antigravity, CommandCode, and more |
 | Treats every developer the same | **Per-developer intelligence** — a personal, gitignored profile seeded from your git history calibrates responses to your test philosophy and depth; a committed team layer captures shared consensus |
 
@@ -51,9 +51,9 @@ Being precise about this up front, so you can decide if it fits:
 - **Conflict-aware tooling**: install/update tracks content hashes, preserves your own edits, and removes only what it added on uninstall.
 
 **What it isn't**
-- It is **not** a runtime enforcement engine. The skills guide the agent; they don't intercept or block its actions. Their effectiveness depends on your IDE's model following the instructions — strong models follow them well, smaller ones less so.
+- The *skills* are guidance, not interception — their effect depends on the model following them (strong models more, smaller ones less). But the toolkit is **no longer pure prose**: deterministic `gate` commands and MCP tools run in **every IDE and in CI** (env-vars, dead-exports, api-diff, migration-lint, claim verification), and automatic local lifecycle hooks (freshness inject, validation-on-stop) are wired for **Claude Code and Cursor**. See [Enforcement Across IDEs](#-enforcement-across-ides) and [Safety Gates](#-safety-gates). Local auto-blocking is Claude/Cursor-only today; CI is the universal enforcement layer.
 - It is **not** a replacement for review. It makes the agent more thorough and consistent; you still own the final call.
-- The **28–37% token reduction** is measured at the rendered-file level (compression + deferred loading) by a regression-guarded test harness (`test/token-reduction.test.mjs`), not from live IDE sessions. It reflects how much less instruction text is loaded per invocation — treat it as a strong directional figure, not a per-session guarantee.
+- **It does not claim to use fewer tokens than raw prompting.** The tiered loading saves tokens *relative to loading the whole toolkit* — routing + brief + one skill instead of all 42 skill files (measured at the rendered-file level by `test/token-reduction.test.mjs`). For a small one-off change, a raw prompt is cheaper. The real saving is not re-deriving your architecture every session: the agent reuses the persisted knowledge base and graphs instead of re-reading your codebase from scratch.
 
 If you want a low-friction start, install it and use just `/initialize-engineering-intelligence` + `/engineering-intelligence` first; adopt the deeper AI-DLC backlog and safety-gate workflows once you've seen the basics fit your team.
 
@@ -248,7 +248,6 @@ For focused, targeted work without going through the full orchestration pipeline
 ```
 /type-safety-engine
 /api-backward-compatibility-engine
-/api-snapshot-testing-engine
 /database-migration-safety-engine
 /environment-variable-auditor
 /adr-compliance-checker
@@ -295,6 +294,22 @@ npx engineering-intelligence freshness . --json
 # Extract git intelligence — hotspots, change coupling, ownership (last 90 days by default)
 npx engineering-intelligence git-analysis . --window 90
 npx engineering-intelligence git-analysis . --json
+
+# Run a deterministic safety gate (exits 1 on a hard failure — usable in CI)
+npx engineering-intelligence gate env-vars .            # env refs vs .env.example
+npx engineering-intelligence gate dead-exports .        # JS/TS exports never imported
+npx engineering-intelligence gate api-diff . --base origin/main   # removed/changed endpoints
+npx engineering-intelligence gate migration-lint . --json         # destructive/locking migrations
+
+# Assemble a token-budgeted context pack for a task (graph neighborhood + verified claims)
+npx engineering-intelligence context "add rate limiting" --files src/auth.ts --budget 2000
+
+# Record and verify hash-pinned claims about the code
+npx engineering-intelligence claims add --statement "auth uses JWT" --evidence "src/auth.ts:12-40"
+npx engineering-intelligence claims verify --strict     # exits 1 if any claim is stale/missing
+
+# Report observed token usage from real sessions (populated by the Stop hook)
+npx engineering-intelligence telemetry --json
 
 # Seed/refresh your personal developer profile from git history (zero LLM tokens; gitignored)
 npx engineering-intelligence user-profile .
@@ -355,15 +370,117 @@ The `/engineering-intelligence` workflow applies these gates automatically when 
 | Rollback planning | Medium, high, or critical risk changes |
 | Observability | New endpoints, jobs, services, or production paths |
 
+The gates above are applied by the workflow prose. The hooks below make the two
+most important guarantees — *fresh intelligence* and *validated changes* —
+**enforced by code**, not left to the model's diligence.
+
+---
+
+## 🛂 Enforcement Across IDEs
+
+Enforcement is **not** one mechanism — it's a tiering, because a "hook" only exists
+if the host IDE exposes a lifecycle-hook API. The value (fresh intelligence,
+validated changes) reaches every IDE through host-independent layers; automatic
+*local* blocking is added per-host where the host supports it.
+
+| Layer | Works in | Strength |
+|-------|----------|----------|
+| **CI** — `gate` commands + the [drift-check Action](templates/canonical/ci/ei-drift-check.yml) | **Any repo, any IDE** | **Strongest — blocks the merge, unskippable** |
+| **MCP tools** — `get_context`, `run_gate`, `verify_claims`, `analyze_impact` | Any MCP-capable IDE (Cursor, Copilot, Windsurf, Gemini…) | Agent can call them everywhere |
+| **CLI** — the same commands by hand or in scripts | Everywhere | Manual |
+| **Local lifecycle hooks** — SessionStart inject / PreToolUse warn-or-deny / Stop validation gate | **Claude Code + Cursor** | Automatic (skippable per-dev) |
+
+The honest takeaway: **CI is the universal, unskippable enforcement spine** (a local
+hook stops *you*; a CI gate stops the *merge*). Local hooks are a per-host
+enhancement on top.
+
+### Local lifecycle hooks — Claude Code & Cursor
+
+Installing for `claude-code` writes `.claude/settings.json`; installing for
+`cursor` writes `.cursor/hooks.json`. Both wire the **same** deterministic engine
+(`engineering-intelligence hook <event>`), just translated to each host's hook
+contract:
+
+| Moment | What it does |
+|--------|-------------|
+| Session start | Injects the current freshness / drift summary so the session starts from real intelligence state. |
+| Before an edit | Warns (or, opt-in, **denies**) when the documentation covering that source is stale. |
+| After edits / shell | Silently records changed source files and the validation commands that actually ran. |
+| Stop | Opt-in: **blocks "done"** when source changed but no test / type-check / lint command was run this session. |
+
+This turns the *environmental backpressure* principle ("never report validation
+as passed unless the command actually ran") from a request into an enforced gate.
+The other IDEs don't get this local auto-blocking — they rely on the CI + MCP
+layers above. Adding another host is a small adapter: the engine is host-neutral.
+
+Behaviour is tuned in `.engineering-intelligence/ei.config.json` (shared by both hosts):
+
+```json
+{
+  "hooks": {
+    "freshnessThreshold": 60,
+    "blockStaleEdits": false,
+    "requireValidationOnStop": false
+  }
+}
+```
+
+Hooks are **fail-safe**: with no intelligence installed, or on any error, they
+allow the action and never break the session. The hard gates (`blockStaleEdits`,
+`requireValidationOnStop`) are opt-in — flip them on when your team is ready.
+
+**CI counterpart:** copy [`templates/canonical/ci/ei-drift-check.yml`](templates/canonical/ci/ei-drift-check.yml)
+to `.github/workflows/` to fail pull requests whose committed intelligence has
+drifted below the freshness threshold.
+
+---
+
+## 🧠 Queryable Context & Verifiable Claims
+
+The knowledge base is only useful if a model can trust it and reach it cheaply.
+Two computed capabilities make that real — and are what let **small models** work
+from retrieved facts instead of re-reading source.
+
+**Verifiable claims.** A *claim* is one factual statement bound to the exact
+evidence spans that justify it, each pinned by a content hash. Re-hashing the
+spans proves — deterministically, no LLM — whether the fact still holds:
+
+```bash
+npx engineering-intelligence claims add --statement "auth uses JWT verified in middleware" --evidence "src/auth/mw.ts:12-40"
+npx engineering-intelligence claims verify --strict   # verified ✅ / stale 🔄 / missing ❌
+```
+
+Unlike mtime-based freshness, editing the cited lines flips exactly that claim
+stale; unrelated edits don't. The `initialize`/`validate` skills author claims as
+they build the knowledge base.
+
+**`get_context` — one query instead of ten file reads.** Ask for what a task
+needs and get a token-budgeted pack back: the graph neighborhood of the touched
+files (what they depend on, what depends on them), the **verified** claims about
+that code (stale ones excluded), plus conventions and dangerous areas.
+
+```bash
+npx engineering-intelligence context "add refunds to charge()" --files src/pay.ts --budget 2000
+```
+
+Also exposed as the `get_context` and `verify_claims` MCP tools, so the agent
+retrieves trustworthy facts rather than inferring them from raw code.
+
+**Honest, measured token numbers.** The Stop hook reads the session transcript
+and records *real* billed input/output tokens — including whether the session
+used `get_context` — to a local log. `npx engineering-intelligence telemetry`
+reports observed averages and a with-vs-without-context comparison. This replaces
+the old synthetic estimate with data you can actually cite.
+
 ---
 
 ## 📦 Toolkit Contents
 
-**46 skills** across six domains:
+**42 skills** across six domains:
 
-- **Knowledge & architecture:** codebase discovery, graph engine, knowledge extraction, architecture review, change detection, staleness detection, context sync, memory sync, knowledge sync, incremental sync, change history
+- **Knowledge & architecture:** codebase discovery, graph engine, knowledge extraction, architecture review, change detection, staleness detection, incremental sync (unified knowledge/memory/context/graph/claims sync), change history
 - **Planning & delivery:** AI-DLC lifecycle, backlog decomposition, issue tracker sync, requirement scoping, impact analysis, refactoring planner, greenfield architect, user intelligence engine
-- **Quality & safety:** testing intelligence, type safety, API compatibility, API snapshots, database migration safety, environment variable auditor, ADR compliance, LLM prompt injection guard, MCP security governor, dead code detector, engineering change review, NFR/ADR governor
+- **Quality & safety:** testing intelligence, type safety, API compatibility & snapshots, database migration safety, environment variable auditor, ADR compliance, LLM prompt injection guard, MCP security governor, dead code detector, engineering change review, NFR/ADR governor
 - **Operations:** performance analysis, operations readiness, environmental backpressure, context budget optimizer, debugging engine, PR intelligence, convention detector
 - **Security & compliance:** security audit, contract test generator, API backward compatibility
 - **Engineering workflow:** engineering intelligence orchestration, initialize intelligence, ongoing learning

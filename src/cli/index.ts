@@ -10,7 +10,9 @@ import { doctor } from "../validation/index.js";
 import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile";
+type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "claims" | "context" | "telemetry";
+
+const COMMANDS: Command[] = ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "claims", "context", "telemetry"];
 
 interface Options {
   command: Command;
@@ -26,6 +28,16 @@ interface Options {
   files: string[];
   threshold: number;
   window: number;
+  hookEvent?: string;
+  gateName?: string;
+  base: string;
+  positional?: string;   // action (claims) or task (context)
+  statement?: string;
+  evidence?: string;
+  confidence?: string;
+  budget: number;
+  strict: boolean;
+  host: string;
 }
 
 async function packageVersion(): Promise<string> {
@@ -52,15 +64,24 @@ Usage:
   engineering-intelligence freshness [path] [--threshold 60] [--json]
   engineering-intelligence git-analysis [path] [--window 90] [--json]
   engineering-intelligence user-profile [path] [--json]
+  engineering-intelligence hook <event> [path]   (internal: driven by IDE lifecycle hooks)
+  engineering-intelligence gate <name> [path] [--base <ref>] [--json]
+  engineering-intelligence claims verify [path] [--json] [--strict]
+  engineering-intelligence claims add --statement "..." --evidence "src/a.ts:10-20,src/b.ts" [path]
+  engineering-intelligence claims list [path] [--json]
+  engineering-intelligence context "<task>" [path] [--files a,b] [--budget 2000] [--json]
+  engineering-intelligence telemetry [path] [--json]
 
 IDE ids: ${IDE_IDS.join(", ")}
+Hook events: session-start, pre-tool-use, post-tool-use, stop
+Gates: env-vars, dead-exports, api-diff, migration-lint
 `;
 }
 
 function parseArgs(args: string[]): Options {
   let command: Command = "install";
   const remaining = [...args];
-  if (remaining[0] && ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile"].includes(remaining[0])) {
+  if (remaining[0] && (COMMANDS as string[]).includes(remaining[0])) {
     command = remaining.shift() as Command;
   }
   if (remaining.includes("--help") || remaining.includes("-h")) {
@@ -79,6 +100,16 @@ function parseArgs(args: string[]): Options {
   let files: string[] = [];
   let threshold = 60;
   let window_ = 90;
+  let hookEvent: string | undefined;
+  let gateName: string | undefined;
+  let base = "HEAD";
+  let positional: string | undefined;
+  let statement: string | undefined;
+  let evidence: string | undefined;
+  let confidence: string | undefined;
+  let budget = 2000;
+  let strict = false;
+  let host = "claude-code";
 
   for (let index = 0; index < remaining.length; index += 1) {
     const arg = remaining[index];
@@ -131,8 +162,42 @@ function parseArgs(args: string[]): Options {
       window_ = parseInt(value, 10);
     } else if (arg.startsWith("--window=")) {
       window_ = parseInt(arg.slice("--window=".length), 10);
+    } else if (arg === "--base") {
+      const value = remaining[++index];
+      if (!value) throw new Error("--base requires a value.");
+      base = value;
+    } else if (arg.startsWith("--base=")) {
+      base = arg.slice("--base=".length);
+    } else if (arg === "--statement") {
+      statement = remaining[++index];
+    } else if (arg.startsWith("--statement=")) {
+      statement = arg.slice("--statement=".length);
+    } else if (arg === "--evidence") {
+      evidence = remaining[++index];
+    } else if (arg.startsWith("--evidence=")) {
+      evidence = arg.slice("--evidence=".length);
+    } else if (arg === "--confidence") {
+      confidence = remaining[++index];
+    } else if (arg.startsWith("--confidence=")) {
+      confidence = arg.slice("--confidence=".length);
+    } else if (arg === "--budget") {
+      budget = parseInt(remaining[++index] ?? "", 10);
+    } else if (arg.startsWith("--budget=")) {
+      budget = parseInt(arg.slice("--budget=".length), 10);
+    } else if (arg === "--strict") {
+      strict = true;
+    } else if (arg === "--host") {
+      host = remaining[++index] ?? host;
+    } else if (arg.startsWith("--host=")) {
+      host = arg.slice("--host=".length);
     } else if (arg.startsWith("-")) {
       throw new Error(`Unknown option "${arg}".`);
+    } else if (command === "hook" && hookEvent === undefined) {
+      hookEvent = arg;
+    } else if (command === "gate" && gateName === undefined) {
+      gateName = arg;
+    } else if ((command === "claims" || command === "context") && positional === undefined) {
+      positional = arg;
     } else if (!target) {
       target = arg;
     } else {
@@ -153,6 +218,16 @@ function parseArgs(args: string[]): Options {
     files,
     threshold,
     window: window_,
+    hookEvent,
+    gateName,
+    base,
+    positional,
+    statement,
+    evidence,
+    confidence,
+    budget: Number.isNaN(budget) ? 2000 : budget,
+    strict,
+    host,
   };
 }
 
@@ -188,8 +263,34 @@ function printResult(label: string, result: OperationResult, dryRun: boolean): v
   output.write(`${prefix} ${result.changed} changed, ${result.conflicts} conflict(s).\n`);
 }
 
+async function readStdin(): Promise<string> {
+  if (input.isTTY) return ""; // no piped payload
+  const chunks: Buffer[] = [];
+  for await (const chunk of input) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks).toString("utf8");
+}
+
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
+
+  if (options.command === "hook") {
+    const { runHook, normalizeInput, isHookEvent, isHookHost } = await import("../hooks/index.js");
+    const event = options.hookEvent ?? "";
+    if (!isHookEvent(event)) {
+      // Unknown event — fail safe (allow) rather than break the host session.
+      process.exitCode = 0;
+      return;
+    }
+    const host = isHookHost(options.host) ? options.host : "claude-code";
+    const payload = normalizeInput(host, await readStdin());
+    // The host passes the project directory as cwd; honour it over the process cwd.
+    const root = path.resolve(options.root !== process.cwd() ? options.root : (payload.cwd ?? process.cwd()));
+    const result = await runHook(event, root, payload, host);
+    if (result.stdout) output.write(`${result.stdout}\n`);
+    process.exitCode = result.exitCode;
+    return;
+  }
+
   const version = await packageVersion();
   let readline: any = null;
   const usePrompt = !options.yes && input.isTTY;
@@ -219,6 +320,95 @@ async function main(): Promise<void> {
         for (const s of stale) output.write(`    ${s.score.toString().padStart(3)} ${s.docPath}\n`);
       }
     }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "gate") {
+    const { runGate, isGateName, GATE_NAMES } = await import("../gates/index.js");
+    if (!options.gateName || !isGateName(options.gateName)) {
+      output.write(`Unknown gate "${options.gateName ?? ""}". Available: ${GATE_NAMES.join(", ")}.\n`);
+      process.exitCode = 2;
+      if (readline) readline.close();
+      return;
+    }
+    const result = await runGate(options.gateName, options.root, { base: options.base });
+    if (options.json) {
+      output.write(`${JSON.stringify(result, null, 2)}\n`);
+    } else {
+      const icon = { error: "🔴", warning: "🟡", info: "🔵" } as const;
+      output.write(`Gate ${result.gate}: ${result.status.toUpperCase()} — ${result.summary}\n`);
+      for (const f of result.findings) {
+        const loc = f.file ? ` (${f.file}${f.line ? `:${f.line}` : ""})` : "";
+        output.write(`  ${icon[f.severity]} ${f.message}${loc}\n`);
+      }
+    }
+    process.exitCode = result.status === "fail" ? 1 : 0;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "claims") {
+    const claims = await import("../claims/index.js");
+    const action = options.positional ?? "verify";
+    if (action === "add") {
+      if (!options.statement || !options.evidence) {
+        output.write('claims add requires --statement "..." and --evidence "path:start-end,path2".\n');
+        process.exitCode = 2;
+        if (readline) readline.close();
+        return;
+      }
+      try {
+        const claim = await claims.addClaim(options.root, {
+          statement: options.statement,
+          evidence: claims.parseEvidenceSpec(options.evidence),
+          confidence: (options.confidence as "verified" | "inferred" | "unknown" | undefined) ?? "verified",
+        });
+        output.write(options.json ? `${JSON.stringify(claim, null, 2)}\n` : `Added ${claim.id}: ${claim.statement}\n`);
+      } catch (error) {
+        output.write(`${error instanceof Error ? error.message : String(error)}\n`);
+        process.exitCode = 1;
+      }
+    } else if (action === "list") {
+      const store = await claims.loadClaims(options.root);
+      if (options.json) output.write(`${JSON.stringify(store, null, 2)}\n`);
+      else {
+        output.write(`${store.claims.length} claim(s):\n`);
+        for (const c of store.claims) output.write(`  ${c.id} [${c.confidence}] ${c.statement}\n`);
+      }
+    } else { // verify
+      const report = await claims.verifyClaims(options.root);
+      output.write(options.json ? `${JSON.stringify(report, null, 2)}\n` : claims.renderVerifyReport(report));
+      if (options.strict && report.stale + report.missing > 0) process.exitCode = 1;
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "context") {
+    const { getContext } = await import("../context/index.js");
+    const task = options.positional ?? "";
+    if (!task) {
+      output.write('context requires a task, e.g. context "add rate limiting" --files src/auth.ts\n');
+      process.exitCode = 2;
+      if (readline) readline.close();
+      return;
+    }
+    const pack = await getContext(options.root, { task, files: options.files, budget: options.budget });
+    if (options.json) {
+      output.write(`${JSON.stringify(pack, null, 2)}\n`);
+    } else {
+      output.write(pack.markdown);
+      output.write(`\n<!-- ~${pack.tokensEstimated}/${pack.budget} tokens; included: ${pack.included.join(", ") || "none"}${pack.omitted.length ? `; omitted (budget): ${pack.omitted.join(", ")}` : ""} -->\n`);
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "telemetry") {
+    const { aggregate, renderReport } = await import("../telemetry/index.js");
+    const report = await aggregate(options.root);
+    output.write(options.json ? `${JSON.stringify(report, null, 2)}\n` : renderReport(report));
     if (readline) readline.close();
     return;
   }

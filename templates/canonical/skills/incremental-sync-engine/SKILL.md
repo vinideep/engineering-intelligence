@@ -1,103 +1,93 @@
 ---
 name: incremental-sync-engine
-description: Synchronizes only intelligence artifacts affected by a completed change or identified diff, including knowledge, memory, context, events, graphs, and reports. Use for explicit synchronization or after implementation.
-version: 3.0.0
+description: Synchronizes only the intelligence artifacts affected by a completed change — knowledge base, durable memory, navigation context, events, graphs, claims, and reports. The single sync engine; use for explicit synchronization or after implementation.
+version: 4.0.0
 ---
 
-# Incremental Sync Engine
+# Sync Engine
 
-Update only the intelligence artifacts affected by a specific change. Never regenerate unrelated content.
+Update only the intelligence affected by a specific change; never regenerate unrelated content. This one skill covers all artifact types — knowledge base, memory, context, events, graphs, and claims.
 
 ## Inputs
 
-- Completed diff, change record, or supplied changed scope
-- Existing impact report (`.engineering-intelligence/reports/IMP-XXX-*.md`)
-- If no impact report exists for the scope, run `impact-analysis-engine` first
+- A completed diff, change record, or explicitly supplied changed scope
+- Existing impact report (`$EI/reports/IMP-XXX-*.md`); if none exists for the scope, run `impact-analysis-engine` first
+
+## Deterministic first steps (run the tools, don't hand-simulate)
+
+1. **Refresh the graph** for changed files: `npx engineering-intelligence map . --update --files <a,b,c>` — preserves stable node IDs, rebuilds only what changed.
+2. **Re-check evidence** the knowledge base already committed to: `npx engineering-intelligence claims verify --json` — every claim is re-hashed against current source and reported `verified` / `stale` / `missing`. Stale and missing claims are your precise worklist.
+3. **Score document freshness**: `npx engineering-intelligence freshness . --json` — flags which knowledge/memory/context docs lag their cited source.
+
+These replace the old prose "confidence decay" heuristic (which nothing enforced) with real, evidence-level signals.
 
 ## Sync Decision Matrix
 
-Use this matrix to determine which artifact types need updating based on the change type:
+Match each change to the artifact types it affects — touch nothing else.
 
-| Change Type | Knowledge Base | Memory | Context | Events | Graphs | Reports |
-|---|---|---|---|---|---|---|
-| API route added/changed | `04-api-documentation.md` | — | `module-map.md` | `api-changed.md` | runtime-graph | IMP update |
-| Database schema changed | `05-database.md` | — | — | `schema-changed.md` | dependency-graph | IMP update |
-| Auth flow changed | `06-authentication.md` | `business-rules.md` | `critical-paths.md` | `auth-changed.md` | runtime-graph | IMP update |
-| New feature added | `07/08-frontend/backend.md` | — | `module-map.md` | `feature-added.md` | dependency-graph | IMP update |
-| Architecture decision | `02-architecture.md` | `architecture-decisions.md` | all maps | — | all graphs | IMP update |
-| Dependency added/removed | `01-repository-structure.md` | `technology-decisions.md` | `dependency-map.md` | — | dependency-graph | IMP update |
-| Infrastructure changed | `09-infrastructure.md` | — | — | `infrastructure-changed.md` | service-graph | IMP update |
-| Refactor (no behavior change) | — | `coding-patterns.md` | affected maps | — | dependency-graph | — |
-| Test changes only | — | — | — | — | — | — |
-| Config/env changes | `09-infrastructure.md` | `project-constraints.md` | — | — | — | — |
-| Convention changed | `16-conventions.md` | `coding-patterns.md` | — | — | — | — |
-| Security concern detected | `20-security-assessment.md` | — | — | — | — | — |
+| Change Type | Knowledge Base | Memory | Context | Events | Graphs |
+|---|---|---|---|---|---|
+| API route added/changed | `04-api-documentation.md` | — | `module-map.md` | `api-changed.md` | runtime-graph |
+| Database schema changed | `05-database.md` | — | — | `schema-changed.md` | dependency-graph |
+| Auth flow changed | `06-authentication.md` | `business-rules.md` | `critical-paths.md` | `auth-changed.md` | runtime-graph |
+| New feature added | `07/08-frontend/backend.md` | — | `module-map.md` | `feature-added.md` | dependency-graph |
+| Architecture decision | `02-architecture.md` | `architecture-decisions.md` | all maps | — | all graphs |
+| Dependency added/removed | `01-repository-structure.md` | `technology-decisions.md` | `dependency-map.md` | — | dependency-graph |
+| Infrastructure changed | `09-infrastructure.md` | — | — | `infrastructure-changed.md` | service-graph |
+| Refactor (no behavior change) | — | `coding-patterns.md` | affected maps | — | dependency-graph |
+| Convention changed | `16-conventions.md` | `coding-patterns.md` | — | — | — |
+| Config/env changes | `09-infrastructure.md` | `project-constraints.md` | — | — | — |
+| Security concern detected | `20-security-assessment.md` | — | — | — | — |
+| Test changes only | — | — | — | — | — |
 
-## Procedure
+## Knowledge Base sync
 
-1. **Read Impact Report** — Get the list of affected intelligence artifacts from the impact report. If no report exists, run `impact-analysis-engine` to create one.
+Update only the sections that reference changed code. Preserve accurate content; never regenerate a whole document. Attach an evidence citation to every changed claim — `(evidence: src/mw/auth.ts:L15-L28)` — and mark uncertainty as `**Unclear from evidence** — <reason>`. For anything durable and code-backed, also record/refresh a verifiable claim: `npx engineering-intelligence claims add --statement "<fact>" --evidence "<path>:<start>-<end>"`. Re-run `claims verify` after editing; a claim that still reads `stale` means the doc text and the code still disagree.
 
-2. **Classify Changes** — Match each change against the sync decision matrix above.
+## Memory sync (durable only)
 
-3. **Update Knowledge Base** — For each affected `.engineering-intelligence/knowledge-base/` document:
-   - Read the current document
-   - Identify the specific section(s) affected
-   - Update only those sections with new evidence
-   - Preserve all accurate existing content
-   - Add evidence citations for all changed claims
+Most changes do **not** touch memory — leaving it unchanged is usually correct. Update only when a durable decision, rule, constraint, pattern, or technology choice changed.
 
-4. **Update Memory** — Only if a durable decision, rule, constraint, pattern, or technology choice changed:
-   - Update the specific entry in the relevant memory document
-   - Add a `Last updated:` timestamp and reason
+| Document | Content | Update trigger |
+|---|---|---|
+| `architecture-decisions.md` | ADRs, boundaries, communication patterns | Architecture changes, new boundaries |
+| `business-rules.md` | Domain invariants, validation, business constraints | Business-logic / regulatory changes |
+| `coding-patterns.md` | Conventions, idioms, naming, file organization | Refactors establishing new patterns |
+| `project-constraints.md` | Perf budgets, compatibility, SLAs, compliance | Infra changes, new compliance |
+| `technology-decisions.md` | Stack, framework versions, migration plans | Dependency/tech migrations |
+| `regression-patterns.md` | Recurring bug categories + regression templates | Bugfixes revealing reusable failure modes |
+| `team-preferences.md` | Team-wide preferences (≥2 developer consensus) | Promoted by `user-intelligence-engine` |
+| `users/<slug>/user-intelligence.md` | Personal profile (gitignored) | Per session / `ei user-profile` |
 
-5. **Update Context** — Only if module, service, runtime, dependency, critical-path, or risk topology changed:
-   - Update the specific entries in affected map documents
-   - Keep maps concise and navigational
+Rules: cite evidence on every entry; mark superseded decisions `Superseded` rather than deleting them; retire stale memory only with evidence. `testing-intelligence-engine` proposes regression patterns; persist them here only when durable.
 
-6. **Update Events** — Only if API, schema, auth, feature, or infrastructure contracts changed:
-   - Verify the change-event guidance still reflects the current system
+## Context sync (navigation maps)
 
-7. **Update Graphs** — Use `graph-engine` in incremental mode:
-   - Update only affected nodes and edges
-   - Preserve stable node IDs
-   - Require full remapping only for unbounded structural changes
+Keep `$EI/context/` maps concise and navigational (tables, under ~150 lines each) — they help an agent find the right file fast, not duplicate the knowledge base. Maintain: `module-map.md`, `service-map.md`, `runtime-map.md`, `critical-paths.md`, `dangerous-areas.md`, `dependency-map.md`. Update only affected entries; remove phantom paths; cross-check against `$EI/graph/` and the real filesystem. For assembling context under a token budget, prefer `npx engineering-intelligence context "<task>" --files <...>` (the `get_context` tool) over reading maps by hand.
 
-8. **Update Impact Report** — Add a synchronization notes section to the original impact report recording what was synced.
+## Events, graphs, reports
 
-9. **Check Freshness** — After sync, update freshness metadata on all modified documents. If any document freshness score drops below 40, flag for full re-verification using `staleness-detector`.
-
-## Confidence Decay
-
-Confidence scores decrease over time without re-verification:
-
-| Changes Since Last Verification | Confidence Level |
-|---|---|
-| 0–9 changes | Maintains current confidence |
-| 10–24 changes | Drops from `verified` to `inferred` |
-| 25+ changes | Drops to `unknown` |
-
-During sync, check how many changes have occurred since each artifact was last verified. Apply decay rules and flag artifacts that have dropped confidence for re-verification.
+- **Events**: verify `$EI/events/*.md` guidance still matches the current contracts when API/schema/auth/feature/infra changed.
+- **Graphs**: already refreshed in step 1 (incremental `map --update`); require a full remap only for broad structural changes.
+- **Report**: append a synchronization-notes section to the originating impact report recording exactly what was synced.
 
 ## Rules
 
-- **Incremental only**: Update only artifacts identified by the impact report — never regenerate unrelated content
-- **Evidence required**: Attach evidence for every changed claim
-- **Preserve accuracy**: Don't modify correct existing content
-- **Full remap trigger**: Require full graph remapping only for broad structural changes (major refactors, architecture changes)
-- **No change records**: As a standalone synchronization capability, do not write `.engineering-intelligence/changes/CHG-XXX-*` records
-- **No product code**: Must not modify product code
+- Incremental only — modify only artifacts the impact report (and the tools above) identify.
+- Evidence required for every changed claim; prefer recorded claims for durable facts.
+- Preserve correct existing content; never regenerate unrelated artifacts.
+- No `CHG-XXX` records here (that is the change-history engine's job); never modify product code.
 
 ## Quality Gates
 
-- [ ] Impact report was consulted (or created) before syncing
-- [ ] Only affected artifacts were modified
-- [ ] Unrelated content was preserved unchanged
-- [ ] Evidence citations were added for changed claims
-- [ ] Graph updates used incremental mode (unless structural change required full remap)
+- [ ] Graph refreshed (`map --update`) and claims re-verified before editing docs
+- [ ] Only impact-identified artifacts were modified; unrelated content preserved
+- [ ] Evidence citations added for changed claims; durable facts recorded as claims
+- [ ] `claims verify` reports no stale/missing claims left unaddressed for the change scope
+- [ ] Context maps reference real paths; impact report updated with sync notes
 
 ## Cross-References
 
 - Depends on: `change-detection-engine`, `impact-analysis-engine`, `graph-engine`
 - Used by: `engineering-intelligence-skill`, `sync-engineering-intelligence` workflow
-- Delegates to: `knowledge-sync-engine`, `memory-sync-engine`, `context-sync-engine`
-- Integrates with: `staleness-detector` (freshness checks), `convention-detector` (convention sync)
+- Integrates with: `knowledge-base-validator` (validates after sync), `convention-detector` (convention sync), `user-intelligence-engine` (memory promotion)

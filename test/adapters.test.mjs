@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { renderAdapters } from "../dist/adapters/index.js";
 import { validateRender } from "../dist/validation/index.js";
+import { SKILL_NAMES } from "../dist/templates.js";
 
 test("all V2 IDE adapters render internally valid native destinations and workflows", async () => {
   const ides = ["antigravity", "antigravity-cli", "codex", "claude-code", "cursor", "github-copilot", "gemini-cli", "commandcode", "generic"];
@@ -37,7 +38,6 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.ok(paths.has(".commandcode/skills/type-safety-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/database-migration-safety-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/api-backward-compatibility-engine/SKILL.md"));
-  assert.ok(paths.has(".commandcode/skills/api-snapshot-testing-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/adr-compliance-checker/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/environment-variable-auditor/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/llm-prompt-injection-guard/SKILL.md"));
@@ -80,7 +80,6 @@ test("CommandCode adapter writes native project skills and commands", async () =
   assert.ok(paths.has(".commandcode/skills/type-safety-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/database-migration-safety-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/api-backward-compatibility-engine/SKILL.md"));
-  assert.ok(paths.has(".commandcode/skills/api-snapshot-testing-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/contract-test-generator/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/dead-code-detector/SKILL.md"));
   assert.ok(paths.has(".commandcode/commands/engineering-intelligence.md"));
@@ -187,6 +186,22 @@ test("Claude Code adapter generates skills index and workflow routing table with
   assert.match(claudeMd, /WORKFLOW-ROUTING/);
 
   assert.deepEqual(await validateRender(["claude-code"]), []);
+});
+
+test("CLAUDE.md skill count is derived from SKILL_NAMES, not hardcoded", async () => {
+  const files = await renderAdapters(["claude-code"]);
+  const claudeMd = files.find((item) => item.path === "CLAUDE.md").content;
+  // The three-tier protocol advertises the true number of installed skills.
+  assert.match(
+    claudeMd,
+    new RegExp(`description of all ${SKILL_NAMES.length} skills`),
+    `CLAUDE.md must report the real skill count (${SKILL_NAMES.length})`,
+  );
+  // Guard against the count drifting out of sync with the template payload again.
+  assert.ok(
+    !/description of all 44 skills/.test(claudeMd),
+    "CLAUDE.md must not carry a stale hardcoded '44 skills' count",
+  );
 });
 
 test("backlog decomposition and delivery ship as skills and commands for Claude Code", async () => {
@@ -344,3 +359,25 @@ test("antigravity-cli adapter writes agents to .agents/ (plural) matching CLI wo
   assert.ok(!paths.has(".agent/agents/engineering-orchestrator/agent.json"), "CLI must not write to .agent/ (singular)");
 });
 
+
+test("Cursor adapter renders .cursor/hooks.json wired to the cursor host", async () => {
+  const files = await renderAdapters(["cursor"]);
+  const hooks = files.find((f) => f.path === ".cursor/hooks.json");
+  assert.ok(hooks, "cursor must ship .cursor/hooks.json");
+  const parsed = JSON.parse(hooks.content);
+  assert.equal(parsed.version, 1);
+  assert.match(parsed.hooks.stop[0].command, /engineering-intelligence hook stop --host cursor/);
+  // Shared config seeded for cursor too.
+  assert.ok(files.some((f) => f.path === ".engineering-intelligence/ei.config.json"), "cursor must seed ei.config.json");
+  assert.deepEqual(await validateRender(["cursor"]), []);
+});
+
+test("Installing claude-code + cursor together dedups ei.config.json without conflict", async () => {
+  const files = await renderAdapters(["claude-code", "cursor"]);
+  const configs = files.filter((f) => f.path === ".engineering-intelligence/ei.config.json");
+  assert.equal(configs.length, 1, "ei.config.json must be merged to a single entry");
+  assert.deepEqual([...configs[0].owners].sort(), ["claude-code", "cursor"]);
+  // Both IDE-specific hook files coexist.
+  assert.ok(files.some((f) => f.path === ".claude/settings.json"));
+  assert.ok(files.some((f) => f.path === ".cursor/hooks.json"));
+});

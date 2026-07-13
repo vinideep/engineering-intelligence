@@ -8,6 +8,7 @@ import {
   smartCrush,
   withPathOptimizations,
 } from "../token-optimizer.js";
+import { claudeCodeHookSettings, cursorHookSettings, defaultConfigFile } from "../hooks/index.js";
 import { IDE_IDS, type IdeId, type RenderedFile } from "../types.js";
 
 const BLOCK_ID = "engineering-intelligence";
@@ -67,7 +68,7 @@ const claudeCodeInstructions = `
 
 **Tier 1 — Routing (load once, always pinned)**
 1. \`.claude/WORKFLOW-ROUTING.md\` — primary/optional skill map per command (~400t)
-2. \`.claude/skills/SKILLS-INDEX.md\` — one-line description of all 44 skills (~1,500t)
+2. \`.claude/skills/SKILLS-INDEX.md\` — one-line description of all ${SKILL_NAMES.length} skills (~1,500t)
 
 **Tier 2 — Brief (load per identified skill, ~150t each)**
 Load \`.claude/skills/<name>/SKILL-BRIEF.md\` for each primary skill identified in the routing table.
@@ -82,6 +83,16 @@ Load **optional** skills only when the request explicitly requires that capabili
 Path aliases used in skill and command files (expand before writing file paths):
 - \`$AIDLC\` = \`.engineering-intelligence/aidlc/\`
 - \`$EI\` = \`.engineering-intelligence/\`
+
+## Enforcement Hooks (Claude Code)
+
+\`.claude/settings.json\` wires four lifecycle hooks to \`engineering-intelligence hook <event>\`:
+- **SessionStart** injects the current intelligence freshness/drift summary.
+- **PreToolUse** warns before editing source while documentation is stale.
+- **PostToolUse** records changed source files and validation commands for the session.
+- **Stop** can require that a validation command actually ran before finishing.
+
+Tune behaviour in \`.engineering-intelligence/ei.config.json\` (\`blockStaleEdits\`, \`requireValidationOnStop\`, \`freshnessThreshold\`). Hooks are fail-safe: with no intelligence installed they do nothing.
 `;
 
 function file(path: string, content: string, owner: IdeId): RenderedFile {
@@ -227,7 +238,7 @@ const AGENT_METADATA: Record<
   },
   "change-agent": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/changes"],
-    skills: ["engineering-intelligence-skill", "context-budget-optimizer", "aidlc-lifecycle-engine", "impact-analysis-engine", "change-detection-engine", "type-safety-engine", "api-backward-compatibility-engine", "api-snapshot-testing-engine", "environment-variable-auditor", "adr-compliance-checker", "llm-prompt-injection-guard"],
+    skills: ["engineering-intelligence-skill", "context-budget-optimizer", "aidlc-lifecycle-engine", "impact-analysis-engine", "change-detection-engine", "type-safety-engine", "api-backward-compatibility-engine", "environment-variable-auditor", "adr-compliance-checker", "llm-prompt-injection-guard"],
   },
   "quality-agent": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
@@ -235,7 +246,7 @@ const AGENT_METADATA: Record<
   },
   "knowledge-agent": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/memory", ".engineering-intelligence/changes"],
-    skills: ["knowledge-sync-engine", "memory-sync-engine", "context-sync-engine", "context-budget-optimizer", "graph-engine", "change-history-engine", "dead-code-detector"],
+    skills: ["incremental-sync-engine", "context-budget-optimizer", "graph-engine", "change-history-engine", "dead-code-detector"],
   },
   "product-analyst": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/graph"],
@@ -255,7 +266,7 @@ const AGENT_METADATA: Record<
   },
   "test-engineer": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
-    skills: ["testing-intelligence-engine", "environmental-backpressure-engine", "type-safety-engine", "api-snapshot-testing-engine", "contract-test-generator"],
+    skills: ["testing-intelligence-engine", "environmental-backpressure-engine", "type-safety-engine", "api-backward-compatibility-engine", "contract-test-generator"],
   },
   "adversary": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
@@ -279,7 +290,7 @@ const AGENT_METADATA: Record<
   },
   "documentation-writer": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/memory", ".engineering-intelligence/changes"],
-    skills: ["knowledge-sync-engine", "memory-sync-engine", "context-sync-engine", "change-history-engine"],
+    skills: ["incremental-sync-engine", "change-history-engine"],
   },
 };
 
@@ -382,6 +393,8 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
         ...bundle,
         ...agents,
         ...commands,
+        file(".claude/settings.json", claudeCodeHookSettings(), ide),
+        file(".engineering-intelligence/ei.config.json", defaultConfigFile(), ide),
         block("CLAUDE.md", sharedInstructions + claudeCodeInstructions, ide),
       ];
     }
@@ -391,6 +404,8 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
       return [
         file(".cursor/rules/engineering-intelligence.mdc", rule, ide),
         ...(await workflowsAt(".cursor/commands", ide)),
+        file(".cursor/hooks.json", cursorHookSettings(), ide),
+        file(".engineering-intelligence/ei.config.json", defaultConfigFile(), ide),
       ];
     }
     case "github-copilot": {

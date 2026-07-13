@@ -166,8 +166,8 @@ infrastructure-changed.md
 
 # Auto Sync Skills
 
-memory-generator context-generator event-generator memory-sync-engine
-context-sync-engine knowledge-sync-engine
+memory-generator context-generator event-generator incremental-sync-engine
+(unified: knowledge + memory + context sync)
 
 ------------------------------------------------------------------------
 

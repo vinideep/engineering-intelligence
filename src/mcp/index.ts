@@ -55,6 +55,50 @@ const TOOLS = [
     },
   },
   {
+    name: "run_gate",
+    description:
+      "Run a deterministic safety gate and return structured findings (severity error/warning/info). Gates: 'env-vars' (code env references vs .env.example), 'dead-exports' (JS/TS exports never imported), 'api-diff' (routes/contracts removed vs a git base ref), 'migration-lint' (destructive/locking DB migration ops). Prefer this over reviewing the code by hand for these checks.",
+    inputSchema: {
+      type: "object" as const,
+      required: ["gate"],
+      properties: {
+        root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
+        gate: {
+          type: "string",
+          enum: ["env-vars", "dead-exports", "api-diff", "migration-lint"],
+          description: "Which gate to run.",
+        },
+        base: { type: "string", description: "Git base ref for api-diff/migration-lint. Defaults to HEAD." },
+      },
+    },
+  },
+  {
+    name: "get_context",
+    description:
+      "Assemble a compact, token-budgeted context pack for a task instead of reading many files. Returns the graph neighborhood of the touched files (what they depend on and what depends on them), the VERIFIED claims about that code (hash-checked against current source — stale facts are excluded), plus project conventions and dangerous areas. Read this FIRST to orient before editing; it is cheaper and more trustworthy than re-reading source.",
+    inputSchema: {
+      type: "object" as const,
+      required: ["task"],
+      properties: {
+        root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
+        task: { type: "string", description: "What you are about to do, in a sentence." },
+        files: { type: "array", items: { type: "string" }, description: "Files the task will touch (drives the graph neighborhood and claim relevance)." },
+        budget: { type: "number", description: "Max tokens for the pack. Defaults to 2000; sections are trimmed lowest-value first." },
+      },
+    },
+  },
+  {
+    name: "verify_claims",
+    description:
+      "Re-hash every recorded claim's evidence spans against the current source and report which still hold (verified), which are stale (cited code changed), and which are missing (cited code gone). Deterministic, no LLM. Use to trust the knowledge base before relying on it.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
+      },
+    },
+  },
+  {
     name: "read_knowledge",
     description:
       "List or read files from the knowledge-base/ directory. Omit 'file' to list all knowledge files. Provide 'file' (relative path within knowledge-base/) to read its contents.",
@@ -70,7 +114,7 @@ const TOOLS = [
 
 export async function startMcpServer(projectRoot: string): Promise<void> {
   const server = new Server(
-    { name: "engineering-intelligence", version: "2.0.0" },
+    { name: "engineering-intelligence", version: "2.3.0" },
     { capabilities: { tools: {} } },
   );
 
@@ -130,6 +174,38 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
         }
         const result = await analyzeImpact(root, changedFiles);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      }
+
+      if (name === "run_gate") {
+        const { runGate, isGateName } = await import("../gates/index.js");
+        const gate = typeof args.gate === "string" ? args.gate : "";
+        if (!isGateName(gate)) {
+          return {
+            content: [{ type: "text", text: JSON.stringify({ error: `Unknown gate: ${gate}` }) }],
+            isError: true,
+          };
+        }
+        const base = typeof args.base === "string" ? args.base : undefined;
+        const result = await runGate(gate, root, { base });
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      }
+
+      if (name === "get_context") {
+        const task = typeof args.task === "string" ? args.task : "";
+        if (!task) {
+          return { content: [{ type: "text", text: JSON.stringify({ error: "task is required" }) }], isError: true };
+        }
+        const { getContext } = await import("../context/index.js");
+        const files = Array.isArray(args.files) ? (args.files as string[]) : undefined;
+        const budget = typeof args.budget === "number" ? args.budget : undefined;
+        const pack = await getContext(root, { task, files, budget });
+        return { content: [{ type: "text", text: pack.markdown }] };
+      }
+
+      if (name === "verify_claims") {
+        const { verifyClaims } = await import("../claims/index.js");
+        const report = await verifyClaims(root);
+        return { content: [{ type: "text", text: JSON.stringify(report, null, 2) }] };
       }
 
       if (name === "read_knowledge") {

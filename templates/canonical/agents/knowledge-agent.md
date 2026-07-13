@@ -38,9 +38,7 @@ After an engineering change:
 
 1. Read impact report for affected artifact list
 2. Delegate to appropriate sync engines:
-   - `knowledge-sync-engine` for knowledge-base docs
-   - `memory-sync-engine` for durable memory
-   - `context-sync-engine` for navigation maps
+   - `incremental-sync-engine` — the single sync engine covering knowledge-base docs, durable memory, and navigation maps (run `map --update`, `claims verify`, and `freshness` first)
    - `graph-engine` in incremental mode for graphs
 3. Update impact report with sync notes
 4. Write change record via `change-history-engine`

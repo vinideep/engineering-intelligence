@@ -75,5 +75,48 @@ export async function doctor(root: string): Promise<FileAction[]> {
       actions.push({ path: entry.path, status: "unchanged" });
     }
   }
+
+  // Claude Code enforcement hooks: if the user owns a pre-existing settings.json,
+  // the installer preserves it (never in the manifest), so verify the hook wiring
+  // is actually present and guide a manual merge when it is not.
+  if (manifest.adapters.includes("claude-code")) {
+    const settingsPath = path.join(root, ".claude", "settings.json");
+    const managedBySettings = manifest.files.some((entry) => entry.path === ".claude/settings.json");
+    if (!managedBySettings) {
+      let hasHooks = false;
+      try {
+        hasHooks = (await readFile(settingsPath, "utf8")).includes("engineering-intelligence hook");
+      } catch { /* missing */ }
+      if (!hasHooks) {
+        actions.push({
+          path: ".claude/settings.json",
+          status: "warning",
+          message:
+            "Enforcement hooks are not wired. Merge the `hooks` block (SessionStart/PreToolUse/PostToolUse/Stop → `npx engineering-intelligence hook <event>`) into your existing .claude/settings.json.",
+        });
+      }
+    }
+  }
+
+  // Cursor enforcement hooks: same pre-existing-file edge case for .cursor/hooks.json.
+  if (manifest.adapters.includes("cursor")) {
+    const hooksPath = path.join(root, ".cursor", "hooks.json");
+    const managed = manifest.files.some((entry) => entry.path === ".cursor/hooks.json");
+    if (!managed) {
+      let hasHooks = false;
+      try {
+        hasHooks = (await readFile(hooksPath, "utf8")).includes("engineering-intelligence hook");
+      } catch { /* missing */ }
+      if (!hasHooks) {
+        actions.push({
+          path: ".cursor/hooks.json",
+          status: "warning",
+          message:
+            "Enforcement hooks are not wired. Merge the `hooks` block (sessionStart/preToolUse/afterFileEdit/afterShellExecution/stop → `npx engineering-intelligence hook <event> --host cursor`) into your existing .cursor/hooks.json.",
+        });
+      }
+    }
+  }
+
   return actions;
 }

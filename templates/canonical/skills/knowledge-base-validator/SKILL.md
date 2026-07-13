@@ -8,6 +8,8 @@ version: 3.0.0
 
 Systematically audit every significant claim in `.engineering-intelligence/knowledge-base/*.md` against actual repository evidence. Produce a structured validation report that identifies exactly what is supported, what is stale, and what needs human review.
 
+**Run the deterministic claim check first:** `npx engineering-intelligence claims verify --json` re-hashes every recorded claim's evidence spans against the current source and reports each as verified, stale (cited code changed), or missing (cited code gone) — no LLM, no guessing. Treat stale/missing claims as the priority worklist, refresh or correct them, and reserve the manual audit below for prose that is not yet backed by recorded claims.
+
 ## Inputs
 
 - Repository root path with `.engineering-intelligence/knowledge-base/` present

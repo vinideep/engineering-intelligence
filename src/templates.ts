@@ -18,9 +18,6 @@ export const SKILL_NAMES = [
   "knowledge-base-validator",
   "impact-analysis-engine",
   "testing-intelligence-engine",
-  "knowledge-sync-engine",
-  "memory-sync-engine",
-  "context-sync-engine",
   "change-history-engine",
   "architecture-review-engine",
   "refactoring-planner",
@@ -48,7 +45,6 @@ export const SKILL_NAMES = [
   "type-safety-engine",
   "database-migration-safety-engine",
   "api-backward-compatibility-engine",
-  "api-snapshot-testing-engine",
   "adr-compliance-checker",
   "dead-code-detector",
   "environment-variable-auditor",
@@ -237,15 +233,10 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
     }
   }
   const apiCompatibility = await readTemplate("skills", "api-backward-compatibility-engine").catch(() => "");
-  for (const requiredContract of ["additive", "deprecated", "breaking", "version bump"]) {
+  // api-backward-compatibility-engine now also absorbs snapshot/replay verification.
+  for (const requiredContract of ["additive", "deprecated", "breaking", "version bump", ".engineering-intelligence/snapshots/", "pre-change", "post-change", "replay"]) {
     if (!apiCompatibility.includes(requiredContract)) {
-      errors.push(`api-backward-compatibility-engine does not define required API compatibility contract: ${requiredContract}`);
-    }
-  }
-  const snapshot = await readTemplate("skills", "api-snapshot-testing-engine").catch(() => "");
-  for (const requiredContract of [".engineering-intelligence/snapshots/", "pre-change", "post-change", "replay"]) {
-    if (!snapshot.includes(requiredContract)) {
-      errors.push(`api-snapshot-testing-engine does not define required snapshot contract: ${requiredContract}`);
+      errors.push(`api-backward-compatibility-engine does not define required API compatibility/snapshot contract: ${requiredContract}`);
     }
   }
   const staleness = await readTemplate("skills", "staleness-detector").catch(() => "");
@@ -260,10 +251,10 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
       errors.push(`convention-detector does not define required convention contract: ${requiredContract}`);
     }
   }
-  const memory = await readTemplate("skills", "memory-sync-engine").catch(() => "");
-  for (const requiredContract of ["regression-patterns.md", "Testing Intelligence Engine owns detection", "Memory Sync owns durable persistence"]) {
-    if (!memory.includes(requiredContract)) {
-      errors.push(`memory-sync-engine does not define required regression-pattern ownership contract: ${requiredContract}`);
+  const sync = await readTemplate("skills", "incremental-sync-engine").catch(() => "");
+  for (const requiredContract of ["Knowledge Base sync", "Memory sync", "Context sync", "regression-patterns.md", "claims verify"]) {
+    if (!sync.includes(requiredContract)) {
+      errors.push(`incremental-sync-engine does not define required unified-sync contract: ${requiredContract}`);
     }
   }
   const contextBudget = await readTemplate("skills", "context-budget-optimizer").catch(() => "");

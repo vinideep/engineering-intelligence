@@ -192,7 +192,6 @@ If your environment supports direct skill invocation, use these for focused work
 ```text
 /type-safety-engine
 /api-backward-compatibility-engine
-/api-snapshot-testing-engine
 /database-migration-safety-engine
 /environment-variable-auditor
 /adr-compliance-checker
