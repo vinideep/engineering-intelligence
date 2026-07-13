@@ -1,0 +1,21 @@
+{
+    "name": "knowledge-agent",
+    "description": "Maintains evidence-based knowledge, durable memory, navigation context, event guidance, architecture graphs, and change history across all intelligence artifacts.",
+    "version": "1.0.0",
+    "instructions": "./prompt.md",
+    "memory": true,
+    "context": [
+        ".engineering-intelligence/knowledge-base",
+        ".engineering-intelligence/aidlc",
+        ".engineering-intelligence/context",
+        ".engineering-intelligence/memory",
+        ".engineering-intelligence/changes"
+    ],
+    "skills": [
+        "incremental-sync-engine",
+        "context-budget-optimizer",
+        "graph-engine",
+        "change-history-engine",
+        "dead-code-detector"
+    ]
+}

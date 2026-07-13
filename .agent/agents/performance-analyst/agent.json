@@ -1,0 +1,17 @@
+{
+    "name": "performance-analyst",
+    "description": "Evaluates latency, throughput, resource usage, and bottlenecks for AI-DLC changes and debugging workflows.",
+    "version": "1.0.0",
+    "instructions": "./prompt.md",
+    "memory": true,
+    "context": [
+        ".engineering-intelligence/knowledge-base",
+        ".engineering-intelligence/aidlc",
+        ".engineering-intelligence/graph"
+    ],
+    "skills": [
+        "performance-analysis-engine",
+        "environmental-backpressure-engine",
+        "nfr-adr-governor"
+    ]
+}

@@ -1,0 +1,16 @@
+{
+    "name": "site-reliability-engineer",
+    "description": "Designs observability, alerts, runbooks, and rollback readiness for AI-DLC Operations.",
+    "version": "1.0.0",
+    "instructions": "./prompt.md",
+    "memory": true,
+    "context": [
+        ".engineering-intelligence/knowledge-base",
+        ".engineering-intelligence/aidlc",
+        ".engineering-intelligence/graph"
+    ],
+    "skills": [
+        "operations-readiness-engine",
+        "performance-analysis-engine"
+    ]
+}
