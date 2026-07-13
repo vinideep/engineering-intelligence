@@ -1,0 +1,25 @@
+{
+    "name": "change-agent",
+    "description": "Implements scoped engineering changes after impact analysis and provides evidence for validation and synchronization.",
+    "version": "1.0.0",
+    "instructions": "./prompt.md",
+    "memory": true,
+    "context": [
+        ".engineering-intelligence/knowledge-base",
+        ".engineering-intelligence/aidlc",
+        ".engineering-intelligence/context",
+        ".engineering-intelligence/changes"
+    ],
+    "skills": [
+        "engineering-intelligence-skill",
+        "context-budget-optimizer",
+        "aidlc-lifecycle-engine",
+        "impact-analysis-engine",
+        "change-detection-engine",
+        "type-safety-engine",
+        "api-backward-compatibility-engine",
+        "environment-variable-auditor",
+        "adr-compliance-checker",
+        "llm-prompt-injection-guard"
+    ]
+}

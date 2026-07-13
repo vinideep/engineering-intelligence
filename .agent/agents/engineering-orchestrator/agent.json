@@ -1,0 +1,26 @@
+{
+    "name": "engineering-orchestrator",
+    "description": "Coordinates initialized engineering work by routing analysis, change, quality, and knowledge responsibilities across specialized agents and skills.",
+    "version": "1.0.0",
+    "instructions": "./prompt.md",
+    "memory": true,
+    "context": [
+        ".engineering-intelligence/knowledge-base",
+        ".engineering-intelligence/aidlc",
+        ".engineering-intelligence/context",
+        ".engineering-intelligence/memory",
+        ".engineering-intelligence/changes"
+    ],
+    "agents": [
+        "product-analyst",
+        "system-architect",
+        "change-agent",
+        "test-engineer",
+        "quality-agent",
+        "knowledge-agent"
+    ],
+    "execution": {
+        "autoRoute": true,
+        "parallel": false
+    }
+}

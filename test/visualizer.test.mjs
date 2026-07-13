@@ -37,3 +37,36 @@ test("generateDashboardHTML returns dashboard HTML content with key components",
   assert.match(html, /discover-codebase/);
   assert.match(html, /create-project/);
 });
+
+test("generateDashboardHTML includes the web-based graph view", async () => {
+  const html = await generateDashboardHTML(process.cwd());
+
+  // Graph tab and canvas stage
+  assert.match(html, /id="graph"/);
+  assert.match(html, /id="graphCanvas"/);
+  assert.match(html, /id="nodeDrawer"/);
+  assert.match(html, /d3@7/);
+
+  // Graph modes: vault, skills, architecture layers
+  assert.match(html, /buildVaultGraph/);
+  assert.match(html, /buildSkillsGraph/);
+  assert.match(html, /buildArchGraph/);
+  assert.match(html, /data-layer="dependency"/);
+  assert.match(html, /data-layer="service"/);
+  assert.match(html, /data-layer="runtime"/);
+  assert.match(html, /data-layer="business-flow"/);
+
+  // Command palette
+  assert.match(html, /id="paletteOverlay"/);
+
+  // No dependency on the Obsidian desktop app
+  assert.doesNotMatch(html, /obsidian:\/\//);
+});
+
+test("generateDashboardHTML escapes script-breaking sequences in payload", async () => {
+  const html = await generateDashboardHTML(process.cwd());
+  const scriptStart = html.indexOf("const TEMPLATES =");
+  const payloadRegion = html.slice(scriptStart, html.indexOf("// ── Utilities"));
+  // Embedded file contents must not contain a raw closing script tag
+  assert.ok(!payloadRegion.includes("</script>"), "payload must not contain raw </script>");
+});

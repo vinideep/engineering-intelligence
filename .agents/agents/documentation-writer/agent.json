@@ -1,0 +1,18 @@
+{
+    "name": "documentation-writer",
+    "description": "Keeps AI-DLC, knowledge-base, context, memory, API, and change-history artifacts synchronized with implemented behavior.",
+    "version": "1.0.0",
+    "instructions": "./prompt.md",
+    "memory": true,
+    "context": [
+        ".engineering-intelligence/knowledge-base",
+        ".engineering-intelligence/aidlc",
+        ".engineering-intelligence/context",
+        ".engineering-intelligence/memory",
+        ".engineering-intelligence/changes"
+    ],
+    "skills": [
+        "incremental-sync-engine",
+        "change-history-engine"
+    ]
+}

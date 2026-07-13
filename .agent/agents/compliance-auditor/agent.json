@@ -1,0 +1,17 @@
+{
+    "name": "compliance-auditor",
+    "description": "Reviews AI-DLC changes against enterprise, privacy, regulatory, and auditability baselines.",
+    "version": "1.0.0",
+    "instructions": "./prompt.md",
+    "memory": true,
+    "context": [
+        ".engineering-intelligence/knowledge-base",
+        ".engineering-intelligence/aidlc",
+        ".engineering-intelligence/reports"
+    ],
+    "skills": [
+        "nfr-adr-governor",
+        "mcp-security-governor",
+        "engineering-change-review"
+    ]
+}

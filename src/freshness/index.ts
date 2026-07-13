@@ -70,7 +70,7 @@ function fileExists(filePath: string): boolean {
 // Document parsing
 // ---------------------------------------------------------------------------
 
-const EVIDENCE_PATTERN = /\(evidence:\s*([^):]+?)(?::L\d+)?\)/g;
+const EVIDENCE_PATTERN = /\(evidence:\s*([^)]+)\)/g;
 const FRESHNESS_COMMENT = /<!--\s*freshness:[^>]*last_checked=([^\s,>]+)/;
 const LAST_UPDATED = /^Last updated:\s*(.+)$/m;
 const FRONTMATTER_DATE = /^updated_at:\s*(.+)$/m;
@@ -91,8 +91,14 @@ function extractEvidencePaths(content: string): string[] {
   let match: RegExpExecArray | null;
   const re = new RegExp(EVIDENCE_PATTERN.source, "g");
   while ((match = re.exec(content)) !== null) {
-    const p = match[1]?.trim();
-    if (p) paths.add(p);
+    // An annotation may cite several sources: (evidence: a.ts, b.ts:12-40, prose note)
+    for (const raw of match[1].split(",")) {
+      const token = raw.trim().replace(/`/g, "").replace(/:L?\d[\d,-]*$/, "").trim();
+      // keep only path-like tokens; evidence lists often carry prose fragments
+      if (!token || /\s/.test(token)) continue;
+      if (!token.includes("/") && !/\.\w+$/.test(token)) continue;
+      paths.add(token);
+    }
   }
   return [...paths];
 }

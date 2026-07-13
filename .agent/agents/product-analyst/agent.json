@@ -1,0 +1,19 @@
+{
+    "name": "product-analyst",
+    "description": "Business and technical product agent responsible for scoping requirements, questioning edge cases, and generating implementation prompts.",
+    "version": "1.0.0",
+    "instructions": "./prompt.md",
+    "memory": true,
+    "context": [
+        ".engineering-intelligence/knowledge-base",
+        ".engineering-intelligence/aidlc",
+        ".engineering-intelligence/context",
+        ".engineering-intelligence/graph"
+    ],
+    "skills": [
+        "requirement-scoper",
+        "backlog-decomposition-engine",
+        "context-budget-optimizer",
+        "aidlc-lifecycle-engine"
+    ]
+}

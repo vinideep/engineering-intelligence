@@ -1,0 +1,19 @@
+{
+    "name": "test-engineer",
+    "description": "Designs and executes unit, integration, contract, regression, performance, and negative-path tests for AI-DLC changes.",
+    "version": "1.0.0",
+    "instructions": "./prompt.md",
+    "memory": true,
+    "context": [
+        ".engineering-intelligence/knowledge-base",
+        ".engineering-intelligence/aidlc",
+        ".engineering-intelligence/context"
+    ],
+    "skills": [
+        "testing-intelligence-engine",
+        "environmental-backpressure-engine",
+        "type-safety-engine",
+        "api-backward-compatibility-engine",
+        "contract-test-generator"
+    ]
+}

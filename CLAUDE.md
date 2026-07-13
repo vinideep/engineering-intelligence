@@ -11,6 +11,8 @@ This repository uses installed engineering intelligence workflows.
 - Before non-trivial edits, write an impact report; after edits, validate and incrementally synchronize only affected intelligence and graph artifacts.
 - AI-DLC work must preserve durable state in `.engineering-intelligence/aidlc/aidlc-state.md`, maintain Agile artifacts, use environmental backpressure, and end with an `AI-DLC: <phase> -> <stage> -> <status>` breadcrumb.
 - Base documentation claims on repository evidence and identify unknowns explicitly.
+- **Prefer persisted intelligence over re-exploration.** Before reading source files to understand the codebase, read the persisted knowledge base in `.engineering-intelligence/knowledge-base/`, context maps in `.engineering-intelligence/context/`, and architecture graphs in `.engineering-intelligence/graph/`. Re-read source only for the specific files a task touches. Run `sync-engineering-intelligence` to refresh these artifacts incrementally rather than re-deriving from scratch each session.
+- **Route before loading skills.** Consult the installed `WORKFLOW-ROUTING.md` and `SKILLS-INDEX.md` in your IDE's skills directory before opening any individual `SKILL.md`. Load only the 1-3 skills relevant to the current request.
 
 ## Token-Efficient Skill Loading (Claude Code)
 
@@ -33,4 +35,14 @@ Load **optional** skills only when the request explicitly requires that capabili
 Path aliases used in skill and command files (expand before writing file paths):
 - `$AIDLC` = `.engineering-intelligence/aidlc/`
 - `$EI` = `.engineering-intelligence/`
+
+## Enforcement Hooks (Claude Code)
+
+`.claude/settings.json` wires four lifecycle hooks to `engineering-intelligence hook <event>`:
+- **SessionStart** injects the current intelligence freshness/drift summary.
+- **PreToolUse** warns before editing source while documentation is stale.
+- **PostToolUse** records changed source files and validation commands for the session.
+- **Stop** can require that a validation command actually ran before finishing.
+
+Tune behaviour in `.engineering-intelligence/ei.config.json` (`blockStaleEdits`, `requireValidationOnStop`, `freshnessThreshold`). Hooks are fail-safe: with no intelligence installed they do nothing.
 <!-- engineering-intelligence:end -->
