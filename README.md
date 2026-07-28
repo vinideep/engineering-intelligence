@@ -313,8 +313,9 @@ npx engineering-intelligence gate migration-lint . --json         # destructive/
 npx engineering-intelligence context "add rate limiting" --files src/auth.ts --budget 2000
 
 # Record and verify hash-pinned claims about the code
-npx engineering-intelligence claims add --statement "auth uses JWT" --evidence "src/auth.ts:12-40"
-npx engineering-intelligence claims verify --strict     # exits 1 if any claim is stale/missing
+npx engineering-intelligence claims derive .            # compute derived facts from source
+npx engineering-intelligence claims add --statement "auth uses JWT" --evidence "src/auth.ts:12-40" --author "you"
+npx engineering-intelligence claims verify --strict     # exits 1 if any claim is refuted/stale/missing
 
 # Report observed token usage from real sessions (populated by the Stop hook)
 npx engineering-intelligence telemetry --json
@@ -474,18 +475,35 @@ The knowledge base is only useful if a model can trust it and reach it cheaply.
 Two computed capabilities make that real — and are what let **small models** work
 from retrieved facts instead of re-reading source.
 
-**Verifiable claims.** A *claim* is one factual statement bound to the exact
-evidence spans that justify it, each pinned by a content hash. Re-hashing the
-spans proves — deterministically, no LLM — whether the fact still holds:
+**Verifiable claims — and the honest limit of the word "verified".**
+
+An anchor proves a symbol still *exists*. It does **not** prove the sentence bound
+to it is *true*: a claim like "the auth endpoint is rate-limited", pinned to a
+handler with no rate limiting, would resolve, hash cleanly, and report `verified`
+forever. That is an expensive mtime wearing a green checkmark — worse than no
+claim, because it gets trusted. So claims come in two kinds and only one can be
+called a fact:
+
+| Kind | Statement comes from | Verification | Best status |
+|---|---|---|---|
+| **derived** | rendered from a machine-extracted descriptor | the fact is **re-computed from source**, so the sentence itself is checked | `verified` — or `refuted` when it stops being true |
+| **asserted** | free text from a human or model | evidence hash only; nothing checks the sentence | `unverified` — never `verified` |
 
 ```bash
-npx engineering-intelligence claims add --statement "auth uses JWT verified in middleware" --evidence "src/auth/mw.ts:12-40"
-npx engineering-intelligence claims verify --strict   # verified ✅ / stale 🔄 / missing ❌
+# Compute the derived baseline: module imports, package dependencies, HTTP routes
+npx engineering-intelligence claims derive .      # 102 facts on this repo, zero prompting
+
+# Record an unchecked note — requires an author, and can never become a "fact"
+npx engineering-intelligence claims add --statement "auth uses JWT" \
+  --evidence "src/auth/mw.ts:12-40" --author "you"
+
+npx engineering-intelligence claims verify --strict   # exits 1 on refuted/stale/missing
 ```
 
-Unlike mtime-based freshness, editing the cited lines flips exactly that claim
-stale; unrelated edits don't. The `initialize`/`validate` skills author claims as
-they build the knowledge base.
+Because derived facts are re-derived rather than re-hashed, deleting a route is
+caught even though its file still exists and still hashes identically. `get_context`
+serves derived facts under **Verified facts**, and asserted claims under a separate
+**Unverified assertions** heading that says not to treat them as fact.
 
 **`get_context` — one query instead of ten file reads.** Ask for what a task
 needs and get a token-budgeted pack back: the graph neighborhood of the touched

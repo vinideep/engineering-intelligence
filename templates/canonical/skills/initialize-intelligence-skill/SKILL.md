@@ -8,7 +8,9 @@ version: 3.0.0
 
 Create a trustworthy, evidence-backed project intelligence baseline. Analyze only artifacts present in source code, configuration, tests, infrastructure, and existing documentation. Mark unknowns and uncertainties explicitly — never invent architecture, APIs, schemas, or business rules.
 
-**Record durable facts as verifiable claims.** For each material, code-backed statement you would put in the knowledge base, also record it as a claim bound to its exact evidence span: `npx engineering-intelligence claims add --statement "<fact>" --evidence "<path>:<start>-<end>"` (writes `.engineering-intelligence/claims/claims.json`, pinning a content hash of the cited lines). This lets `claims verify` and `get_context` later prove — deterministically, with no LLM — whether each fact still holds against the current source. Prefer line-scoped evidence for precise, low-noise staleness detection.
+**Compute the derived-fact baseline first:** `npx engineering-intelligence claims derive .` extracts module imports, package dependencies and HTTP routes from source and records them as *derived* claims. Their statements are generated from the extracted descriptor, so `claims verify` can RE-COMPUTE them and genuinely prove whether each still holds — that is the only kind of claim allowed to be called a fact.
+
+For durable statements the derivation cannot express, record an *asserted* claim: `npx engineering-intelligence claims add --statement "<fact>" --evidence "<path>:<start>-<end>" --author "<who>"`. Be clear about what this does and does not buy you: the evidence span is hash-pinned, so edits to the cited lines are detected, but nothing checks that your sentence is TRUE of that code. Asserted claims report `unverified` and `get_context` serves them under an explicit unverified heading. Never write an asserted claim to make something look confirmed.
 
 ## Inputs
 

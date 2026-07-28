@@ -16,7 +16,7 @@ Update only the intelligence affected by a specific change; never regenerate unr
 ## Deterministic first steps (run the tools, don't hand-simulate)
 
 1. **Refresh the graph** for changed files: `npx engineering-intelligence map . --update --files <a,b,c>` — preserves stable node IDs, rebuilds only what changed.
-2. **Re-check evidence** the knowledge base already committed to: `npx engineering-intelligence claims verify --json` — every claim is re-hashed against current source and reported `verified` / `stale` / `missing`. Stale and missing claims are your precise worklist.
+2. **Re-check evidence** the knowledge base already committed to: `npx engineering-intelligence claims verify --json` — derived claims are re-computed (`verified` / `refuted`), asserted claims are hash-checked (`unverified` / `stale` / `missing`). Refuted, stale and missing claims are your precise worklist. After code changes, re-run `npx engineering-intelligence claims derive .` so the derived baseline matches reality.
 3. **Score document freshness**: `npx engineering-intelligence freshness . --json` — flags which knowledge/memory/context docs lag their cited source.
 
 These replace the old prose "confidence decay" heuristic (which nothing enforced) with real, evidence-level signals.
@@ -42,7 +42,7 @@ Match each change to the artifact types it affects — touch nothing else.
 
 ## Knowledge Base sync
 
-Update only the sections that reference changed code. Preserve accurate content; never regenerate a whole document. Attach an evidence citation to every changed claim — `(evidence: src/mw/auth.ts:L15-L28)` — and mark uncertainty as `**Unclear from evidence** — <reason>`. For anything durable and code-backed, also record/refresh a verifiable claim: `npx engineering-intelligence claims add --statement "<fact>" --evidence "<path>:<start>-<end>"`. Re-run `claims verify` after editing; a claim that still reads `stale` means the doc text and the code still disagree.
+Update only the sections that reference changed code. Preserve accurate content; never regenerate a whole document. Attach an evidence citation to every changed claim — `(evidence: src/mw/auth.ts:L15-L28)` — and mark uncertainty as `**Unclear from evidence** — <reason>`. For anything durable and code-backed, prefer `claims derive` (machine-checkable); use `npx engineering-intelligence claims add --statement "<fact>" --evidence "<path>:<start>-<end>" --author "<who>"` only for statements derivation cannot express, and remember those stay `unverified`. Re-run `claims verify` after editing; a claim that still reads `stale` means the doc text and the code still disagree.
 
 ## Memory sync (durable only)
 
@@ -83,7 +83,7 @@ Keep `.engineering-intelligence/context/` maps concise and navigational (tables,
 - [ ] Graph refreshed (`map --update`) and claims re-verified before editing docs
 - [ ] Only impact-identified artifacts were modified; unrelated content preserved
 - [ ] Evidence citations added for changed claims; durable facts recorded as claims
-- [ ] `claims verify` reports no stale/missing claims left unaddressed for the change scope
+- [ ] `claims verify` reports no refuted/stale/missing claims left unaddressed for the change scope
 - [ ] Context maps reference real paths; impact report updated with sync notes
 
 ## Cross-References

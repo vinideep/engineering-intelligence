@@ -58,13 +58,7 @@ This repository uses installed engineering intelligence workflows.
 
 These run deterministically. Use them instead of inferring the answer from source — they are the difference between a computed fact and a guess. Available over MCP (server \`engineering-intelligence\`) and as CLI commands:
 
-- \`map_dependencies\` — build/refresh the computed dependency graph from source imports
-- \`get_graph\` — read an existing graph as JSON
-- \`analyze_impact\` — given changed files, list the modules that import them (direct + indirect)
-- \`run_gate\` — run a deterministic safety gate: env-vars, dead-exports, api-diff, migration-lint
-- \`get_context\` — assemble a token-budgeted context pack for a task
-- \`verify_claims\` — re-check documented claims against the code they cite
-- \`read_knowledge\` — list or read knowledge-base documents
+${MCP_TOOL_SUMMARY.map(([n, d]) => `- \`${n}\` — ${d}`).join("\n")}
 
 CLI equivalents: \`npx engineering-intelligence map|gate <name>|verify|freshness|context|claims verify|git-analysis .\`. \`gate\` and \`verify\` exit non-zero on failure, so they work in CI too.
 `;

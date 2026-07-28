@@ -80,7 +80,7 @@ const TOOLS = [
   {
     name: "get_context",
     description:
-      "Assemble a compact, token-budgeted context pack for a task instead of reading many files. Returns the graph neighborhood of the touched files (what they depend on and what depends on them), the VERIFIED claims about that code (hash-checked against current source — stale facts are excluded), plus project conventions and dangerous areas. Read this FIRST to orient before editing; it is cheaper and more trustworthy than re-reading source.",
+      "Assemble a compact, token-budgeted context pack for a task instead of reading many files. Returns the graph neighborhood of the touched files (what they depend on and what depends on them), the DERIVED facts about that code (re-computed from source, so refuted or stale ones are excluded), any asserted claims under a separate clearly-unverified heading, plus project conventions and dangerous areas. Read this FIRST to orient before editing; it is cheaper and more trustworthy than re-reading source.",
     inputSchema: {
       type: "object" as const,
       required: ["task"],
@@ -95,7 +95,18 @@ const TOOLS = [
   {
     name: "verify_claims",
     description:
-      "Re-hash every recorded claim's evidence spans against the current source and report which still hold (verified), which are stale (cited code changed), and which are missing (cited code gone). Deterministic, no LLM. Use to trust the knowledge base before relying on it.",
+      "Check recorded claims against the current source. DERIVED claims are re-computed from source, so 'verified' means the statement itself still holds and 'refuted' means it no longer does. ASSERTED claims are free text: their evidence is hash-checked, but the sentence is never machine-checked, so they report 'unverified' and must not be treated as fact. Deterministic, no LLM.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
+      },
+    },
+  },
+  {
+    name: "derive_claims",
+    description:
+      "Recompute the derived-fact baseline (module imports, package dependencies, HTTP routes) from source and store it as verifiable claims. Asserted claims written by humans are left untouched. Run after significant changes so `verify_claims` and `get_context` reflect reality.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -124,7 +135,8 @@ export const MCP_TOOL_SUMMARY: ReadonlyArray<readonly [string, string]> = [
   ["analyze_impact", "given changed files, list the modules that import them (direct + indirect)"],
   ["run_gate", "run a deterministic safety gate: env-vars, dead-exports, api-diff, migration-lint"],
   ["get_context", "assemble a token-budgeted context pack for a task"],
-  ["verify_claims", "re-check documented claims against the code they cite"],
+  ["verify_claims", "check claims: derived facts are re-computed; asserted prose is never called verified"],
+  ["derive_claims", "recompute the derived-fact baseline (imports, dependencies, routes) from source"],
   ["read_knowledge", "list or read knowledge-base documents"],
 ];
 
@@ -244,6 +256,12 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
         const { verifyClaims } = await import("../claims/index.js");
         const report = await verifyClaims(root);
         return { content: [{ type: "text", text: JSON.stringify(report, null, 2) }] };
+      }
+
+      if (name === "derive_claims") {
+        const { deriveClaims } = await import("../claims/index.js");
+        const result = await deriveClaims(root);
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       }
 
       if (name === "read_knowledge") {

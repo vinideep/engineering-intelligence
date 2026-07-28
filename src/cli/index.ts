@@ -35,6 +35,7 @@ interface Options {
   statement?: string;
   evidence?: string;
   confidence?: string;
+  author?: string;
   budget: number;
   strict: boolean;
   host: string;
@@ -69,7 +70,8 @@ Usage:
   engineering-intelligence gate <name> [path] [--base <ref>] [--fail-on error|warning] [--json]
   engineering-intelligence verify [path] [--json]
   engineering-intelligence claims verify [path] [--json] [--strict]
-  engineering-intelligence claims add --statement "..." --evidence "src/a.ts:10-20,src/b.ts" [path]
+  engineering-intelligence claims derive [path] [--json]
+  engineering-intelligence claims add --statement "..." --evidence "src/a.ts:10-20,src/b.ts" --author "name" [path]
   engineering-intelligence claims list [path] [--json]
   engineering-intelligence context "<task>" [path] [--files a,b] [--budget 2000] [--json]
   engineering-intelligence telemetry [path] [--json]
@@ -109,6 +111,7 @@ function parseArgs(args: string[]): Options {
   let statement: string | undefined;
   let evidence: string | undefined;
   let confidence: string | undefined;
+  let author: string | undefined;
   let budget = 2000;
   let strict = false;
   let host = "claude-code";
@@ -179,6 +182,10 @@ function parseArgs(args: string[]): Options {
       evidence = remaining[++index];
     } else if (arg.startsWith("--evidence=")) {
       evidence = arg.slice("--evidence=".length);
+    } else if (arg === "--author") {
+      author = remaining[++index];
+    } else if (arg.startsWith("--author=")) {
+      author = arg.slice("--author=".length);
     } else if (arg === "--confidence") {
       confidence = remaining[++index];
     } else if (arg.startsWith("--confidence=")) {
@@ -234,6 +241,7 @@ function parseArgs(args: string[]): Options {
     statement,
     evidence,
     confidence,
+    author,
     budget: Number.isNaN(budget) ? 2000 : budget,
     strict,
     host,
@@ -395,8 +403,8 @@ async function main(): Promise<void> {
     const claims = await import("../claims/index.js");
     const action = options.positional ?? "verify";
     if (action === "add") {
-      if (!options.statement || !options.evidence) {
-        output.write('claims add requires --statement "..." and --evidence "path:start-end,path2".\n');
+      if (!options.statement || !options.evidence || !options.author) {
+        output.write('claims add records an ASSERTED (unchecked) claim and requires --statement "..." --evidence "path:start-end,path2" --author "name".\nDerived facts are not hand-authored — run `claims derive` to compute them.\n');
         process.exitCode = 2;
         if (readline) readline.close();
         return;
@@ -405,9 +413,11 @@ async function main(): Promise<void> {
         const claim = await claims.addClaim(options.root, {
           statement: options.statement,
           evidence: claims.parseEvidenceSpec(options.evidence),
-          confidence: (options.confidence as "verified" | "inferred" | "unknown" | undefined) ?? "verified",
+          author: options.author,
         });
-        output.write(options.json ? `${JSON.stringify(claim, null, 2)}\n` : `Added ${claim.id}: ${claim.statement}\n`);
+        output.write(options.json
+          ? `${JSON.stringify(claim, null, 2)}\n`
+          : `Added ${claim.id} (asserted — not machine-checked): ${claim.statement}\n`);
       } catch (error) {
         output.write(`${error instanceof Error ? error.message : String(error)}\n`);
         process.exitCode = 1;
@@ -417,12 +427,18 @@ async function main(): Promise<void> {
       if (options.json) output.write(`${JSON.stringify(store, null, 2)}\n`);
       else {
         output.write(`${store.claims.length} claim(s):\n`);
-        for (const c of store.claims) output.write(`  ${c.id} [${c.confidence}] ${c.statement}\n`);
+        for (const c of store.claims) output.write(`  ${c.id} [${c.kind ?? "asserted"}] ${c.statement}\n`);
       }
+    } else if (action === "derive") {
+      const { added, removed, total } = await claims.deriveClaims(options.root);
+      output.write(options.json
+        ? `${JSON.stringify({ added, removed, total }, null, 2)}\n`
+        : `Derived ${total} fact(s) from source (+${added} new, -${removed} no longer true). Asserted claims left untouched.\n`);
     } else { // verify
       const report = await claims.verifyClaims(options.root);
       output.write(options.json ? `${JSON.stringify(report, null, 2)}\n` : claims.renderVerifyReport(report));
-      if (options.strict && report.stale + report.missing > 0) process.exitCode = 1;
+      // A refuted derived fact is a real contradiction with the source and fails strict mode.
+      if (options.strict && report.refuted + report.stale + report.missing > 0) process.exitCode = 1;
     }
     if (readline) readline.close();
     return;
