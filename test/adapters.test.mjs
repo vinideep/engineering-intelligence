@@ -165,20 +165,13 @@ test("Claude Code adapter generates skills index and workflow routing table with
   const indexTokens = Math.ceil(index.length / 4);
   assert.ok(indexTokens < 2000, `SKILLS-INDEX should be under 2,000 tokens, got ${indexTokens}`);
 
-  // Path aliases are applied in command files.
+  // Commands and skills carry literal runtime paths — aliases were removed because
+  // they broke frontmatter parsing and produced glued tokens like `$EIknowledge-base/`.
   const engCmd = files.find((item) => item.path === ".claude/commands/engineering-intelligence.md").content;
-  assert.match(engCmd, /\$AIDLC/, "command files should use $AIDLC alias");
-  assert.match(engCmd, /\$EI/, "command files should use $EI alias");
-  assert.match(engCmd, /Path aliases/, "alias preamble must be present");
-  // Raw path count in the body should be reduced to only the preamble definition line (≤2 occurrences).
-  const rawAidlcCount = (engCmd.match(/\.engineering-intelligence\/aidlc\//g) ?? []).length;
-  assert.ok(rawAidlcCount <= 2, `raw $AIDLC path in command should appear only in preamble, got ${rawAidlcCount} occurrences`);
+  assert.match(engCmd, /\.engineering-intelligence\//, "command files must use literal runtime paths");
 
-  // Path aliases are applied in skill files — the heavy aidlc-lifecycle-engine has many path refs.
   const skill = files.find((item) => item.path === ".claude/skills/aidlc-lifecycle-engine/SKILL.md").content;
-  assert.match(skill, /\$AIDLC/);
-  const rawSkillAidlcCount = (skill.match(/\.engineering-intelligence\/aidlc\//g) ?? []).length;
-  assert.ok(rawSkillAidlcCount <= 2, `raw $AIDLC path in skill should appear only in preamble, got ${rawSkillAidlcCount} occurrences`);
+  assert.match(skill, /\.engineering-intelligence\/aidlc\//, "skill files must use literal runtime paths");
 
   // CLAUDE.md managed block directs AI to use the index and routing table.
   const claudeMd = files.find((item) => item.path === "CLAUDE.md").content;
@@ -186,6 +179,47 @@ test("Claude Code adapter generates skills index and workflow routing table with
   assert.match(claudeMd, /WORKFLOW-ROUTING/);
 
   assert.deepEqual(await validateRender(["claude-code"]), []);
+});
+
+test("every rendered file that has frontmatter starts with it at byte 0", async () => {
+  // Regression guard: the path-alias preamble used to be prepended ABOVE the YAML
+  // fence, so `name`/`description`/`argument-hint` never parsed on any host that
+  // reads frontmatter — silently disabling model-driven skill invocation for every
+  // skill and every command across all adapters.
+  const ides = ["antigravity", "antigravity-cli", "codex", "claude-code", "cursor", "github-copilot", "gemini-cli", "commandcode", "generic"];
+  const files = await renderAdapters(ides);
+
+  const offenders = [];
+  for (const item of files) {
+    if (item.kind !== "file" || !item.path.endsWith(".md")) continue;
+    // A frontmatter block is a `---` fence on its own line at the very start.
+    // If a file contains a `key: value` fence anywhere but does not start with it,
+    // the frontmatter is unreachable to the host parser.
+    const hasFence = /^---\n[\s\S]*?\n---\n/m.test(item.content);
+    if (hasFence && !item.content.startsWith("---\n")) {
+      offenders.push(`${item.path}: starts with ${JSON.stringify(item.content.slice(0, 40))}`);
+    }
+  }
+  assert.deepEqual(offenders, [], `frontmatter must be at byte 0:\n${offenders.join("\n")}`);
+});
+
+test("rendered files contain no path-alias tokens", async () => {
+  // Aliases expanded into glued identifiers ($EIknowledge-base/, $EIreports/IMP-XXX-)
+  // that a model cannot reliably expand — 240 occurrences before removal.
+  const files = await renderAdapters(["claude-code", "commandcode", "github-copilot", "antigravity"]);
+  const offenders = files
+    .filter((item) => /\$EI\b|\$EI[A-Za-z]|\$AIDLC/.test(item.content))
+    .map((item) => item.path);
+  assert.deepEqual(offenders, [], `no rendered file may contain $EI/$AIDLC aliases: ${offenders.join(", ")}`);
+});
+
+test("Claude Code commands keep argument-hint inside frontmatter", async () => {
+  const files = await renderAdapters(["claude-code"]);
+  const cmd = files.find((item) => item.path === ".claude/commands/engineering-intelligence.md").content;
+  assert.ok(cmd.startsWith("---\n"), "command must open with frontmatter");
+  const fm = cmd.match(/^---\n([\s\S]*?)\n---\n/)[1];
+  assert.match(fm, /argument-hint:/, "argument-hint must live inside the frontmatter block");
+  assert.match(cmd, /\$ARGUMENTS/, "input workflows still receive the argument placeholder");
 });
 
 test("CLAUDE.md skill count is derived from SKILL_NAMES, not hardcoded", async () => {

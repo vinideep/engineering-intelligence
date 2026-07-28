@@ -62,22 +62,18 @@ test("CLI writes WORKFLOW-ROUTING.md and SKILLS-INDEX.md for claude-code", async
   assert.match(index, /aidlc-lifecycle-engine/, "index should list at least one skill name");
 });
 
-test("CLI applies path aliases ($AIDLC) to skill files written on disk", async () => {
+test("on-disk skills start with frontmatter and use literal paths", async () => {
   const root = await tmpProject();
   const result = cli(["install", root, "--ide", "claude-code", "--yes"]);
   assert.equal(result.status, 0, `CLI exited ${result.status}:\n${result.stderr}`);
 
-  // The aidlc-lifecycle-engine skill heavily references the $AIDLC path
   const skill = await read(root, ".claude/skills/aidlc-lifecycle-engine/SKILL.md");
-  assert.match(skill, /\$AIDLC/, "on-disk SKILL.md must contain $AIDLC alias (pipeline ran end-to-end)");
-  // The alias preamble defines "$AIDLC"=".engineering-intelligence/aidlc/" on the first line;
-  // subsequent lines in the body must use the alias, not the raw path.
-  const bodyLines = skill.split("\n").slice(1).join("\n");
-  assert.doesNotMatch(
-    bodyLines,
-    /\.engineering-intelligence\/aidlc\//,
-    "SKILL.md body (after preamble) must not contain the raw path — aliasing must have run",
-  );
+  // Frontmatter must survive the full pipeline to disk — a host that cannot parse
+  // `name`/`description` here cannot auto-invoke the skill at all.
+  assert.ok(skill.startsWith("---\n"), `on-disk SKILL.md must start with frontmatter, got: ${JSON.stringify(skill.slice(0, 40))}`);
+  assert.match(skill.match(/^---\n([\s\S]*?)\n---\n/)[1], /name:\s*aidlc-lifecycle-engine/);
+  assert.match(skill, /\.engineering-intelligence\/aidlc\//, "on-disk SKILL.md must carry literal runtime paths");
+  assert.doesNotMatch(skill, /\$AIDLC|\$EI/, "aliases must not reach disk");
 });
 
 test("CLI writes SKILL-BRIEF.md smaller than SKILL.md for claude-code", async () => {
@@ -166,5 +162,6 @@ test("CLI applies SmartCrush to command files (no bare 'version:' key in frontma
   // SmartCrush strips `version:` from YAML frontmatter in all rendered command files
   const cmd = await read(root, ".claude/commands/engineering-intelligence.md");
   assert.doesNotMatch(cmd, /^version:/m, "version: key should be stripped by SmartCrush");
-  assert.match(cmd, /\$AIDLC/, "command file should also have path aliases applied");
+  assert.ok(cmd.startsWith("---\n"), "command file must start with frontmatter so argument-hint parses");
+  assert.doesNotMatch(cmd, /\$AIDLC|\$EI/, "aliases must not reach disk");
 });

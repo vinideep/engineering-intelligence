@@ -5,8 +5,7 @@ import {
   generateAllSkillBriefs,
   generateSkillsIndex,
   generateWorkflowRouting,
-  smartCrush,
-  withPathOptimizations,
+  prepareRendered,
 } from "../token-optimizer.js";
 import { claudeCodeHookSettings, cursorHookSettings, defaultConfigFile } from "../hooks/index.js";
 import { IDE_IDS, type IdeId, type RenderedFile } from "../types.js";
@@ -80,10 +79,6 @@ Never skip this step — the brief does not contain the complete procedure.
 
 Load **optional** skills only when the request explicitly requires that capability.
 
-Path aliases used in skill and command files (expand before writing file paths):
-- \`$AIDLC\` = \`.engineering-intelligence/aidlc/\`
-- \`$EI\` = \`.engineering-intelligence/\`
-
 ## Enforcement Hooks (Claude Code)
 
 \`.claude/settings.json\` wires four lifecycle hooks to \`engineering-intelligence hook <event>\`:
@@ -108,7 +103,7 @@ async function skillsAt(directory: string, owner: IdeId): Promise<RenderedFile[]
     SKILL_NAMES.map(async (name) =>
       file(
         `${directory}/${name}/SKILL.md`,
-        withPathOptimizations(smartCrush(await readTemplate("skills", name))),
+        prepareRendered(await readTemplate("skills", name)),
         owner,
       ),
     ),
@@ -120,7 +115,7 @@ async function workflowsAt(directory: string, owner: IdeId): Promise<RenderedFil
     WORKFLOW_NAMES.map(async (name) =>
       file(
         `${directory}/${name}.md`,
-        withPathOptimizations(smartCrush(await readTemplate("workflows", name))),
+        prepareRendered(await readTemplate("workflows", name)),
         owner,
       ),
     ),
@@ -149,18 +144,19 @@ function withArgumentHint(content: string, hint: string): string {
 // Render workflows as Claude Code slash commands. Request-driven workflows get
 // an `argument-hint` and the `$ARGUMENTS` placeholder so the user's input is
 // passed through (e.g. `/engineering-intelligence Add rate limiting`).
-// Path aliases are applied to all commands to reduce token usage.
+// `withArgumentHint` splices into the frontmatter, so content must be prepared
+// (and therefore still start with `---`) before the hint is inserted.
 async function claudeCommandsAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
   return Promise.all(
     WORKFLOW_NAMES.map(async (name) => {
-      const workflow = smartCrush(await readTemplate("workflows", name));
+      const workflow = prepareRendered(await readTemplate("workflows", name));
       if (!INPUT_WORKFLOWS.has(name)) {
-        return file(`${directory}/${name}.md`, withPathOptimizations(workflow), owner);
+        return file(`${directory}/${name}.md`, workflow, owner);
       }
       const hinted = withArgumentHint(workflow, WORKFLOW_ARGUMENT_HINTS[name] ?? "<request>");
       return file(
         `${directory}/${name}.md`,
-        withPathOptimizations(`${hinted}\n\nUser supplied scope or request: $ARGUMENTS`),
+        `${hinted}\n\nUser supplied scope or request: $ARGUMENTS\n`,
         owner,
       );
     }),
@@ -324,7 +320,7 @@ async function agentsAsJsonAt(directory: string, owner: IdeId): Promise<Rendered
 async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
   switch (ide) {
     case "antigravity": {
-      const ruleContent = withPathOptimizations(smartCrush(await readTemplate("rules", "engineering-intelligence")));
+      const ruleContent = prepareRendered(await readTemplate("rules", "engineering-intelligence"));
       const [bundle, agents, workflows] = await Promise.all([
         skillBundle(ide, {
           skillsDir: ".agent/skills",
@@ -399,7 +395,7 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
       ];
     }
     case "cursor": {
-      const ruleContent = withPathOptimizations(smartCrush(await readTemplate("rules", "engineering-intelligence")));
+      const ruleContent = prepareRendered(await readTemplate("rules", "engineering-intelligence"));
       const rule = `---\ndescription: Engineering Intelligence orchestration and synchronization rules\nalwaysApply: true\n---\n\n${ruleContent}`;
       return [
         file(".cursor/rules/engineering-intelligence.mdc", rule, ide),
@@ -421,7 +417,7 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
           WORKFLOW_NAMES.map(async (name) =>
             file(
               `.github/prompts/${name}.prompt.md`,
-              withPathOptimizations(smartCrush(await readTemplate("workflows", name))),
+              prepareRendered(await readTemplate("workflows", name)),
               ide,
             ),
           ),
@@ -457,7 +453,7 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
         }),
         Promise.all(
           WORKFLOW_NAMES.map(async (name) => {
-            const workflow = withPathOptimizations(smartCrush(await readTemplate("workflows", name)));
+            const workflow = prepareRendered(await readTemplate("workflows", name));
             const prompt = INPUT_WORKFLOWS.has(name)
               ? `${workflow}\n\nUser supplied scope or request: {{args}}`
               : workflow;
@@ -481,7 +477,7 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
         }),
         Promise.all(
           WORKFLOW_NAMES.map(async (name) => {
-            const workflow = withPathOptimizations(smartCrush(await readTemplate("workflows", name)));
+            const workflow = prepareRendered(await readTemplate("workflows", name));
             const prompt = INPUT_WORKFLOWS.has(name)
               ? `${workflow}\n\nUser supplied scope or request: $ARGUMENTS`
               : workflow;

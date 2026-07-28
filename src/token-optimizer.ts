@@ -16,37 +16,28 @@
 
 import { WORKFLOW_NAMES, readTemplate } from "./templates.js";
 
-// --- Path aliasing -----------------------------------------------------------
+// --- Rendered-file preparation ------------------------------------------------
 
 /**
- * Two unambiguous path aliases covering the highest-frequency path strings.
- * Deliberately kept to two so expanded aliases never collide with adjacent
- * text (e.g. avoid "$EIR" + "IMP-XXX" concatenating into "$EIRIMP-XXX").
+ * Path aliasing was removed deliberately. It prepended an expansion preamble
+ * above the YAML frontmatter fence, so rendered files no longer started with
+ * `---` at byte 0 — which means hosts that parse frontmatter (Claude Code,
+ * Copilot, Codex, anything following the Agent Skills spec) could not read
+ * `name`, `description` or `argument-hint`, disabling model-driven skill
+ * invocation for every skill and every command.
  *
- * $AIDLC covers 89 occurrences, $EI covers the remaining 142 (231 total).
- * Saves ~3,200 tokens across all skill and command files.
+ * The aliases also produced 240 glued identifiers across 47 distinct tokens
+ * (`$EIknowledge-base/`, `$EIreports/IMP-XXX-`, `$EImemory/users/`), because
+ * `$EI` expanded to a directory prefix that was immediately followed by more
+ * path. Those are exactly the strings a small model mis-expands, silently
+ * writing artifacts to paths nothing reads. ~955 saved tokens did not justify
+ * breaking host parsing and inventing a whole failure class.
+ *
+ * `prepareRendered` is the single place rendered content is normalized, so the
+ * frontmatter-at-byte-0 invariant has one owner.
  */
-export const PATH_ALIASES: ReadonlyArray<readonly [string, string]> = [
-  ["$AIDLC", ".engineering-intelligence/aidlc/"],   // more specific — replace first
-  ["$EI",    ".engineering-intelligence/"],           // base prefix — replace last
-];
-
-const ALIAS_PREAMBLE =
-  `> **Path aliases:** ` +
-  PATH_ALIASES.map(([a, p]) => `\`${a}\`=\`${p}\``).join(", ") +
-  `. Expand before writing any file paths.\n\n`;
-
-export function applyPathAliases(content: string): string {
-  let result = content;
-  for (const [alias, path] of PATH_ALIASES) {
-    result = result.replaceAll(path, alias);
-  }
-  return result;
-}
-
-/** Apply path aliases and prepend the expansion preamble. */
-export function withPathOptimizations(content: string): string {
-  return ALIAS_PREAMBLE + applyPathAliases(content);
+export function prepareRendered(content: string): string {
+  return smartCrush(content);
 }
 
 // --- Workflow → skill routing table ------------------------------------------
@@ -246,8 +237,9 @@ export function generateSkillBrief(content: string, name: string): string {
 }
 
 /**
- * Generate SKILL-BRIEF.md content for every skill, applying path aliases.
- * Returns a map of skill name → brief content (with aliases applied).
+ * Generate SKILL-BRIEF.md content for every skill.
+ * Returns a map of skill name → brief content. Briefs preserve the source
+ * frontmatter, so they must also start with `---` at byte 0.
  */
 export async function generateAllSkillBriefs(
   skillNames: ReadonlyArray<string>,
@@ -255,8 +247,7 @@ export async function generateAllSkillBriefs(
   const entries = await Promise.all(
     skillNames.map(async (name) => {
       const full = await readTemplate("skills", name).catch(() => "");
-      const brief = smartCrush(generateSkillBrief(full, name));
-      return [name, applyPathAliases(brief)] as const;
+      return [name, prepareRendered(generateSkillBrief(full, name))] as const;
     }),
   );
   return new Map(entries);
