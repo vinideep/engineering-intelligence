@@ -43,7 +43,18 @@ export interface GateResult {
 export interface GateOptions {
   /** Git base ref for diff-oriented gates (api-diff). */
   base?: string;
+  /**
+   * Minimum severity that makes a gate FAIL (exit 1). Defaults to "error".
+   *
+   * Without this, `env-vars` and `dead-exports` could never fail anything: they
+   * emit only warning/info findings, so their status was always pass/warn and
+   * the CLI always exited 0 — advisory checks wearing a gate's name. Setting
+   * `failOn: "warning"` lets a team promote them to real blocking gates.
+   */
+  failOn?: Severity;
 }
+
+const SEVERITY_RANK: Record<Severity, number> = { info: 0, warning: 1, error: 2 };
 
 export const GATE_NAMES = ["env-vars", "dead-exports", "api-diff", "migration-lint"] as const;
 export type GateName = (typeof GATE_NAMES)[number];
@@ -52,9 +63,14 @@ export function isGateName(value: string): value is GateName {
   return (GATE_NAMES as readonly string[]).includes(value);
 }
 
-/** Derive a gate status from its findings: any error → fail, any warning → warn, else pass. */
-export function statusFromFindings(findings: GateFinding[]): GateStatus {
-  if (findings.some((f) => f.severity === "error")) return "fail";
+/**
+ * Derive a gate status from its findings. `failOn` is the threshold at or above
+ * which a finding fails the gate (default "error"); anything below it that is
+ * still a warning downgrades to "warn".
+ */
+export function statusFromFindings(findings: GateFinding[], failOn: Severity = "error"): GateStatus {
+  const threshold = SEVERITY_RANK[failOn];
+  if (findings.some((f) => SEVERITY_RANK[f.severity] >= threshold)) return "fail";
   if (findings.some((f) => f.severity === "warning")) return "warn";
   return "pass";
 }
@@ -144,6 +160,13 @@ export async function gitAvailable(root: string): Promise<boolean> {
 // ---------------------------------------------------------------------------
 
 export async function runGate(name: GateName, root: string, options: GateOptions = {}): Promise<GateResult> {
+  const result = await dispatch(name, root, options);
+  // Re-derive status against the caller's threshold so a team can promote
+  // advisory gates to blocking ones without changing each gate's severities.
+  return { ...result, status: statusFromFindings(result.findings, options.failOn ?? "error") };
+}
+
+async function dispatch(name: GateName, root: string, options: GateOptions): Promise<GateResult> {
   switch (name) {
     case "env-vars":       return (await import("./env-vars.js")).envVarsGate(root);
     case "dead-exports":   return (await import("./dead-exports.js")).deadExportsGate(root);

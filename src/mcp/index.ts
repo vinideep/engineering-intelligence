@@ -69,6 +69,11 @@ const TOOLS = [
           description: "Which gate to run.",
         },
         base: { type: "string", description: "Git base ref for api-diff/migration-lint. Defaults to HEAD." },
+        failOn: {
+          type: "string",
+          enum: ["error", "warning", "info"],
+          description: "Minimum severity that fails the gate. Defaults to 'error'. Use 'warning' to make advisory gates (env-vars, dead-exports) blocking.",
+        },
       },
     },
   },
@@ -186,7 +191,8 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
           };
         }
         const base = typeof args.base === "string" ? args.base : undefined;
-        const result = await runGate(gate, root, { base });
+        const failOn = typeof args.failOn === "string" ? args.failOn as "error" | "warning" | "info" : undefined;
+        const result = await runGate(gate, root, { base, failOn });
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       }
 

@@ -302,6 +302,10 @@ npx engineering-intelligence git-analysis . --json
 # Run a deterministic safety gate (exits 1 on a hard failure — usable in CI)
 npx engineering-intelligence gate env-vars .            # env refs vs .env.example
 npx engineering-intelligence gate dead-exports .        # JS/TS exports never imported
+
+# env-vars and dead-exports emit only warnings, so by default they report but never
+# fail. Promote them to blocking checks with --fail-on:
+npx engineering-intelligence gate dead-exports . --fail-on warning
 npx engineering-intelligence gate api-diff . --base origin/main   # removed/changed endpoints
 npx engineering-intelligence gate migration-lint . --json         # destructive/locking migrations
 

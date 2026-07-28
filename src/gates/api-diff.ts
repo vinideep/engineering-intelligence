@@ -19,13 +19,24 @@ import {
 
 const METHODS = "get|post|put|patch|delete|options|head|all";
 
-// app.get('/x') / router.post("/y") / api.delete(`/z`)
+// Route registration on a server-ish receiver. `api`, `route` and bare `r` were
+// removed deliberately: `api.get('/users')` in an axios wrapper and
+// `r.get('/x')` in a test helper are HTTP CLIENT calls, and treating them as
+// endpoints made this gate unsafe to block on.
 const ROUTE_CALL = new RegExp(
-  `\\b(?:app|router|server|fastify|api|route|r)\\.(${METHODS})\\s*\\(\\s*['"\\\`]([^'"\\\`]+)['"\\\`]`,
+  `\\b(?:app|router|server|fastify)\\.(${METHODS})\\s*\\(\\s*['"\\\`]([^'"\\\`]+)['"\\\`]`,
   "gi",
 );
 // NestJS / decorator style: @Get('/x'), @Post()
 const ROUTE_DECORATOR = new RegExp(`@(${METHODS})\\s*\\(\\s*(?:['"\\\`]([^'"\\\`]*)['"\\\`])?`, "gi");
+
+/**
+ * Only trust route-call syntax in a file that actually constructs or imports a
+ * server framework. Without this anchor, any object with `.get()` reads as a
+ * router.
+ */
+const FRAMEWORK_MARKER =
+  /\b(express|fastify|koa|hapi|@nestjs\/|next\/server)\b|\b(?:express|Fastify|Router|createServer)\s*\(/;
 
 function isOpenApiFile(rel: string): boolean {
   return /(^|\/)(openapi|swagger)[^/]*\.(ya?ml|json)$/i.test(rel);
@@ -62,10 +73,14 @@ export function extractApiSurface(content: string, relPath: string): Set<string>
 
   if (isCodeFile(relPath)) {
     let m: RegExpExecArray | null;
-    ROUTE_CALL.lastIndex = 0;
-    while ((m = ROUTE_CALL.exec(content)) !== null) surface.add(`${m[1].toUpperCase()} ${m[2]}`);
-    ROUTE_DECORATOR.lastIndex = 0;
-    while ((m = ROUTE_DECORATOR.exec(content)) !== null) surface.add(`${m[1].toUpperCase()} ${m[2] ?? ""}`.trim());
+    // Fresh regexes per call: `g` regexes carry a mutable lastIndex and this is
+    // invoked repeatedly (base and head, per file).
+    if (FRAMEWORK_MARKER.test(content)) {
+      const routeCall = new RegExp(ROUTE_CALL.source, "gi");
+      while ((m = routeCall.exec(content)) !== null) surface.add(`${m[1].toUpperCase()} ${m[2]}`);
+    }
+    const decorator = new RegExp(ROUTE_DECORATOR.source, "gi");
+    while ((m = decorator.exec(content)) !== null) surface.add(`${m[1].toUpperCase()} ${m[2] ?? ""}`.trim());
   }
   return surface;
 }
@@ -81,33 +96,42 @@ export async function apiDiffGate(root: string, base: string): Promise<GateResul
   }
 
   const findings: GateFinding[] = [];
-  let removed = 0;
-  let added = 0;
+
+  // Union the surface across ALL changed files before comparing. Comparing per
+  // file reports a false breaking change whenever a route simply moves between
+  // files — fatal for a gate that is meant to block a merge.
+  const baseSurface = new Map<string, string>(); // endpoint -> file it was found in
+  const headSurface = new Map<string, string>();
 
   for (const rel of changed) {
     const baseContent = await gitShow(root, base, rel);
+    if (baseContent) {
+      for (const ep of extractApiSurface(baseContent, rel)) if (!baseSurface.has(ep)) baseSurface.set(ep, rel);
+    }
     let headContent: string | null = null;
     try { headContent = await readFile(path.join(root, rel), "utf8"); } catch { headContent = null; }
-
-    const baseSurface = baseContent ? extractApiSurface(baseContent, rel) : new Set<string>();
-    const headSurface = headContent ? extractApiSurface(headContent, rel) : new Set<string>();
-
-    for (const ep of baseSurface) {
-      if (!headSurface.has(ep)) {
-        removed++;
-        findings.push({
-          severity: "error",
-          message: `Endpoint removed or changed: ${ep} (in ${rel}). This is a breaking change — version the API or restore compatibility.`,
-          file: rel,
-          evidence: `${base}:${rel}`,
-        });
-      }
+    if (headContent) {
+      for (const ep of extractApiSurface(headContent, rel)) if (!headSurface.has(ep)) headSurface.set(ep, rel);
     }
-    for (const ep of headSurface) {
-      if (!baseSurface.has(ep)) {
-        added++;
-        findings.push({ severity: "info", message: `Endpoint added: ${ep} (in ${rel}).`, file: rel });
-      }
+  }
+
+  let removed = 0;
+  let added = 0;
+  for (const [ep, rel] of baseSurface) {
+    if (!headSurface.has(ep)) {
+      removed++;
+      findings.push({
+        severity: "error",
+        message: `Endpoint removed or changed: ${ep} (was in ${rel}). This is a breaking change — version the API or restore compatibility.`,
+        file: rel,
+        evidence: `${base}:${rel}`,
+      });
+    }
+  }
+  for (const [ep, rel] of headSurface) {
+    if (!baseSurface.has(ep)) {
+      added++;
+      findings.push({ severity: "info", message: `Endpoint added: ${ep} (in ${rel}).`, file: rel });
     }
   }
 

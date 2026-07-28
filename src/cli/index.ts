@@ -38,6 +38,7 @@ interface Options {
   budget: number;
   strict: boolean;
   host: string;
+  failOn?: string;
 }
 
 async function packageVersion(): Promise<string> {
@@ -65,7 +66,7 @@ Usage:
   engineering-intelligence git-analysis [path] [--window 90] [--json]
   engineering-intelligence user-profile [path] [--json]
   engineering-intelligence hook <event> [path]   (internal: driven by IDE lifecycle hooks)
-  engineering-intelligence gate <name> [path] [--base <ref>] [--json]
+  engineering-intelligence gate <name> [path] [--base <ref>] [--fail-on error|warning] [--json]
   engineering-intelligence verify [path] [--json]
   engineering-intelligence claims verify [path] [--json] [--strict]
   engineering-intelligence claims add --statement "..." --evidence "src/a.ts:10-20,src/b.ts" [path]
@@ -111,6 +112,7 @@ function parseArgs(args: string[]): Options {
   let budget = 2000;
   let strict = false;
   let host = "claude-code";
+  let failOn: string | undefined;
 
   for (let index = 0; index < remaining.length; index += 1) {
     const arg = remaining[index];
@@ -191,6 +193,12 @@ function parseArgs(args: string[]): Options {
       host = remaining[++index] ?? host;
     } else if (arg.startsWith("--host=")) {
       host = arg.slice("--host=".length);
+    } else if (arg === "--fail-on") {
+      const value = remaining[++index];
+      if (!value) throw new Error("--fail-on requires a value.");
+      failOn = value;
+    } else if (arg.startsWith("--fail-on=")) {
+      failOn = arg.slice("--fail-on=".length);
     } else if (arg.startsWith("-")) {
       throw new Error(`Unknown option "${arg}".`);
     } else if (command === "hook" && hookEvent === undefined) {
@@ -229,6 +237,7 @@ function parseArgs(args: string[]): Options {
     budget: Number.isNaN(budget) ? 2000 : budget,
     strict,
     host,
+    failOn,
   };
 }
 
@@ -360,7 +369,13 @@ async function main(): Promise<void> {
       if (readline) readline.close();
       return;
     }
-    const result = await runGate(options.gateName, options.root, { base: options.base });
+    if (options.failOn && !["error", "warning", "info"].includes(options.failOn)) {
+      throw new Error(`--fail-on must be error, warning, or info (got "${options.failOn}").`);
+    }
+    const result = await runGate(options.gateName, options.root, {
+      base: options.base,
+      failOn: options.failOn as "error" | "warning" | "info" | undefined,
+    });
     if (options.json) {
       output.write(`${JSON.stringify(result, null, 2)}\n`);
     } else {
