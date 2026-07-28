@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { renderAdapters } from "../adapters/index.js";
 import { readManagedBlock } from "../installer/blocks.js";
+import { hasOurEntries } from "../installer/json-merge.js";
 import { MANIFEST_PATH, hashContent, readManifest } from "../manifest/index.js";
 import { exists, validateCanonicalTemplates } from "../templates.js";
 import type { FileAction, IdeId } from "../types.js";
@@ -46,6 +47,9 @@ export async function doctor(root: string): Promise<FileAction[]> {
     return actions;
   }
   const renderingErrors = await validateRender(manifest.adapters);
+  // Needed to verify json-merge entries: we must know what we would write in
+  // order to check that it is still present inside the user's own file.
+  const desiredByPath = new Map((await renderAdapters(manifest.adapters)).map((f) => [f.path, f]));
   for (const message of renderingErrors) {
     actions.push({ path: "templates", status: "error", message });
   }
@@ -63,6 +67,30 @@ export async function doctor(root: string): Promise<FileAction[]> {
       continue;
     }
     const current = await readFile(absolute, "utf8");
+
+    if (entry.kind === "seed") {
+      // Seeded config is the user's to edit — that is how enforcement is turned
+      // on — so a local change is expected, never a warning.
+      actions.push({ path: entry.path, status: "unchanged" });
+      continue;
+    }
+
+    if (entry.kind === "json-merge") {
+      // We only own our own entries; the user's surrounding config is theirs.
+      const rendered = desiredByPath.get(entry.path);
+      const wired = rendered ? hasOurEntries(current, rendered.content) : true;
+      actions.push(
+        wired
+          ? { path: entry.path, status: "unchanged" }
+          : {
+              path: entry.path,
+              status: "warning",
+              message: "Enforcement hook entries are missing. Run `engineering-intelligence update` to re-merge them.",
+            },
+      );
+      continue;
+    }
+
     const tracked =
       entry.kind === "block" && entry.blockId
         ? readManagedBlock(current, entry.blockId)
@@ -73,48 +101,6 @@ export async function doctor(root: string): Promise<FileAction[]> {
       actions.push({ path: entry.path, status: "warning", message: "Managed content was edited locally." });
     } else {
       actions.push({ path: entry.path, status: "unchanged" });
-    }
-  }
-
-  // Claude Code enforcement hooks: if the user owns a pre-existing settings.json,
-  // the installer preserves it (never in the manifest), so verify the hook wiring
-  // is actually present and guide a manual merge when it is not.
-  if (manifest.adapters.includes("claude-code")) {
-    const settingsPath = path.join(root, ".claude", "settings.json");
-    const managedBySettings = manifest.files.some((entry) => entry.path === ".claude/settings.json");
-    if (!managedBySettings) {
-      let hasHooks = false;
-      try {
-        hasHooks = (await readFile(settingsPath, "utf8")).includes("engineering-intelligence hook");
-      } catch { /* missing */ }
-      if (!hasHooks) {
-        actions.push({
-          path: ".claude/settings.json",
-          status: "warning",
-          message:
-            "Enforcement hooks are not wired. Merge the `hooks` block (SessionStart/PreToolUse/PostToolUse/Stop → `npx engineering-intelligence hook <event>`) into your existing .claude/settings.json.",
-        });
-      }
-    }
-  }
-
-  // Cursor enforcement hooks: same pre-existing-file edge case for .cursor/hooks.json.
-  if (manifest.adapters.includes("cursor")) {
-    const hooksPath = path.join(root, ".cursor", "hooks.json");
-    const managed = manifest.files.some((entry) => entry.path === ".cursor/hooks.json");
-    if (!managed) {
-      let hasHooks = false;
-      try {
-        hasHooks = (await readFile(hooksPath, "utf8")).includes("engineering-intelligence hook");
-      } catch { /* missing */ }
-      if (!hasHooks) {
-        actions.push({
-          path: ".cursor/hooks.json",
-          status: "warning",
-          message:
-            "Enforcement hooks are not wired. Merge the `hooks` block (sessionStart/preToolUse/afterFileEdit/afterShellExecution/stop → `npx engineering-intelligence hook <event> --host cursor`) into your existing .cursor/hooks.json.",
-        });
-      }
     }
   }
 

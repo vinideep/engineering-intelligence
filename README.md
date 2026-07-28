@@ -405,7 +405,13 @@ enhancement on top.
 ### Local lifecycle hooks — Claude Code & Cursor
 
 Installing for `claude-code` writes `.claude/settings.json`; installing for
-`cursor` writes `.cursor/hooks.json`. Both wire the **same** deterministic engine
+`cursor` writes `.cursor/hooks.json`. **If you already have one, it is merged,
+not replaced** — your `permissions`, `model`, `env` and your own hooks are left
+untouched, our entries are added alongside, re-installing never duplicates them,
+and `uninstall` takes back only what we added. The install also registers the
+MCP server (`.mcp.json` / `.cursor/mcp.json`) so the tools below are reachable
+without any manual setup, and seeds `.engineering-intelligence/ei.config.json`
+once — after that it is yours to edit, and editing it never causes a conflict. Both wire the **same** deterministic engine
 (`engineering-intelligence hook <event>`), just translated to each host's hook
 contract:
 

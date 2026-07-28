@@ -8,6 +8,7 @@ import {
   prepareRendered,
 } from "../token-optimizer.js";
 import { claudeCodeHookSettings, cursorHookSettings, defaultConfigFile } from "../hooks/index.js";
+import { MCP_TOOL_SUMMARY, mcpServerRegistration } from "../mcp/index.js";
 import { IDE_IDS, type IdeId, type RenderedFile } from "../types.js";
 
 const BLOCK_ID = "engineering-intelligence";
@@ -52,6 +53,20 @@ This repository uses installed engineering intelligence workflows.
 - Base documentation claims on repository evidence and identify unknowns explicitly.
 - **Prefer persisted intelligence over re-exploration.** Before reading source files to understand the codebase, read the persisted knowledge base in \`.engineering-intelligence/knowledge-base/\`, context maps in \`.engineering-intelligence/context/\`, and architecture graphs in \`.engineering-intelligence/graph/\`. Re-read source only for the specific files a task touches. Run \`sync-engineering-intelligence\` to refresh these artifacts incrementally rather than re-deriving from scratch each session.
 - **Route before loading skills.** Consult the installed \`WORKFLOW-ROUTING.md\` and \`SKILLS-INDEX.md\` in your IDE's skills directory before opening any individual \`SKILL.md\`. Load only the 1-3 skills relevant to the current request.
+
+## Tools (prefer these over reasoning by hand)
+
+These run deterministically. Use them instead of inferring the answer from source — they are the difference between a computed fact and a guess. Available over MCP (server \`engineering-intelligence\`) and as CLI commands:
+
+- \`map_dependencies\` — build/refresh the computed dependency graph from source imports
+- \`get_graph\` — read an existing graph as JSON
+- \`analyze_impact\` — given changed files, list the modules that import them (direct + indirect)
+- \`run_gate\` — run a deterministic safety gate: env-vars, dead-exports, api-diff, migration-lint
+- \`get_context\` — assemble a token-budgeted context pack for a task
+- \`verify_claims\` — re-check documented claims against the code they cite
+- \`read_knowledge\` — list or read knowledge-base documents
+
+CLI equivalents: \`npx engineering-intelligence map|gate <name>|verify|freshness|context|claims verify|git-analysis .\`. \`gate\` and \`verify\` exit non-zero on failure, so they work in CI too.
 `;
 
 /**
@@ -92,6 +107,16 @@ Tune behaviour in \`.engineering-intelligence/ei.config.json\` (\`blockStaleEdit
 
 function file(path: string, content: string, owner: IdeId): RenderedFile {
   return { path, content, kind: "file", owners: [owner] };
+}
+
+/** Written once, then owned by the user — editing it must never conflict. */
+function seed(path: string, content: string, owner: IdeId): RenderedFile {
+  return { path, content, kind: "seed", owners: [owner] };
+}
+
+/** We own only our own entries inside a JSON file the user also owns. */
+function jsonMerge(path: string, content: string, owner: IdeId): RenderedFile {
+  return { path, content, kind: "json-merge", owners: [owner] };
 }
 
 function block(path: string, content: string, owner: IdeId): RenderedFile {
@@ -389,8 +414,9 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
         ...bundle,
         ...agents,
         ...commands,
-        file(".claude/settings.json", claudeCodeHookSettings(), ide),
-        file(".engineering-intelligence/ei.config.json", defaultConfigFile(), ide),
+        jsonMerge(".claude/settings.json", claudeCodeHookSettings(), ide),
+        jsonMerge(".mcp.json", mcpServerRegistration(), ide),
+        seed(".engineering-intelligence/ei.config.json", defaultConfigFile(), ide),
         block("CLAUDE.md", sharedInstructions + claudeCodeInstructions, ide),
       ];
     }
@@ -400,8 +426,9 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
       return [
         file(".cursor/rules/engineering-intelligence.mdc", rule, ide),
         ...(await workflowsAt(".cursor/commands", ide)),
-        file(".cursor/hooks.json", cursorHookSettings(), ide),
-        file(".engineering-intelligence/ei.config.json", defaultConfigFile(), ide),
+        jsonMerge(".cursor/hooks.json", cursorHookSettings(), ide),
+        jsonMerge(".cursor/mcp.json", mcpServerRegistration(), ide),
+        seed(".engineering-intelligence/ei.config.json", defaultConfigFile(), ide),
       ];
     }
     case "github-copilot": {

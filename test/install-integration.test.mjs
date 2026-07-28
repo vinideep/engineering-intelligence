@@ -121,6 +121,67 @@ test("CLI installs enforcement hooks (settings.json + ei.config.json)", async ()
   assert.match(doc.stdout, /unchanged .*settings\.json/);
 });
 
+test("installs into a repo that already owns .claude/settings.json", async () => {
+  // The likeliest adopter is an existing Claude Code user, who therefore already
+  // has a settings.json. Treating it as a whole managed file made that a conflict
+  // and the enforcement layer silently did not install at all.
+  const root = await tmpProject();
+  await mkdir(path.join(root, ".claude"), { recursive: true });
+  await writeFile(
+    path.join(root, ".claude/settings.json"),
+    JSON.stringify({
+      permissions: { allow: ["Bash(npm test)"] },
+      model: "opus",
+      hooks: { SessionStart: [{ hooks: [{ type: "command", command: "echo mine" }] }] },
+    }),
+    "utf8",
+  );
+
+  const result = cli(["install", root, "--ide", "claude-code", "--yes"]);
+  assert.equal(result.status, 0, `install should not conflict:\n${result.stdout}`);
+  assert.match(result.stdout, /0 conflict/, `expected no conflicts:\n${result.stdout}`);
+
+  const settings = JSON.parse(await read(root, ".claude/settings.json"));
+  assert.deepEqual(settings.permissions, { allow: ["Bash(npm test)"] }, "user permissions preserved");
+  assert.equal(settings.model, "opus", "user model preserved");
+  const starts = settings.hooks.SessionStart.map((e) => e.hooks[0].command);
+  assert.ok(starts.includes("echo mine"), "user's own hook preserved");
+  assert.ok(starts.some((c) => c.includes("engineering-intelligence hook")), "our hook wired alongside");
+
+  // The MCP server is registered, so its tools are actually reachable.
+  const mcp = JSON.parse(await read(root, ".mcp.json"));
+  assert.ok(mcp.mcpServers["engineering-intelligence"], "MCP server must be registered");
+
+  assert.equal(cli(["doctor", root]).status, 0, "doctor must be clean");
+
+  // Uninstall takes back only what we added.
+  cli(["uninstall", root, "--yes"]);
+  const after = JSON.parse(await read(root, ".claude/settings.json"));
+  assert.deepEqual(after.permissions, { allow: ["Bash(npm test)"] });
+  assert.equal(after.hooks.SessionStart.length, 1, "only the user's hook remains");
+});
+
+test("editing ei.config.json does not conflict or warn", async () => {
+  // Editing it is the documented way to enable enforcement; doing so must not
+  // break the update path or permanently flag doctor.
+  const root = await tmpProject();
+  cli(["install", root, "--ide", "claude-code", "--yes"]);
+
+  const configPath = path.join(root, ".engineering-intelligence/ei.config.json");
+  const config = JSON.parse(await readFile(configPath, "utf8"));
+  config.hooks.requireValidationOnStop = true;
+  await writeFile(configPath, JSON.stringify(config, null, 2), "utf8");
+
+  const doc = cli(["doctor", root]);
+  assert.equal(doc.status, 0);
+  assert.doesNotMatch(doc.stdout, /warning\s+\.engineering-intelligence\/ei\.config\.json/, "user config edits are expected, not warnings");
+
+  const upd = cli(["update", root, "--yes"]);
+  assert.match(upd.stdout, /0 conflict/, `update must not conflict:\n${upd.stdout}`);
+  const after = JSON.parse(await readFile(configPath, "utf8"));
+  assert.equal(after.hooks.requireValidationOnStop, true, "the user's setting must survive update");
+});
+
 test("hook CLI enforces the Stop gate with real verification receipts", async () => {
   const root = await tmpProject();
   cli(["install", root, "--ide", "claude-code", "--yes"]);

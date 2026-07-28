@@ -117,6 +117,38 @@ const TOOLS = [
   },
 ];
 
+/** Tool names and one-line purposes, for the installed instructions. */
+export const MCP_TOOL_SUMMARY: ReadonlyArray<readonly [string, string]> = [
+  ["map_dependencies", "build/refresh the computed dependency graph from source imports"],
+  ["get_graph", "read an existing graph as JSON"],
+  ["analyze_impact", "given changed files, list the modules that import them (direct + indirect)"],
+  ["run_gate", "run a deterministic safety gate: env-vars, dead-exports, api-diff, migration-lint"],
+  ["get_context", "assemble a token-budgeted context pack for a task"],
+  ["verify_claims", "re-check documented claims against the code they cite"],
+  ["read_knowledge", "list or read knowledge-base documents"],
+];
+
+/**
+ * Project-scoped MCP server registration. Hosts that read a project `.mcp.json`
+ * (Claude Code) or `.cursor/mcp.json` (Cursor) will start the server themselves,
+ * so the tools are actually reachable instead of requiring the user to register
+ * the server by hand and then somehow know the tool names.
+ */
+export function mcpServerRegistration(): string {
+  return JSON.stringify(
+    {
+      mcpServers: {
+        "engineering-intelligence": {
+          command: "npx",
+          args: ["-y", "engineering-intelligence", "mcp"],
+        },
+      },
+    },
+    null,
+    2,
+  ) + "\n";
+}
+
 export async function startMcpServer(projectRoot: string): Promise<void> {
   const server = new Server(
     { name: "engineering-intelligence", version: "2.3.0" },
