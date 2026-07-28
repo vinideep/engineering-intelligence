@@ -1,10 +1,43 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import type { GraphNode, GraphEdge } from "../schema.js";
+import { LITERAL_TOKEN, lineOf, literalAt, maskSource } from "./scan.js";
 
 export interface ImportResult {
   nodes: GraphNode[];
   edges: GraphEdge[];
+  /** Specifiers we could not resolve to a file on disk, with evidence. */
+  unknowns?: string[];
+}
+
+// Extensions tried when resolving a relative specifier, in order. `.js` maps to
+// `.ts` first because TypeScript ESM writes `./x.js` for a file named `x.ts` —
+// treating that literally is why 25 of 48 module nodes carried a `path` that
+// does not exist on disk.
+const RESOLVE_EXTS = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"];
+
+async function isFile(candidate: string): Promise<boolean> {
+  try { return (await stat(candidate)).isFile(); } catch { return false; }
+}
+
+/**
+ * Resolve a relative specifier to a real file, returning the repo-relative path
+ * or null. Never guesses: an unresolved specifier becomes an `unknown`, not a
+ * confident edge to a file that isn't there.
+ */
+async function resolveRelative(specifier: string, fromFile: string, root: string): Promise<string | null> {
+  const base = path.resolve(path.dirname(fromFile), specifier);
+  const withoutExt = base.replace(/\.(tsx?|jsx?|mjs|cjs|mts|cts)$/, "");
+
+  const candidates: string[] = [];
+  if (path.extname(base)) candidates.push(base);
+  for (const ext of RESOLVE_EXTS) candidates.push(`${withoutExt}${ext}`);
+  for (const ext of RESOLVE_EXTS) candidates.push(path.join(withoutExt, `index${ext}`));
+
+  for (const candidate of candidates) {
+    if (await isFile(candidate)) return path.relative(root, candidate).replace(/\\/g, "/");
+  }
+  return null;
 }
 
 // Resolve a JS/TS specifier to a stable node id
@@ -21,17 +54,78 @@ function resolveSpecifier(specifier: string, sourceFile: string, root: string): 
   return { id: `pkg:${parts}`, kind: "package", label: parts };
 }
 
+/**
+ * A node for a file we are actually reading. The id stays extension-stripped so
+ * it is stable across `./x` and `./x.js` references, but `path` carries the REAL
+ * file — previously it was the stripped id, so `src/templates` was recorded for a
+ * file named `src/templates.ts` and 25 of 48 module nodes pointed at nothing.
+ */
 function moduleNodeFor(sourceFile: string, root: string): GraphNode {
-  const rel = path.relative(root, sourceFile).replace(/\.(ts|tsx|js|mjs|cjs)$/, "");
+  const relWithExt = path.relative(root, sourceFile).replace(/\\/g, "/");
+  const id = relWithExt.replace(/\.(tsx?|jsx?|mjs|cjs|mts|cts)$/, "");
   return {
-    id: `module:${rel}`,
+    id: `module:${id}`,
     kind: "module",
-    label: path.basename(rel),
-    path: rel,
+    label: path.basename(id),
+    path: relWithExt,
     confidence: "verified",
     metadata: {},
-    evidence: [path.relative(root, sourceFile)],
+    evidence: [relWithExt],
   };
+}
+
+/**
+ * Import/export/require/dynamic-import forms, matched against MASKED source so
+ * comments and string bodies cannot contribute edges. `[\s\S]*?` spans newlines,
+ * which is what makes multi-line imports visible.
+ */
+const JS_PATTERN_SOURCES: { source: string; kind: "static" | "reexport" | "require" | "dynamic" }[] = [
+  // import ... from "x"  /  import "x"
+  { source: String.raw`\bimport\b([\s\S]*?)\bfrom\s*${LITERAL_TOKEN}`, kind: "static" },
+  { source: String.raw`\bimport\s*${LITERAL_TOKEN}`, kind: "static" },
+  // export ... from "x"
+  { source: String.raw`\bexport\b([\s\S]*?)\bfrom\s*${LITERAL_TOKEN}`, kind: "reexport" },
+  // require("x")
+  { source: String.raw`\brequire\s*\(\s*${LITERAL_TOKEN}\s*\)`, kind: "require" },
+  // import("x")
+  { source: String.raw`\bimport\s*\(\s*${LITERAL_TOKEN}\s*\)`, kind: "dynamic" },
+];
+
+interface RawMatch {
+  specifier: string;
+  typeOnly: boolean;
+  line: number;
+  kind: "static" | "reexport" | "require" | "dynamic";
+}
+
+/**
+ * Collect every import site SYNCHRONOUSLY.
+ *
+ * Two hazards this shape avoids: `g`-flagged regexes carry a mutable `lastIndex`,
+ * so they must never be shared across concurrent calls (the builder parses 50
+ * files at once); and awaiting inside an `exec` loop lets another invocation
+ * advance that index mid-iteration, silently dropping imports. Fresh regexes per
+ * call, and no `await` until matching is finished.
+ */
+function collectJSMatches(source: ReturnType<typeof maskSource>): RawMatch[] {
+  const out: RawMatch[] = [];
+  for (const { source: pattern, kind } of JS_PATTERN_SOURCES) {
+    const re = new RegExp(pattern, "g");
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(source.masked)) !== null) {
+      const hasClause = match.length > 2;
+      const clause = hasClause ? match[1] : "";
+      const specifier = literalAt(source, hasClause ? match[2] : match[1]);
+      if (!specifier || specifier.startsWith("node:")) continue;
+      out.push({
+        specifier,
+        typeOnly: /^\s*type\b/.test(clause) || /\bexport\s+type\b/.test(match[0]),
+        line: lineOf(source.masked, match.index),
+        kind,
+      });
+    }
+  }
+  return out;
 }
 
 async function extractJSImports(filePath: string, root: string): Promise<ImportResult> {
@@ -41,59 +135,88 @@ async function extractJSImports(filePath: string, root: string): Promise<ImportR
   } catch {
     return { nodes: [], edges: [] };
   }
+
+  const source = maskSource(content);
   const sourceNode = moduleNodeFor(filePath, root);
   const nodes: GraphNode[] = [sourceNode];
   const edges: GraphEdge[] = [];
-  const lines = content.split("\n");
+  const unknowns: string[] = [];
+  const relFile = path.relative(root, filePath).replace(/\\/g, "/");
 
-  // Patterns to match
-  const patterns: { re: RegExp; typeOnly: boolean }[] = [
-    // import type ... from '...'
-    { re: /\bimport\s+type\b[^'"]*from\s+['"]([^'"]+)['"]/g, typeOnly: true },
-    // import ... from '...'
-    { re: /\bimport\b[^'"]*from\s+['"]([^'"]+)['"]/g, typeOnly: false },
-    // require('...')
-    { re: /\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g, typeOnly: false },
-    // export ... from '...'
-    { re: /\bexport\b[^'"]*from\s+['"]([^'"]+)['"]/g, typeOnly: false },
-  ];
+  // from|to|relation -> already emitted, so a type-only import is never also
+  // counted as a runtime import (the old `[^'"]*` spanned `type { Foo }`).
+  const seen = new Set<string>();
 
-  for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-    const line = lines[lineIdx];
-    for (const { re, typeOnly } of patterns) {
-      re.lastIndex = 0;
-      let match: RegExpExecArray | null;
-      while ((match = re.exec(line)) !== null) {
-        const specifier = match[1];
-        // skip node: builtins
-        if (specifier.startsWith("node:")) continue;
-        const resolved = resolveSpecifier(specifier, filePath, root);
-        const targetNode: GraphNode = {
-          id: resolved.id,
-          kind: resolved.kind,
-          label: resolved.label,
-          path: resolved.filePath,
+  for (const { specifier, typeOnly, line, kind } of collectJSMatches(source)) {
+    {
+      const relation = typeOnly ? "imports-type" : "imports";
+
+      let targetId: string;
+      let targetNode: GraphNode;
+
+      if (specifier.startsWith(".")) {
+        const resolvedPath = await resolveRelative(specifier, filePath, root);
+        if (resolvedPath) {
+          const idPath = resolvedPath.replace(/\.(tsx?|jsx?|mjs|cjs|mts|cts)$/, "");
+          targetId = `module:${idPath}`;
+          targetNode = {
+            id: targetId,
+            kind: "module",
+            label: path.basename(idPath),
+            path: resolvedPath, // a real file — verified against disk
+            confidence: "verified",
+            metadata: {},
+            evidence: [`${relFile}:${line}`],
+          };
+        } else {
+          // Unresolvable relative import: record it as an unknown rather than
+          // inventing a node with a path that does not exist.
+          const idPath = path.relative(root, path.resolve(path.dirname(filePath), specifier)).replace(/\\/g, "/");
+          targetId = `module:${idPath}`;
+          targetNode = {
+            id: targetId,
+            kind: "module",
+            label: path.basename(idPath),
+            confidence: "unknown",
+            metadata: { unresolved: true },
+            evidence: [`${relFile}:${line}`],
+          };
+          unknowns.push(`unresolved import "${specifier}" at ${relFile}:${line}`);
+        }
+      } else {
+        const pkg = specifier.startsWith("@")
+          ? specifier.split("/").slice(0, 2).join("/")
+          : specifier.split("/")[0];
+        targetId = `pkg:${pkg}`;
+        targetNode = {
+          id: targetId,
+          kind: "package",
+          label: pkg,
           confidence: "verified",
           metadata: {},
-          evidence: [],
+          evidence: [`${relFile}:${line}`],
         };
-        nodes.push(targetNode);
-        const edgeKey = `${sourceNode.id}→${resolved.id}→${typeOnly ? "imports-type" : "imports"}`;
-        const evidence = `${path.relative(root, filePath)}:${lineIdx + 1}`;
-        edges.push({
-          from: sourceNode.id,
-          to: resolved.id,
-          relation: typeOnly ? "imports-type" : "imports",
-          confidence: "verified",
-          metadata: {},
-          evidence: [evidence],
-        });
-        // Avoid duplicate edges (same from/to/relation from multiple lines — merge evidence later)
-        void edgeKey;
       }
+
+      const key = `${sourceNode.id}→${targetId}→${relation}`;
+      const runtimeKey = `${sourceNode.id}→${targetId}→imports`;
+      // A runtime import supersedes a type-only one; never emit both.
+      if (seen.has(key) || (typeOnly && seen.has(runtimeKey))) continue;
+      seen.add(key);
+
+      nodes.push(targetNode);
+      edges.push({
+        from: sourceNode.id,
+        to: targetId,
+        relation,
+        confidence: "verified", // the statement itself is verified; node confidence carries resolution
+        metadata: kind === "dynamic" || kind === "require" ? { [kind]: true } : {},
+        evidence: [`${relFile}:${line}`],
+      });
     }
   }
-  return { nodes, edges };
+
+  return { nodes, edges, unknowns };
 }
 
 async function extractPythonImports(filePath: string, root: string): Promise<ImportResult> {
@@ -103,16 +226,17 @@ async function extractPythonImports(filePath: string, root: string): Promise<Imp
   } catch {
     return { nodes: [], edges: [] };
   }
-  const rel = path.relative(root, filePath).replace(/\.py$/, "");
+  const relWithExt = path.relative(root, filePath).replace(/\\/g, "/");
+  const rel = relWithExt.replace(/\.py$/, "");
   const sourceId = `module:${rel}`;
   const sourceNode: GraphNode = {
     id: sourceId,
     kind: "module",
     label: path.basename(rel),
-    path: rel,
+    path: relWithExt,
     confidence: "verified",
     metadata: {},
-    evidence: [path.relative(root, filePath)],
+    evidence: [relWithExt],
   };
   const nodes: GraphNode[] = [sourceNode];
   const edges: GraphEdge[] = [];
@@ -175,16 +299,17 @@ async function extractGoImports(filePath: string, root: string): Promise<ImportR
   } catch {
     return { nodes: [], edges: [] };
   }
-  const rel = path.relative(root, filePath).replace(/\.go$/, "");
+  const relWithExt = path.relative(root, filePath).replace(/\\/g, "/");
+  const rel = relWithExt.replace(/\.go$/, "");
   const sourceId = `module:${rel}`;
   const sourceNode: GraphNode = {
     id: sourceId,
     kind: "module",
     label: path.basename(rel),
-    path: rel,
+    path: relWithExt,
     confidence: "verified",
     metadata: {},
-    evidence: [path.relative(root, filePath)],
+    evidence: [relWithExt],
   };
   const nodes: GraphNode[] = [sourceNode];
   const edges: GraphEdge[] = [];
@@ -227,16 +352,17 @@ async function extractRustImports(filePath: string, root: string): Promise<Impor
   } catch {
     return { nodes: [], edges: [] };
   }
-  const rel = path.relative(root, filePath).replace(/\.rs$/, "");
+  const relWithExt = path.relative(root, filePath).replace(/\\/g, "/");
+  const rel = relWithExt.replace(/\.rs$/, "");
   const sourceId = `module:${rel}`;
   const sourceNode: GraphNode = {
     id: sourceId,
     kind: "module",
     label: path.basename(rel),
-    path: rel,
+    path: relWithExt,
     confidence: "verified",
     metadata: {},
-    evidence: [path.relative(root, filePath)],
+    evidence: [relWithExt],
   };
   const nodes: GraphNode[] = [sourceNode];
   const edges: GraphEdge[] = [];
@@ -288,16 +414,17 @@ async function extractRubyImports(filePath: string, root: string): Promise<Impor
   } catch {
     return { nodes: [], edges: [] };
   }
-  const rel = path.relative(root, filePath).replace(/\.rb$/, "");
+  const relWithExt = path.relative(root, filePath).replace(/\\/g, "/");
+  const rel = relWithExt.replace(/\.rb$/, "");
   const sourceId = `module:${rel}`;
   const sourceNode: GraphNode = {
     id: sourceId,
     kind: "module",
     label: path.basename(rel),
-    path: rel,
+    path: relWithExt,
     confidence: "verified",
     metadata: {},
-    evidence: [path.relative(root, filePath)],
+    evidence: [relWithExt],
   };
   const nodes: GraphNode[] = [sourceNode];
   const edges: GraphEdge[] = [];
@@ -334,16 +461,17 @@ async function extractJavaImports(filePath: string, root: string): Promise<Impor
     return { nodes: [], edges: [] };
   }
   const ext = path.extname(filePath).toLowerCase();
-  const rel = path.relative(root, filePath).replace(ext === ".kt" ? /\.kt$/ : /\.java$/, "");
+  const relWithExt = path.relative(root, filePath).replace(/\\/g, "/");
+  const rel = relWithExt.replace(ext === ".kt" ? /\.kt$/ : /\.java$/, "");
   const sourceId = `module:${rel}`;
   const sourceNode: GraphNode = {
     id: sourceId,
     kind: "module",
     label: path.basename(rel),
-    path: rel,
+    path: relWithExt,
     confidence: "verified",
     metadata: {},
-    evidence: [path.relative(root, filePath)],
+    evidence: [relWithExt],
   };
   const nodes: GraphNode[] = [sourceNode];
   const edges: GraphEdge[] = [];
