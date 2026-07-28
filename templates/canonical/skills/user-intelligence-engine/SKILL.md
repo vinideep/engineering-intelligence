@@ -8,6 +8,8 @@ version: 1.0.0
 
 Build and maintain a personal developer profile so every workflow response is calibrated to the individual — their test philosophy, implementation depth, communication style, and architecture preferences — without asking onboarding questions.
 
+**Seed from git first:** `npx engineering-intelligence user-profile . [--json]` resolves identity and seeds the profile from git history with zero LLM context, and creates the gitignore entry so personal profiles never land in a teammate's checkout. Use the steps below to refine what the CLI cannot infer.
+
 This capability does not modify product code.
 
 ## Inputs

@@ -2,11 +2,10 @@
  * Lossless token optimization for rendered toolkit files.
  *
  * Techniques used:
- * 1. Path aliasing — dictionary substitution of repeated long path strings (saves ~955t)
- * 2. Skills index — compact 1-line-per-skill routing table (saves ~10,000t vs reading all skills)
- * 3. Workflow routing — pre-computed primary/optional skill map per command (saves ~2,000t)
- * 4. Tiered skill format — SKILL-BRIEF.md (~150t) read upfront; SKILL.md loaded at execution time
- * 5. KV-cache pinning — routing artifacts sort first so they form a stable context prefix
+ * 1. Skills index — compact 1-line-per-skill routing table (saves ~10,000t vs reading all skills)
+ * 2. Workflow routing — pre-computed primary/optional skill map per command (saves ~2,000t)
+ * 3. Tiered skill format — SKILL-BRIEF.md (~150t) read upfront; SKILL.md loaded at execution time
+ * 4. KV-cache pinning — routing artifacts sort first so they form a stable context prefix
  *
  * Inspired by Headroom's ContentRouter + CacheAligner + CCR patterns:
  * - Routing table = CacheAligner: stable prefix, KV-cache hits across all invocations
@@ -70,6 +69,8 @@ export const WORKFLOW_SKILL_ROUTING: Record<
       "environmental-backpressure-engine",
       "testing-intelligence-engine",
       "question-file-engine",
+      "refactoring-planner",
+      "debugging-engine",
     ],
   },
   "initialize-engineering-intelligence": {
@@ -103,7 +104,12 @@ export const WORKFLOW_SKILL_ROUTING: Record<
   },
   "sync-engineering-intelligence": {
     primary: ["change-detection-engine", "incremental-sync-engine"],
-    optional: ["knowledge-base-validator", "graph-engine"],
+    optional: [
+      "staleness-detector",
+      "ongoing-learning-engine",
+      "knowledge-base-validator",
+      "graph-engine",
+    ],
   },
   "review-engineering-change": {
     primary: ["change-detection-engine", "engineering-change-review"],
@@ -158,7 +164,7 @@ function parseFrontmatterDescription(content: string): string {
 
 /**
  * Generate a compact one-line-per-skill index.
- * ~1,500 tokens total vs ~62,700 to read all 46 full skill files.
+ * ~1,500 tokens total vs reading every full skill file.
  * The AI reads this index to identify which 1-3 skills to load in full.
  */
 export async function generateSkillsIndex(

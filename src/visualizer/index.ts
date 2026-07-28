@@ -10,295 +10,105 @@ interface SkillInfo {
   dependsOn: string[];
 }
 
-const SKILL_CATALOG: Record<string, SkillInfo> = {
-  "initialize-intelligence-skill": {
-    name: "Initialize Intelligence",
-    category: "initialization",
-    description: "Creates evidence-backed project intelligence baseline",
-    usedBy: ["engineering-intelligence-skill"],
-    dependsOn: ["deep-project-knowledge-extractor", "knowledge-base-validator", "graph-engine", "change-history-engine"],
-  },
-  "engineering-intelligence-skill": {
-    name: "Engineering Intelligence",
-    category: "implementation",
-    description: "Executes engineering changes with full lifecycle",
-    usedBy: [],
-    dependsOn: ["initialize-intelligence-skill", "change-detection-engine", "impact-analysis-engine", "testing-intelligence-engine", "incremental-sync-engine", "change-history-engine"],
-  },
-  "deep-project-knowledge-extractor": {
-    name: "Knowledge Extractor",
-    category: "initialization",
-    description: "Produces evidence-based project documentation",
-    usedBy: ["initialize-intelligence-skill"],
-    dependsOn: [],
-  },
-  "knowledge-base-validator": {
-    name: "Knowledge Validator",
-    category: "review",
-    description: "Validates docs against source evidence",
-    usedBy: ["initialize-intelligence-skill", "incremental-sync-engine"],
-    dependsOn: ["deep-project-knowledge-extractor"],
-  },
-  "graph-engine": {
-    name: "Graph Engine",
-    category: "analysis",
-    description: "Builds evidence-backed architecture graphs",
-    usedBy: ["initialize-intelligence-skill", "impact-analysis-engine", "incremental-sync-engine"],
-    dependsOn: [],
-  },
-  "impact-analysis-engine": {
-    name: "Impact Analysis",
-    category: "analysis",
-    description: "Determines direct and indirect change impact",
-    usedBy: ["engineering-intelligence-skill", "incremental-sync-engine"],
-    dependsOn: ["change-detection-engine", "graph-engine"],
-  },
-  "change-detection-engine": {
-    name: "Change Detection",
-    category: "analysis",
-    description: "Resolves change scope from diffs or proposals",
-    usedBy: ["impact-analysis-engine", "incremental-sync-engine", "engineering-change-review"],
-    dependsOn: [],
-  },
-  "incremental-sync-engine": {
-    name: "Sync Engine",
-    category: "sync",
-    description: "Synchronizes only affected knowledge, memory, context, graph, and claims",
-    usedBy: ["engineering-intelligence-skill"],
-    dependsOn: ["change-detection-engine", "impact-analysis-engine", "graph-engine"],
-  },
-  "testing-intelligence-engine": {
-    name: "Testing Intelligence",
-    category: "implementation",
-    description: "Determines risk-based testing needs",
-    usedBy: ["engineering-intelligence-skill"],
-    dependsOn: ["impact-analysis-engine"],
-  },
-  "change-history-engine": {
-    name: "Change History",
-    category: "implementation",
-    description: "Records validated engineering work",
-    usedBy: ["initialize-intelligence-skill", "engineering-intelligence-skill"],
-    dependsOn: ["impact-analysis-engine"],
-  },
-  "architecture-review-engine": {
-    name: "Architecture Review",
-    category: "review",
-    description: "Reviews architecture quality and health",
-    usedBy: ["refactoring-planner"],
-    dependsOn: ["graph-engine"],
-  },
-  "refactoring-planner": {
-    name: "Refactoring Planner",
-    category: "planning",
-    description: "Plans safe, incremental refactoring",
-    usedBy: ["engineering-intelligence-skill"],
-    dependsOn: ["graph-engine", "architecture-review-engine"],
-  },
-  "engineering-change-review": {
-    name: "Change Review",
-    category: "review",
-    description: "Reviews changes for quality before completion",
-    usedBy: ["engineering-intelligence-skill"],
-    dependsOn: ["change-detection-engine"],
-  },
-  "requirement-scoper": {
-    name: "Requirement Scoper",
-    category: "planning",
-    description: "Scopes requirements and configurations interactively",
-    usedBy: [],
-    dependsOn: ["graph-engine", "deep-project-knowledge-extractor"],
-  },
-  "codebase-discovery-engine": {
-    name: "Codebase Discovery",
-    category: "discovery",
-    description: "Autonomously explores and understands any codebase",
-    usedBy: ["initialize-intelligence-skill", "ongoing-learning-engine"],
-    dependsOn: [],
-  },
-  "convention-detector": {
-    name: "Convention Detector",
-    category: "discovery",
-    description: "Detects and codifies project coding conventions",
-    usedBy: ["engineering-intelligence-skill", "incremental-sync-engine"],
-    dependsOn: ["codebase-discovery-engine"],
-  },
-  "ongoing-learning-engine": {
-    name: "Ongoing Learning",
-    category: "sync",
-    description: "Continuous post-initialization learning and uncertainty tracking",
-    usedBy: ["incremental-sync-engine"],
-    dependsOn: ["codebase-discovery-engine", "staleness-detector"],
-  },
-  "greenfield-architect": {
-    name: "Greenfield Architect",
-    category: "planning",
-    description: "Interview-based architecture design for new projects",
-    usedBy: [],
-    dependsOn: [],
-  },
-  "git-intelligence-engine": {
-    name: "Git Intelligence",
-    category: "analysis",
-    description: "Extracts hotspots, ownership, and change coupling from git history",
-    usedBy: ["impact-analysis-engine", "graph-engine", "pr-intelligence-engine"],
-    dependsOn: [],
-  },
-  "pr-intelligence-engine": {
-    name: "PR Intelligence",
-    category: "review",
-    description: "Auto-generates PR descriptions, reviewer suggestions, and impact summaries",
-    usedBy: [],
-    dependsOn: ["git-intelligence-engine", "change-history-engine", "impact-analysis-engine"],
-  },
-  "staleness-detector": {
-    name: "Staleness Detector",
-    category: "sync",
-    description: "Tracks knowledge freshness and triggers re-verification",
-    usedBy: ["ongoing-learning-engine", "incremental-sync-engine"],
-    dependsOn: [],
-  },
-  "security-audit-engine": {
-    name: "Security Audit",
-    category: "security",
-    description: "Scans for vulnerabilities, secrets, and OWASP compliance",
-    usedBy: [],
-    dependsOn: ["graph-engine", "deep-project-knowledge-extractor"],
-  },
-  "performance-analysis-engine": {
-    name: "Performance Analysis",
-    category: "analysis",
-    description: "Identifies N+1 queries, bundle bloat, and caching opportunities",
-    usedBy: [],
-    dependsOn: ["graph-engine"],
-  },
-  "debugging-engine": {
-    name: "Debugging Engine",
-    category: "analysis",
-    description: "Root cause analysis, log correlation, and fix suggestions",
-    usedBy: [],
-    dependsOn: ["graph-engine", "change-detection-engine", "impact-analysis-engine"],
-  },
-  "aidlc-lifecycle-engine": {
-    name: "AI-DLC Lifecycle",
-    category: "planning",
-    description: "Embeds Agile + AI-DLC state, checkpoints, units, and gates",
-    usedBy: ["engineering-intelligence-skill"],
-    dependsOn: [],
-  },
-  "environmental-backpressure-engine": {
-    name: "Environmental Backpressure",
-    category: "implementation",
-    description: "Uses local tools to self-correct validation failures",
-    usedBy: ["engineering-intelligence-skill", "testing-intelligence-engine"],
-    dependsOn: [],
-  },
-  "nfr-adr-governor": {
-    name: "NFR & ADR Governor",
-    category: "planning",
-    description: "Captures measurable NFRs and ADR lifecycle decisions",
-    usedBy: ["aidlc-lifecycle-engine"],
-    dependsOn: [],
-  },
-  "mcp-security-governor": {
-    name: "MCP Security Governor",
-    category: "security",
-    description: "Reviews MCP tools, permissions, schemas, and sandboxing",
-    usedBy: ["security-audit-engine"],
-    dependsOn: [],
-  },
-  "operations-readiness-engine": {
-    name: "Operations Readiness",
-    category: "operations",
-    description: "Builds rollback, observability, deployment, and runbook readiness",
-    usedBy: ["engineering-intelligence-skill"],
-    dependsOn: [],
-  },
-  "type-safety-engine": {
-    name: "Type Safety",
-    category: "implementation",
-    description: "Runs type checks and traces type-only dependencies",
-    usedBy: ["engineering-intelligence-skill", "impact-analysis-engine"],
-    dependsOn: [],
-  },
-  "database-migration-safety-engine": {
-    name: "Migration Safety",
-    category: "implementation",
-    description: "Checks migrations for rollback, locks, and destructive operations",
-    usedBy: ["engineering-intelligence-skill"],
-    dependsOn: [],
-  },
-  "api-backward-compatibility-engine": {
-    name: "API Compatibility",
-    category: "implementation",
-    description: "Classifies API changes, blocks unversioned breaking changes, and replays response snapshots",
-    usedBy: ["engineering-intelligence-skill", "testing-intelligence-engine"],
-    dependsOn: [],
-  },
-  "adr-compliance-checker": {
-    name: "ADR Compliance",
-    category: "review",
-    description: "Checks diffs against accepted ADRs and architecture decisions",
-    usedBy: ["engineering-change-review"],
-    dependsOn: ["nfr-adr-governor"],
-  },
-  "dead-code-detector": {
-    name: "Dead Code Detector",
-    category: "analysis",
-    description: "Finds unused exports, zombie dependencies, and stale modules",
-    usedBy: ["architecture-review-engine"],
-    dependsOn: ["git-intelligence-engine"],
-  },
-  "environment-variable-auditor": {
-    name: "Environment Variable Auditor",
-    category: "operations",
-    description: "Checks env var usage against examples, validation, CI, and deploy config",
-    usedBy: ["engineering-intelligence-skill"],
-    dependsOn: [],
-  },
-  "contract-test-generator": {
-    name: "Contract Test Generator",
-    category: "implementation",
-    description: "Generates service-boundary contract test plans and stubs",
-    usedBy: ["testing-intelligence-engine"],
-    dependsOn: ["graph-engine", "api-backward-compatibility-engine"],
-  },
-  "llm-prompt-injection-guard": {
-    name: "LLM Prompt Injection Guard",
-    category: "security",
-    description: "Finds unsafe user-input-to-LLM and durable-memory paths",
-    usedBy: ["security-audit-engine"],
-    dependsOn: [],
-  },
-  "context-budget-optimizer": {
-    name: "Context Budget Optimizer",
-    category: "planning",
-    description: "Ranks and slices context to reduce AI IDE token usage",
-    usedBy: ["engineering-intelligence-skill", "incremental-sync-engine"],
-    dependsOn: ["graph-engine"],
-  },
-  "backlog-decomposition-engine": {
-    name: "Backlog Decomposition Engine",
-    category: "planning",
-    description: "Decomposes initiatives into an Epic → Feature → Ticket backlog with per-feature approval gates",
-    usedBy: ["engineering-intelligence-skill"],
-    dependsOn: ["graph-engine", "impact-analysis-engine", "issue-tracker-sync-engine"],
-  },
-  "issue-tracker-sync-engine": {
-    name: "Issue Tracker Sync Engine",
-    category: "operations",
-    description: "Mirrors the local backlog to GitHub Issues while keeping markdown as the source of truth",
-    usedBy: ["backlog-decomposition-engine"],
-    dependsOn: [],
-  },
-  "question-file-engine": {
-    name: "Question File Engine",
-    category: "planning",
-    description: "Creates structured MCQ clarification files instead of asking inline. Enables context reset and durable decision artifacts.",
-    usedBy: ["requirement-scoper", "backlog-decomposition-engine"],
-    dependsOn: [],
-  },
+/**
+ * Skill categories — the one piece of curation that cannot be derived from the
+ * templates. Everything else (display name, description, dependsOn, usedBy) is
+ * computed from the canonical skill files at render time.
+ *
+ * The catalog used to be 289 hand-maintained lines duplicating every skill.
+ * That coupling made adding or removing a skill expensive and it had already
+ * silently drifted: user-intelligence-engine existed as a skill but was absent
+ * here, so the dashboard omitted it entirely. A skill with no entry below simply
+ * falls back to "analysis" rather than disappearing.
+ */
+const SKILL_CATEGORIES: Record<string, SkillInfo["category"]> = {
+  "adr-compliance-checker": "review",
+  "aidlc-lifecycle-engine": "planning",
+  "api-backward-compatibility-engine": "implementation",
+  "architecture-review-engine": "review",
+  "backlog-decomposition-engine": "planning",
+  "change-detection-engine": "analysis",
+  "change-history-engine": "implementation",
+  "codebase-discovery-engine": "discovery",
+  "context-budget-optimizer": "planning",
+  "contract-test-generator": "implementation",
+  "convention-detector": "discovery",
+  "database-migration-safety-engine": "implementation",
+  "dead-code-detector": "analysis",
+  "debugging-engine": "analysis",
+  "deep-project-knowledge-extractor": "initialization",
+  "engineering-change-review": "review",
+  "engineering-intelligence-skill": "implementation",
+  "environment-variable-auditor": "operations",
+  "environmental-backpressure-engine": "implementation",
+  "git-intelligence-engine": "analysis",
+  "graph-engine": "analysis",
+  "greenfield-architect": "planning",
+  "impact-analysis-engine": "analysis",
+  "incremental-sync-engine": "sync",
+  "initialize-intelligence-skill": "initialization",
+  "issue-tracker-sync-engine": "operations",
+  "knowledge-base-validator": "review",
+  "llm-prompt-injection-guard": "security",
+  "mcp-security-governor": "security",
+  "nfr-adr-governor": "planning",
+  "ongoing-learning-engine": "sync",
+  "operations-readiness-engine": "operations",
+  "performance-analysis-engine": "analysis",
+  "pr-intelligence-engine": "review",
+  "question-file-engine": "planning",
+  "refactoring-planner": "planning",
+  "requirement-scoper": "planning",
+  "security-audit-engine": "security",
+  "staleness-detector": "sync",
+  "testing-intelligence-engine": "implementation",
+  "type-safety-engine": "implementation",
+  "user-intelligence-engine": "discovery",
 };
+
+/** Title-case a skill id for display: "graph-engine" -> "Graph Engine". */
+function humanizeSkillId(id: string): string {
+  return id.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+
+function frontmatterField(content: string, field: string): string {
+  const fm = content.match(/^---\n([\s\S]*?)\n---/);
+  const line = (fm ? fm[1] : "").match(new RegExp(`^${field}:\\s*(.+)$`, "m"));
+  return line ? line[1].trim() : "";
+}
+
+/**
+ * Build the skill catalog from the canonical templates.
+ *
+ * dependsOn is evidence-based: a skill "depends on" another when its own text
+ * names it. usedBy is the inverse. Both therefore stay correct automatically as
+ * skills are added, merged, or removed.
+ */
+async function buildSkillCatalog(): Promise<Record<string, SkillInfo>> {
+  const bodies = new Map<string, string>();
+  await Promise.all(
+    SKILL_NAMES.map(async (name) => {
+      bodies.set(name, await readTemplate("skills", name).catch(() => ""));
+    }),
+  );
+
+  const catalog: Record<string, SkillInfo> = {};
+  for (const id of SKILL_NAMES) {
+    const content = bodies.get(id) ?? "";
+    const description = frontmatterField(content, "description");
+    catalog[id] = {
+      name: humanizeSkillId(id),
+      category: SKILL_CATEGORIES[id] ?? "analysis",
+      description: description.length > 160 ? `${description.slice(0, 157)}…` : description,
+      usedBy: [],
+      dependsOn: SKILL_NAMES.filter((other) => other !== id && content.includes(other)),
+    };
+  }
+  for (const [id, info] of Object.entries(catalog)) {
+    for (const dep of info.dependsOn) catalog[dep]?.usedBy.push(id);
+  }
+  return catalog;
+}
 
 const CATEGORY_COLORS: Record<string, string> = {
   initialization: "#818cf8",
@@ -478,6 +288,10 @@ function safeJson(value: unknown): string {
 
 export async function generateDashboardHTML(projectRoot: string): Promise<string> {
   const vaultName = path.basename(projectRoot);
+
+  // Derived from the canonical templates on every render, so the dashboard can
+  // never drift from the skills that actually ship.
+  const SKILL_CATALOG = await buildSkillCatalog();
 
   // Read all canonical template contents
   const templates: Record<string, string> = {};
