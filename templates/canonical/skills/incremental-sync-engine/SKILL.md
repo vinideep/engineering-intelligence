@@ -11,7 +11,7 @@ Update only the intelligence affected by a specific change; never regenerate unr
 ## Inputs
 
 - A completed diff, change record, or explicitly supplied changed scope
-- Existing impact report (`$EI/reports/IMP-XXX-*.md`); if none exists for the scope, run `impact-analysis-engine` first
+- Existing impact report (`.engineering-intelligence/reports/IMP-XXX-*.md`); if none exists for the scope, run `impact-analysis-engine` first
 
 ## Deterministic first steps (run the tools, don't hand-simulate)
 
@@ -63,11 +63,11 @@ Rules: cite evidence on every entry; mark superseded decisions `Superseded` rath
 
 ## Context sync (navigation maps)
 
-Keep `$EI/context/` maps concise and navigational (tables, under ~150 lines each) — they help an agent find the right file fast, not duplicate the knowledge base. Maintain: `module-map.md`, `service-map.md`, `runtime-map.md`, `critical-paths.md`, `dangerous-areas.md`, `dependency-map.md`. Update only affected entries; remove phantom paths; cross-check against `$EI/graph/` and the real filesystem. For assembling context under a token budget, prefer `npx engineering-intelligence context "<task>" --files <...>` (the `get_context` tool) over reading maps by hand.
+Keep `.engineering-intelligence/context/` maps concise and navigational (tables, under ~150 lines each) — they help an agent find the right file fast, not duplicate the knowledge base. Maintain: `module-map.md`, `service-map.md`, `runtime-map.md`, `critical-paths.md`, `dangerous-areas.md`, `dependency-map.md`. Update only affected entries; remove phantom paths; cross-check against `.engineering-intelligence/graph/` and the real filesystem. For assembling context under a token budget, prefer `npx engineering-intelligence context "<task>" --files <...>` (the `get_context` tool) over reading maps by hand.
 
 ## Events, graphs, reports
 
-- **Events**: verify `$EI/events/*.md` guidance still matches the current contracts when API/schema/auth/feature/infra changed.
+- **Events**: verify `.engineering-intelligence/events/*.md` guidance still matches the current contracts when API/schema/auth/feature/infra changed.
 - **Graphs**: already refreshed in step 1 (incremental `map --update`); require a full remap only for broad structural changes.
 - **Report**: append a synchronization-notes section to the originating impact report recording exactly what was synced.
 

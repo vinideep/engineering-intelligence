@@ -266,6 +266,10 @@ test("runHook formats output in Cursor's contract (agent_message / followup_mess
   assert.ok(!("hookSpecificOutput" in startOut));
 
   // Record a source change (Cursor afterFileEdit → Edit), then stop must block via followup_message.
+  // The file must really exist: the gate binds receipts to bytes on disk, so it
+  // cannot (and must not) block on a path that was only mentioned.
+  await mkdir(path.join(root, "src"), { recursive: true });
+  await writeFile(path.join(root, "src/a.ts"), "export const a = 1;\n", "utf8");
   const edit = normalizeInput("cursor", JSON.stringify({ session_id: sid, hook_event_name: "afterFileEdit", file_path: path.join(root, "src/a.ts") }));
   await runHook("post-tool-use", root, edit, "cursor");
   const stop = await runHook("stop", root, { session_id: sid }, "cursor");
