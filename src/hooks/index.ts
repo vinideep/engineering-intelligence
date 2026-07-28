@@ -75,14 +75,17 @@ export interface HookConfig {
   freshnessThreshold: number;
   /** When true, PreToolUse denies edits while any intelligence doc scores < 50. */
   blockStaleEdits: boolean;
-  /** When true, Stop blocks completion if source changed but no validation ran. */
+  /** When true, Stop blocks completion unless a passing receipt covers the changes. */
   requireValidationOnStop: boolean;
+  /** Explicit verification commands; empty means auto-detect from the project. */
+  verifyCommands: string[];
 }
 
 export const DEFAULT_HOOK_CONFIG: HookConfig = {
   freshnessThreshold: 60,
   blockStaleEdits: false,
   requireValidationOnStop: false,
+  verifyCommands: [],
 };
 
 const CONFIG_PATH = ".engineering-intelligence/ei.config.json";
@@ -161,6 +164,8 @@ export function defaultConfigFile(): string {
         freshnessThreshold: DEFAULT_HOOK_CONFIG.freshnessThreshold,
         blockStaleEdits: DEFAULT_HOOK_CONFIG.blockStaleEdits,
         requireValidationOnStop: DEFAULT_HOOK_CONFIG.requireValidationOnStop,
+        // Empty = auto-detect the project's own check commands.
+        verifyCommands: DEFAULT_HOOK_CONFIG.verifyCommands,
       },
     },
     null,
@@ -194,35 +199,17 @@ export function isSourceFile(relPath: string): boolean {
   return SOURCE_EXTENSIONS.has(path.extname(normalized).toLowerCase());
 }
 
+/**
+ * Whether a shell command *looks* like a check. Retained only as a UX hint: when
+ * the agent runs something test-shaped we remind it that a receipt is what the
+ * gate accepts. It is deliberately NOT the gate — see src/verify. The previous
+ * gate used exactly this pattern and was satisfied by `rm -rf build`.
+ */
 const VALIDATION_PATTERN =
-  /\b(test|tests|spec|jest|vitest|mocha|ava|pytest|tox|nox|unittest|lint|eslint|ruff|flake8|pylint|tsc|typecheck|type-check|mypy|pyright|build|check|cargo\s+(test|check|clippy)|go\s+(test|vet|build)|gradle|mvn|rspec|phpunit|dotnet\s+test)\b/i;
+  /\b(jest|vitest|mocha|pytest|tox|nox|unittest|eslint|ruff|flake8|pylint|tsc|typecheck|type-check|mypy|pyright|cargo\s+(test|check|clippy)|go\s+(test|vet)|gradle|mvn|rspec|phpunit|dotnet\s+test|npm\s+(test|run\s+\S+)|pnpm\s+\S+|yarn\s+\S+)\b/i;
 
-/** True when a shell command looks like it exercises the code (tests/types/lint/build). */
-export function isValidationCommand(command: string): boolean {
+export function looksLikeValidationCommand(command: string): boolean {
   return VALIDATION_PATTERN.test(command);
-}
-
-/** Best-effort discovery of the project's own check commands, for guidance text. */
-async function detectProjectCheckCommands(root: string): Promise<string[]> {
-  const commands: string[] = [];
-  try {
-    const pkgRaw = await readFile(path.join(root, "package.json"), "utf8");
-    const scripts = (JSON.parse(pkgRaw) as { scripts?: Record<string, string> }).scripts ?? {};
-    for (const key of ["test", "lint", "typecheck", "type-check", "build", "check", "ci"]) {
-      if (scripts[key]) commands.push(key === "test" ? "npm test" : `npm run ${key}`);
-    }
-  } catch { /* no package.json */ }
-  if (commands.length === 0) {
-    for (const [file, cmd] of [
-      ["pyproject.toml", "pytest"],
-      ["setup.cfg", "pytest"],
-      ["Cargo.toml", "cargo test"],
-      ["go.mod", "go test ./..."],
-    ] as const) {
-      try { await readFile(path.join(root, file), "utf8"); commands.push(cmd); break; } catch { /* next */ }
-    }
-  }
-  return commands;
 }
 
 // ---------------------------------------------------------------------------
@@ -394,6 +381,9 @@ async function onPostToolUse(root: string, input: HookInput): Promise<HookDecisi
   const state = await readState(root, input);
   let dirty = false;
 
+  // Edits are still recorded, but only as a hint for messaging. The Stop gate
+  // derives the real change set from git, so edits this matcher never sees
+  // (sed -i, patch, a subagent) are still covered.
   if (/^(Edit|Write|NotebookEdit|MultiEdit)$/.test(tool)) {
     const targetPath = input.tool_input?.file_path;
     if (targetPath) {
@@ -405,9 +395,7 @@ async function onPostToolUse(root: string, input: HookInput): Promise<HookDecisi
     }
   } else if (tool === "Bash") {
     const command = input.tool_input?.command ?? "";
-    // Only credit commands that actually succeeded, when the host reports it.
-    const succeeded = input.tool_response?.success !== false;
-    if (command && succeeded && isValidationCommand(command)) {
+    if (command && looksLikeValidationCommand(command)) {
       const trimmed = command.slice(0, 200);
       if (!state.validationCommands.includes(trimmed)) {
         state.validationCommands.push(trimmed);
@@ -433,25 +421,45 @@ async function onStop(root: string, input: HookInput, config: HookConfig): Promi
   // Avoid infinite loops: if we already blocked and the model is re-stopping, let it go.
   if (input.stop_hook_active) return ALLOW;
 
-  const state = await readState(root, input);
-  if (state.changedFiles.length === 0) return ALLOW; // no code changed
-  if (state.validationCommands.length > 0) return ALLOW; // something was run
+  const { changedFiles, coverageFor, detectCheckCommands } = await import("../verify/index.js");
 
-  const checks = await detectProjectCheckCommands(root);
-  const suggestion = checks.length > 0
-    ? `Run one of: ${checks.join(", ")}.`
-    : "Run this project's tests / type-check / lint before finishing.";
-  const changed = state.changedFiles.slice(0, 8).map((f) => `  - ${f}`).join("\n");
-  return block(
-    [
-      "Engineering Intelligence: source files changed but no validation command ran this session.",
-      "Environmental backpressure requires the environment — not inspection — to confirm the change.",
-      "Changed files:",
-      changed,
-      suggestion,
-      "If validation is genuinely unavailable, say so explicitly, then stop again.",
-    ].join("\n"),
+  // Derive the change set from git, not from what the tool matcher happened to see.
+  // Fall back to hook-tracked edits when git is unavailable (e.g. no repo).
+  const state = await readState(root, input);
+  const fromGit = await changedFiles(root);
+  const candidates = (fromGit.length > 0 ? fromGit : state.changedFiles).filter(isSourceFile);
+  if (candidates.length === 0) return ALLOW; // no source changed
+
+  const coverage = await coverageFor(root, candidates);
+  if (coverage.covered) return ALLOW; // a passing receipt vouches for these exact bytes
+
+  const receipts = await (await import("../verify/index.js")).readReceipts(root);
+  const lastFailed = receipts.find((r) => r.verdict === "fail");
+  const checks = config.verifyCommands.length > 0
+    ? config.verifyCommands
+    : await detectCheckCommands(root);
+
+  const reason: string[] = [
+    "Engineering Intelligence: these source changes have no passing verification receipt.",
+    "Validation must be a fact this tool produced, not a command that looked test-shaped.",
+    "Unverified files:",
+    ...coverage.uncovered.slice(0, 8).map((f) => `  - ${f}`),
+  ];
+  if (coverage.uncovered.length > 8) reason.push(`  …and ${coverage.uncovered.length - 8} more`);
+
+  if (lastFailed && receipts[0] === lastFailed) {
+    const failing = lastFailed.commands.find((c) => c.exitCode !== 0);
+    if (failing) {
+      reason.push(`The last run FAILED: \`${failing.command}\` exited ${failing.exitCode}.`);
+      if (failing.outputTail) reason.push(failing.outputTail.trim().split("\n").slice(-6).join("\n"));
+    }
+  }
+  reason.push(
+    checks.length > 0
+      ? `Run \`npx engineering-intelligence verify .\` (will run: ${checks.join(", ")}).`
+      : "No check command could be detected. Configure `verify.commands` in .engineering-intelligence/ei.config.json, or state explicitly that validation is unavailable and stop again.",
   );
+  return block(reason.join("\n"));
 }
 
 // ---------------------------------------------------------------------------

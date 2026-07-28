@@ -291,6 +291,10 @@ npx engineering-intelligence visualize . --open
 npx engineering-intelligence freshness . --threshold 60
 npx engineering-intelligence freshness . --json
 
+# Verify the working tree and write a receipt (exit 1 if checks fail)
+npx engineering-intelligence verify .
+npx engineering-intelligence verify . --json
+
 # Extract git intelligence — hotspots, change coupling, ownership (last 90 days by default)
 npx engineering-intelligence git-analysis . --window 90
 npx engineering-intelligence git-analysis . --json
@@ -405,8 +409,27 @@ contract:
 |--------|-------------|
 | Session start | Injects the current freshness / drift summary so the session starts from real intelligence state. |
 | Before an edit | Warns (or, opt-in, **denies**) when the documentation covering that source is stale. |
-| After edits / shell | Silently records changed source files and the validation commands that actually ran. |
-| Stop | Opt-in: **blocks "done"** when source changed but no test / type-check / lint command was run this session. |
+| After edits / shell | Silently records changed source files for messaging. |
+| Stop | Opt-in: **blocks "done"** unless a passing **verification receipt** covers the current bytes of every changed source file. |
+
+### Verification receipts
+
+`npx engineering-intelligence verify .` runs the project's own check commands,
+records their **real exit codes**, and writes a receipt binding the outcome to a
+`sha256` of every changed file (change set taken from `git status -uall`, so
+edits made via `sed`, `patch` or a subagent are covered too).
+
+That receipt is the only thing the Stop gate accepts. Consequences:
+
+- A command that merely *looks* like a test (`rm -rf build`, `echo check`,
+  `git commit -m "add tests"`) cannot satisfy it — the earlier word-matching
+  gate was defeated by exactly these.
+- A **failing** command produces a `fail` verdict, never a pass.
+- Editing a file after verifying it **invalidates** the receipt automatically,
+  because the hash no longer matches. Re-verify after every edit.
+- Outside a git repo the receipt records `gitAvailable: false` and coverage
+  degrades to an mtime comparison — weaker, and labelled as such rather than
+  pretending to a guarantee it cannot make.
 
 This turns the *environmental backpressure* principle ("never report validation
 as passed unless the command actually ran") from a request into an enforced gate.

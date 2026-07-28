@@ -14,12 +14,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 
+import { execFileSync } from "node:child_process";
 import {
   runHook,
   parseHookInput,
   normalizeInput,
   isSourceFile,
-  isValidationCommand,
+  looksLikeValidationCommand,
   isHookHost,
   loadHookConfig,
   DEFAULT_HOOK_CONFIG,
@@ -27,6 +28,7 @@ import {
   cursorHookSettings,
   defaultConfigFile,
 } from "../dist/hooks/index.js";
+import { runVerification } from "../dist/verify/index.js";
 
 async function tmpRoot(config) {
   const root = await mkdtemp(path.join(tmpdir(), "ei-hooks-"));
@@ -38,6 +40,21 @@ async function tmpRoot(config) {
       "utf8",
     );
   }
+  return root;
+}
+
+/** A real git repo with a committed baseline and a passing `npm test`, so the
+ *  receipt-based Stop gate has genuine change detection to work against. */
+async function gitRoot(config) {
+  const root = await tmpRoot(config);
+  const git = (...args) => execFileSync("git", args, { cwd: root, stdio: "pipe" });
+  git("init");
+  git("config", "user.email", "t@t.co");
+  git("config", "user.name", "t");
+  await writeFile(path.join(root, "package.json"), JSON.stringify({ scripts: { test: "node -e \"0\"" } }), "utf8");
+  await mkdir(path.join(root, "src"), { recursive: true });
+  git("add", "-A");
+  git("commit", "-m", "base");
   return root;
 }
 
@@ -59,14 +76,18 @@ test("isSourceFile classifies product code but excludes intelligence/config/vend
   assert.equal(isSourceFile("dist/app.js"), false);
 });
 
-test("isValidationCommand recognizes test/type/lint/build commands", () => {
-  assert.equal(isValidationCommand("npm test"), true);
-  assert.equal(isValidationCommand("npx tsc --noEmit"), true);
-  assert.equal(isValidationCommand("pytest -q"), true);
-  assert.equal(isValidationCommand("cargo test"), true);
-  assert.equal(isValidationCommand("npm run lint"), true);
-  assert.equal(isValidationCommand("ls -la"), false);
-  assert.equal(isValidationCommand("git status"), false);
+test("looksLikeValidationCommand is a UX hint only, and no longer gates anything", () => {
+  assert.equal(looksLikeValidationCommand("npm test"), true);
+  assert.equal(looksLikeValidationCommand("npx tsc --noEmit"), true);
+  assert.equal(looksLikeValidationCommand("pytest -q"), true);
+  assert.equal(looksLikeValidationCommand("cargo test"), true);
+  assert.equal(looksLikeValidationCommand("ls -la"), false);
+  assert.equal(looksLikeValidationCommand("git status"), false);
+  // These defeated the OLD gate. They may still look test-shaped to a human, but
+  // nothing about this function can satisfy the Stop gate any more — only a receipt can.
+  assert.equal(looksLikeValidationCommand("rm -rf build"), false);
+  assert.equal(looksLikeValidationCommand("echo check"), false);
+  assert.equal(looksLikeValidationCommand("git commit -m 'add tests'"), false);
 });
 
 test("loadHookConfig merges overrides onto defaults and falls back safely", async () => {
@@ -80,7 +101,7 @@ test("loadHookConfig merges overrides onto defaults and falls back safely", asyn
   assert.deepEqual(await loadHookConfig(bare), DEFAULT_HOOK_CONFIG);
 });
 
-test("PostToolUse records changed source files and successful validation commands", async () => {
+test("PostToolUse records changed source files and check-shaped commands", async () => {
   const root = await tmpRoot();
   const sid = "sess";
   const base = { session_id: sid };
@@ -88,45 +109,68 @@ test("PostToolUse records changed source files and successful validation command
   await runHook("post-tool-use", root, { ...base, tool_name: "Write", tool_input: { file_path: path.join(root, "src/a.ts") } });
   await runHook("post-tool-use", root, { ...base, tool_name: "Edit", tool_input: { file_path: path.join(root, "README.md") } });
   await runHook("post-tool-use", root, { ...base, tool_name: "Bash", tool_input: { command: "ls" } });
-  await runHook("post-tool-use", root, { ...base, tool_name: "Bash", tool_input: { command: "npm test" }, tool_response: { success: true } });
-  await runHook("post-tool-use", root, { ...base, tool_name: "Bash", tool_input: { command: "npm run lint" }, tool_response: { success: false } });
+  await runHook("post-tool-use", root, { ...base, tool_name: "Bash", tool_input: { command: "npm test" } });
 
   const state = await readState(root, sid);
   assert.deepEqual(state.changedFiles, ["src/a.ts"], "only source files are tracked");
-  assert.deepEqual(state.validationCommands, ["npm test"], "only successful validation commands count");
+  assert.deepEqual(state.validationCommands, ["npm test"], "check-shaped commands recorded as a hint");
 });
 
 test("Stop is a no-op unless requireValidationOnStop is enabled", async () => {
-  const root = await tmpRoot(); // default config: gate off
-  const sid = "off";
-  await runHook("post-tool-use", root, { session_id: sid, tool_name: "Write", tool_input: { file_path: path.join(root, "src/a.ts") } });
-  const result = await runHook("stop", root, { session_id: sid });
+  const root = await gitRoot(); // default config: gate off
+  await writeFile(path.join(root, "src/a.ts"), "export const a = 1;\n", "utf8");
+  const result = await runHook("stop", root, { session_id: "off" });
   assert.equal(result.exitCode, 0);
   assert.equal(result.stdout, undefined, "gate off → never blocks");
 });
 
-test("Stop blocks unvalidated code change, allows after validation, and never loops", async () => {
-  const root = await tmpRoot({ requireValidationOnStop: true });
-  await writeFile(path.join(root, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }), "utf8");
+test("Stop requires a passing receipt covering the current bytes", async () => {
+  const root = await gitRoot({ requireValidationOnStop: true });
   const sid = "gate";
+  const stop = async (extra = {}) => runHook("stop", root, { session_id: sid, ...extra });
 
-  // No changes yet → allow.
-  assert.equal((await runHook("stop", root, { session_id: sid })).stdout, undefined);
+  // Clean tree → allow.
+  assert.equal((await stop()).stdout, undefined, "no source change → allow");
 
-  // Source changed, nothing run → block.
-  await runHook("post-tool-use", root, { session_id: sid, tool_name: "Write", tool_input: { file_path: path.join(root, "src/a.ts") } });
-  const blocked = await runHook("stop", root, { session_id: sid });
-  assert.ok(blocked.stdout, "should block");
+  // Source changed, nothing verified → block.
+  await writeFile(path.join(root, "src/a.ts"), "export const a = 1;\n", "utf8");
+  const blocked = await stop();
+  assert.ok(blocked.stdout, "unverified change must block");
   const decision = JSON.parse(blocked.stdout);
   assert.equal(decision.decision, "block");
-  assert.match(decision.reason, /npm test/, "reason surfaces the real project check command");
+  assert.match(decision.reason, /src\/a\.ts/, "names the unverified file");
+  assert.match(decision.reason, /npm test/, "surfaces the real project check command");
 
-  // The stop_hook_active guard prevents an infinite block loop.
-  assert.equal((await runHook("stop", root, { session_id: sid, stop_hook_active: true })).stdout, undefined);
+  // THE OLD BYPASS: a test-shaped shell command must no longer satisfy the gate.
+  await runHook("post-tool-use", root, { session_id: sid, tool_name: "Bash", tool_input: { command: "rm -rf build" } });
+  await runHook("post-tool-use", root, { session_id: sid, tool_name: "Bash", tool_input: { command: "npm test" } });
+  assert.ok((await stop()).stdout, "claiming to have run tests must not satisfy the gate");
 
-  // Validation runs → allow.
-  await runHook("post-tool-use", root, { session_id: sid, tool_name: "Bash", tool_input: { command: "npm test" }, tool_response: { success: true } });
-  assert.equal((await runHook("stop", root, { session_id: sid })).stdout, undefined, "validated → allow");
+  // The stop_hook_active guard still prevents an infinite block loop.
+  assert.equal((await stop({ stop_hook_active: true })).stdout, undefined);
+
+  // A real verification run produces a receipt → allow.
+  const { receipt } = await runVerification(root);
+  assert.equal(receipt.verdict, "pass");
+  assert.equal((await stop()).stdout, undefined, "passing receipt → allow");
+
+  // Editing after verification invalidates the receipt → block again.
+  await writeFile(path.join(root, "src/a.ts"), "export const a = 2;\n", "utf8");
+  assert.ok((await stop()).stdout, "receipt must not vouch for bytes it never saw");
+});
+
+test("Stop stays blocked when verification actually fails", async () => {
+  const root = await gitRoot({ requireValidationOnStop: true });
+  // A check command that always fails.
+  await writeFile(path.join(root, "package.json"), JSON.stringify({ scripts: { test: "node -e \"process.exit(1)\"" } }), "utf8");
+  await writeFile(path.join(root, "src/a.ts"), "export const a = 1;\n", "utf8");
+
+  const { receipt } = await runVerification(root);
+  assert.equal(receipt.verdict, "fail", "a failing command must never produce a passing receipt");
+
+  const blocked = await runHook("stop", root, { session_id: "failing" });
+  assert.ok(blocked.stdout, "failed verification must still block");
+  assert.match(JSON.parse(blocked.stdout).reason, /FAILED/, "surfaces the failure");
 });
 
 test("SessionStart resets session state and injects context", async () => {

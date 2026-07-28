@@ -8,6 +8,10 @@ version: 1.0.0
 
 Use this skill whenever code is generated or modified. The environment, not subjective inspection alone, supplies the feedback loop.
 
+**Run the deterministic verifier:** `npx engineering-intelligence verify .` executes the project's own check commands, records their real exit codes, and writes a **receipt** binding the result to a sha256 of every changed file. Exit 1 means the tree is not verified.
+
+This is what "validated" means here — a receipt this tool produced, not a command that looked test-shaped. When the Stop gate is enabled it accepts nothing else, and a receipt stops counting the moment any covered file changes, so re-verify after every edit. Configure `hooks.verifyCommands` in `.engineering-intelligence/ei.config.json` when detection picks the wrong commands. Use the steps below to decide what to fix when the verifier reports failures.
+
 ## Procedure
 
 1. Detect available validation commands from package manifests, build files, CI config, and README instructions.

@@ -10,9 +10,9 @@ import { doctor } from "../validation/index.js";
 import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "claims" | "context" | "telemetry";
+type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "verify" | "claims" | "context" | "telemetry";
 
-const COMMANDS: Command[] = ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "claims", "context", "telemetry"];
+const COMMANDS: Command[] = ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "verify", "claims", "context", "telemetry"];
 
 interface Options {
   command: Command;
@@ -66,6 +66,7 @@ Usage:
   engineering-intelligence user-profile [path] [--json]
   engineering-intelligence hook <event> [path]   (internal: driven by IDE lifecycle hooks)
   engineering-intelligence gate <name> [path] [--base <ref>] [--json]
+  engineering-intelligence verify [path] [--json]
   engineering-intelligence claims verify [path] [--json] [--strict]
   engineering-intelligence claims add --statement "..." --evidence "src/a.ts:10-20,src/b.ts" [path]
   engineering-intelligence claims list [path] [--json]
@@ -320,6 +321,33 @@ async function main(): Promise<void> {
         for (const s of stale) output.write(`    ${s.score.toString().padStart(3)} ${s.docPath}\n`);
       }
     }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "verify") {
+    const { runVerification } = await import("../verify/index.js");
+    const { loadHookConfig } = await import("../hooks/index.js");
+    const config = await loadHookConfig(options.root);
+    const { receipt, noCommands } = await runVerification(options.root, {
+      commands: config.verifyCommands.length > 0 ? config.verifyCommands : undefined,
+    });
+    if (options.json) {
+      output.write(`${JSON.stringify(receipt, null, 2)}\n`);
+    } else if (noCommands) {
+      output.write("No check commands detected. Set hooks.verifyCommands in .engineering-intelligence/ei.config.json.\n");
+    } else {
+      for (const run of receipt.commands) {
+        output.write(`${run.exitCode === 0 ? "PASS" : "FAIL"}  ${run.command}  (${run.durationMs}ms)\n`);
+      }
+      const covered = Object.keys(receipt.files).length;
+      output.write(`Verdict: ${receipt.verdict.toUpperCase()} — receipt covers ${covered} changed file(s).\n`);
+      if (receipt.verdict === "fail") {
+        const failing = receipt.commands.find((r) => r.exitCode !== 0);
+        if (failing?.outputTail) output.write(`${failing.outputTail.trimEnd()}\n`);
+      }
+    }
+    process.exitCode = receipt.verdict === "pass" ? 0 : 1;
     if (readline) readline.close();
     return;
   }
