@@ -19,7 +19,7 @@ Write structured clarification question files rather than asking questions inlin
 
 - Original request or initiative description
 - Ambiguity analysis from calling skill (requirement-scoper, backlog-decomposition-engine)
-- Optional: project architecture from `.engineering-intelligence/knowledge-base/`, `$EI graph/`
+- Optional: project architecture from `.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/graph/`
 
 ## Procedure
 
@@ -38,7 +38,7 @@ Cap at 8 questions per file. Write a second file for additional batches.
 
 ### 2. Write the Question File
 
-Save to `$AIDLC open-questions/YYYYMMDD-{slug}.md`:
+Save to `.engineering-intelligence/aidlc/open-questions/YYYYMMDD-{slug}.md`:
 
 ```markdown
 # Clarification Questions: {topic}
@@ -82,7 +82,7 @@ Guidelines for good questions:
 
 After writing the file, output exactly this and nothing else:
 
-> Questions written to `$AIDLC open-questions/{filename}`.
+> Questions written to `.engineering-intelligence/aidlc/open-questions/{filename}`.
 >
 > **Next step:** Open the file, check boxes to select your answers (you may select multiple), then return here and say **"questions answered, continue"**.
 
@@ -99,7 +99,7 @@ When user signals answers are ready:
 
 ## Output
 
-- `$AIDLC open-questions/YYYYMMDD-{slug}.md` — question file (before resume)
+- `.engineering-intelligence/aidlc/open-questions/YYYYMMDD-{slug}.md` — question file (before resume)
 - On resume: confirmed decision set, referenced by path in the calling skill's output
 
 ## Rules

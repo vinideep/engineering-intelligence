@@ -154,7 +154,7 @@ test("per-adapter per-invocation token reduction meets floor and is printed", as
   console.log("  estimateTokens uses length/4; relative deltas are regression-guarded.\n");
 });
 
-test("all adapters ship skill files with path aliases applied (SmartCrush + aliasing universal)", async () => {
+test("all adapters ship SmartCrushed skill files with literal paths and byte-0 frontmatter", async () => {
   const skippedIDEs = new Set(["cursor"]);
 
   for (const ide of Object.keys(MIN_REDUCTION_PCT)) {
@@ -164,10 +164,15 @@ test("all adapters ship skill files with path aliases applied (SmartCrush + alia
     const skillFile = files.find(f => f.path.endsWith("/aidlc-lifecycle-engine/SKILL.md"));
     assert.ok(skillFile, `${ide}: aidlc-lifecycle-engine/SKILL.md not found`);
 
+    assert.ok(
+      skillFile.content.startsWith("---\n"),
+      `${ide}: skill files must start with frontmatter at byte 0 or the host cannot read name/description`,
+    );
+
     assert.match(
       skillFile.content,
-      /\$AIDLC/,
-      `${ide}: skill files must contain $AIDLC alias (path aliasing not applied)`,
+      /\.engineering-intelligence\/aidlc\//,
+      `${ide}: skill files must carry literal runtime paths, not aliases`,
     );
 
     assert.doesNotMatch(
@@ -258,10 +263,11 @@ test("KV-cache pinned routing files sort first across every IDE that ships them"
   }
 });
 
-test("cursor adapter optimizes command files with SmartCrush and path aliases", async () => {
+test("cursor adapter optimizes command files with SmartCrush and literal paths", async () => {
   const files = await renderAdapters(["cursor"]);
   const engCmd = files.find(f => f.path === ".cursor/commands/engineering-intelligence.md");
   assert.ok(engCmd, "cursor must ship engineering-intelligence command");
-  assert.match(engCmd.content, /\$AIDLC/, "cursor commands must use $AIDLC alias");
+  assert.match(engCmd.content, /\.engineering-intelligence\//, "cursor commands must use literal runtime paths");
+  assert.doesNotMatch(engCmd.content, /\$AIDLC|\$EI/, "cursor commands must not contain aliases");
   assert.doesNotMatch(engCmd.content, /^version:/m, "cursor commands must not contain version:");
 });

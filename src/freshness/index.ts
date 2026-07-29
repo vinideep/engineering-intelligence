@@ -6,7 +6,7 @@ import { execSync } from "node:child_process";
 // Types
 // ---------------------------------------------------------------------------
 
-export type FreshnessStatus = "fresh" | "aging" | "stale" | "very-stale" | "obsolete";
+export type FreshnessStatus = "fresh" | "aging" | "stale" | "very-stale" | "obsolete" | "unverifiable";
 export type FreshnessAction = "none" | "incremental-sync" | "full-regeneration" | "manual-review";
 
 export interface StaleSource {
@@ -120,6 +120,7 @@ function statusFromScore(score: number): FreshnessStatus {
 }
 
 function actionFromStatus(status: FreshnessStatus): FreshnessAction {
+  if (status === "unverifiable") return "manual-review";
   if (status === "fresh" || status === "aging") return "none";
   if (status === "stale") return "incremental-sync";
   if (status === "very-stale") return "full-regeneration";
@@ -135,6 +136,22 @@ async function scoreDocument(docPath: string, root: string): Promise<DocumentSco
 
   const docLastUpdated = extractDocTimestamp(content);
   const evidencePaths = extractEvidencePaths(content);
+
+  // A document with no evidence citations cannot be checked against anything.
+  // Previously it kept the full 100 and reported "fresh", so a placeholder
+  // outscored a conscientious doc — inverting the incentive the whole product
+  // depends on. Say "unverifiable" instead of pretending to know.
+  if (evidencePaths.length === 0) {
+    return {
+      docPath,
+      score: 0,
+      status: "unverifiable",
+      docLastUpdated: docLastUpdated?.toISOString() ?? null,
+      staleSources: [],
+      deletedSources: [],
+      action: "manual-review",
+    };
+  }
 
   let score = 100;
   const staleSources: StaleSource[] = [];
@@ -157,13 +174,14 @@ async function scoreDocument(docPath: string, root: string): Promise<DocumentSco
     }
   }
 
-  // Age penalty
+  // Age penalty. Clamped at 0 so a document claiming a FUTURE "Last updated"
+  // date cannot earn a negative penalty — i.e. a bonus — and score above 100.
   if (docLastUpdated) {
     const ageDays = daysBetween(docLastUpdated, now);
-    score -= Math.min(20, ageDays * 0.5);
+    score -= Math.max(0, Math.min(20, ageDays * 0.5));
   }
 
-  score = Math.max(0, Math.round(score));
+  score = Math.max(0, Math.min(100, Math.round(score)));
   const status = statusFromScore(score);
 
   return {
@@ -221,7 +239,12 @@ function computeDriftDecision(
   scores: DocumentScore[],
   threshold: number,
 ): FreshnessReport["driftDecision"] {
-  const minScore = scores.reduce((min, s) => Math.min(min, s.score), 100);
+  // "unverifiable" means we have no evidence to check against — that is missing
+  // information, not proof of drift. Counting it as score 0 would block every
+  // edit in any repo containing one uncited document. It is surfaced in the
+  // report and as a manual-review action instead.
+  const checkable = scores.filter((s) => s.status !== "unverifiable");
+  const minScore = checkable.reduce((min, s) => Math.min(min, s.score), 100);
   if (minScore < 50) return "Block implementation";
   if (minScore < threshold) return "Sync before implementation";
   return "Proceed";
@@ -232,13 +255,13 @@ function computeDriftDecision(
 // ---------------------------------------------------------------------------
 
 const STATUS_ICON: Record<FreshnessStatus, string> = {
-  fresh: "🟢", aging: "🟡", stale: "🟠", "very-stale": "🔴", obsolete: "⛔",
+  fresh: "🟢", aging: "🟡", stale: "🟠", "very-stale": "🔴", obsolete: "⛔", unverifiable: "⚪",
 };
 
 function renderReport(report: FreshnessReport): string {
   const { generatedAt, threshold, scores, driftDecision } = report;
 
-  const counts = { fresh: 0, aging: 0, stale: 0, "very-stale": 0, obsolete: 0 };
+  const counts = { fresh: 0, aging: 0, stale: 0, "very-stale": 0, obsolete: 0, unverifiable: 0 };
   for (const s of scores) counts[s.status]++;
 
   const summaryRows = Object.entries(counts)

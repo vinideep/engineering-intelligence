@@ -85,6 +85,55 @@ npx engineering-intelligence install . --ide claude-code --yes
 
 That's it. The agent now plans, implements, validates, and self-documents.
 
+### The v3 loop — what actually runs
+
+Four commands do the real work. Everything else is guidance layered on top.
+
+```bash
+# 1. Map the code. Builds a validated dependency graph; anything it cannot
+#    resolve is reported in `unknowns` rather than guessed.
+npx engineering-intelligence map .
+
+# 2. Compute facts. Extracts module imports, package dependencies and HTTP
+#    routes as *derived* claims — statements the tool can re-compute later.
+npx engineering-intelligence claims derive .
+
+# 3. Work. Inside your IDE, as usual:
+#      /engineering-intelligence Add rate limiting to the auth endpoints
+#    The agent queries `get_context` instead of re-reading your codebase.
+
+# 4. Prove it. Runs YOUR check commands and writes a receipt bound to a
+#    sha256 of every changed file. Exit 1 if anything failed.
+npx engineering-intelligence verify .
+```
+
+Then, any time you want to know whether the docs still match the code:
+
+```bash
+npx engineering-intelligence claims verify --strict   # exit 1 on refuted/stale
+npx engineering-intelligence gate api-diff . --base origin/main
+```
+
+**Turn on enforcement** when your team is ready — both hard gates ship off:
+
+```jsonc
+// .engineering-intelligence/ei.config.json  (yours to edit; never overwritten)
+{
+  "hooks": {
+    "requireValidationOnStop": true,  // block "done" without a passing receipt
+    "blockStaleEdits": false          // deny edits while docs are stale
+  }
+}
+```
+
+**In CI**, the same verdicts that interrupt an edit fail the build:
+
+```bash
+npx engineering-intelligence gate migration-lint . --base origin/main
+npx engineering-intelligence claims verify . --strict
+npx engineering-intelligence verify .
+```
+
 ---
 
 ## 🖥 Supported IDEs
@@ -291,6 +340,10 @@ npx engineering-intelligence visualize . --open
 npx engineering-intelligence freshness . --threshold 60
 npx engineering-intelligence freshness . --json
 
+# Verify the working tree and write a receipt (exit 1 if checks fail)
+npx engineering-intelligence verify .
+npx engineering-intelligence verify . --json
+
 # Extract git intelligence — hotspots, change coupling, ownership (last 90 days by default)
 npx engineering-intelligence git-analysis . --window 90
 npx engineering-intelligence git-analysis . --json
@@ -298,6 +351,10 @@ npx engineering-intelligence git-analysis . --json
 # Run a deterministic safety gate (exits 1 on a hard failure — usable in CI)
 npx engineering-intelligence gate env-vars .            # env refs vs .env.example
 npx engineering-intelligence gate dead-exports .        # JS/TS exports never imported
+
+# env-vars and dead-exports emit only warnings, so by default they report but never
+# fail. Promote them to blocking checks with --fail-on:
+npx engineering-intelligence gate dead-exports . --fail-on warning
 npx engineering-intelligence gate api-diff . --base origin/main   # removed/changed endpoints
 npx engineering-intelligence gate migration-lint . --json         # destructive/locking migrations
 
@@ -305,8 +362,9 @@ npx engineering-intelligence gate migration-lint . --json         # destructive/
 npx engineering-intelligence context "add rate limiting" --files src/auth.ts --budget 2000
 
 # Record and verify hash-pinned claims about the code
-npx engineering-intelligence claims add --statement "auth uses JWT" --evidence "src/auth.ts:12-40"
-npx engineering-intelligence claims verify --strict     # exits 1 if any claim is stale/missing
+npx engineering-intelligence claims derive .            # compute derived facts from source
+npx engineering-intelligence claims add --statement "auth uses JWT" --evidence "src/auth.ts:12-40" --author "you"
+npx engineering-intelligence claims verify --strict     # exits 1 if any claim is refuted/stale/missing
 
 # Report observed token usage from real sessions (populated by the Stop hook)
 npx engineering-intelligence telemetry --json
@@ -397,7 +455,13 @@ enhancement on top.
 ### Local lifecycle hooks — Claude Code & Cursor
 
 Installing for `claude-code` writes `.claude/settings.json`; installing for
-`cursor` writes `.cursor/hooks.json`. Both wire the **same** deterministic engine
+`cursor` writes `.cursor/hooks.json`. **If you already have one, it is merged,
+not replaced** — your `permissions`, `model`, `env` and your own hooks are left
+untouched, our entries are added alongside, re-installing never duplicates them,
+and `uninstall` takes back only what we added. The install also registers the
+MCP server (`.mcp.json` / `.cursor/mcp.json`) so the tools below are reachable
+without any manual setup, and seeds `.engineering-intelligence/ei.config.json`
+once — after that it is yours to edit, and editing it never causes a conflict. Both wire the **same** deterministic engine
 (`engineering-intelligence hook <event>`), just translated to each host's hook
 contract:
 
@@ -405,8 +469,27 @@ contract:
 |--------|-------------|
 | Session start | Injects the current freshness / drift summary so the session starts from real intelligence state. |
 | Before an edit | Warns (or, opt-in, **denies**) when the documentation covering that source is stale. |
-| After edits / shell | Silently records changed source files and the validation commands that actually ran. |
-| Stop | Opt-in: **blocks "done"** when source changed but no test / type-check / lint command was run this session. |
+| After edits / shell | Silently records changed source files for messaging. |
+| Stop | Opt-in: **blocks "done"** unless a passing **verification receipt** covers the current bytes of every changed source file. |
+
+### Verification receipts
+
+`npx engineering-intelligence verify .` runs the project's own check commands,
+records their **real exit codes**, and writes a receipt binding the outcome to a
+`sha256` of every changed file (change set taken from `git status -uall`, so
+edits made via `sed`, `patch` or a subagent are covered too).
+
+That receipt is the only thing the Stop gate accepts. Consequences:
+
+- A command that merely *looks* like a test (`rm -rf build`, `echo check`,
+  `git commit -m "add tests"`) cannot satisfy it — the earlier word-matching
+  gate was defeated by exactly these.
+- A **failing** command produces a `fail` verdict, never a pass.
+- Editing a file after verifying it **invalidates** the receipt automatically,
+  because the hash no longer matches. Re-verify after every edit.
+- Outside a git repo the receipt records `gitAvailable: false` and coverage
+  degrades to an mtime comparison — weaker, and labelled as such rather than
+  pretending to a guarantee it cannot make.
 
 This turns the *environmental backpressure* principle ("never report validation
 as passed unless the command actually ran") from a request into an enforced gate.
@@ -441,18 +524,35 @@ The knowledge base is only useful if a model can trust it and reach it cheaply.
 Two computed capabilities make that real — and are what let **small models** work
 from retrieved facts instead of re-reading source.
 
-**Verifiable claims.** A *claim* is one factual statement bound to the exact
-evidence spans that justify it, each pinned by a content hash. Re-hashing the
-spans proves — deterministically, no LLM — whether the fact still holds:
+**Verifiable claims — and the honest limit of the word "verified".**
+
+An anchor proves a symbol still *exists*. It does **not** prove the sentence bound
+to it is *true*: a claim like "the auth endpoint is rate-limited", pinned to a
+handler with no rate limiting, would resolve, hash cleanly, and report `verified`
+forever. That is an expensive mtime wearing a green checkmark — worse than no
+claim, because it gets trusted. So claims come in two kinds and only one can be
+called a fact:
+
+| Kind | Statement comes from | Verification | Best status |
+|---|---|---|---|
+| **derived** | rendered from a machine-extracted descriptor | the fact is **re-computed from source**, so the sentence itself is checked | `verified` — or `refuted` when it stops being true |
+| **asserted** | free text from a human or model | evidence hash only; nothing checks the sentence | `unverified` — never `verified` |
 
 ```bash
-npx engineering-intelligence claims add --statement "auth uses JWT verified in middleware" --evidence "src/auth/mw.ts:12-40"
-npx engineering-intelligence claims verify --strict   # verified ✅ / stale 🔄 / missing ❌
+# Compute the derived baseline: module imports, package dependencies, HTTP routes
+npx engineering-intelligence claims derive .      # 102 facts on this repo, zero prompting
+
+# Record an unchecked note — requires an author, and can never become a "fact"
+npx engineering-intelligence claims add --statement "auth uses JWT" \
+  --evidence "src/auth/mw.ts:12-40" --author "you"
+
+npx engineering-intelligence claims verify --strict   # exits 1 on refuted/stale/missing
 ```
 
-Unlike mtime-based freshness, editing the cited lines flips exactly that claim
-stale; unrelated edits don't. The `initialize`/`validate` skills author claims as
-they build the knowledge base.
+Because derived facts are re-derived rather than re-hashed, deleting a route is
+caught even though its file still exists and still hashes identically. `get_context`
+serves derived facts under **Verified facts**, and asserted claims under a separate
+**Unverified assertions** heading that says not to treat them as fact.
 
 **`get_context` — one query instead of ten file reads.** Ask for what a task
 needs and get a token-budgeted pack back: the graph neighborhood of the touched

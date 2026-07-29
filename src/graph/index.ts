@@ -73,10 +73,17 @@ export async function analyzeImpact(root: string, changedFiles: string[]): Promi
     return { direct: [], indirect: [], unknowns: changedFiles.map((f) => `no graph found for ${f}`) };
   }
 
-  // Normalize changed files to module node IDs
+  // Normalize changed files to module node IDs. This must cover every language
+  // the parsers support — it previously stripped only ts/tsx/js/mjs/cjs/py, so a
+  // changed .go/.rs/.rb/.java/.kt file produced `module:src/main.go`, which never
+  // matched the `module:src/main` node built at scan time, and impact silently
+  // came back empty.
   const changedIds = new Set<string>();
   for (const f of changedFiles) {
-    const rel = path.relative(root, path.resolve(root, f)).replace(/\.(ts|tsx|js|mjs|cjs|py)$/, "");
+    const rel = path
+      .relative(root, path.resolve(root, f))
+      .replace(/\\/g, "/")
+      .replace(/\.(tsx?|jsx?|mjs|cjs|mts|cts|py|go|rs|rb|java|kt)$/, "");
     changedIds.add(`module:${rel}`);
   }
 

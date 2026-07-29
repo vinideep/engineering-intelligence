@@ -75,20 +75,28 @@ export async function getContext(root: string, request: ContextRequest): Promise
   }
   const relevantModules = new Set<string>([...fileModuleIds, ...dependents, ...dependencies]);
 
-  // --- Verified claims (relevant) ------------------------------------------
+  // --- Claims, split by what actually verified them -------------------------
+  // Derived claims were RE-COMPUTED from source, so they may be served as facts.
+  // Asserted claims have an intact anchor but nothing checked the sentence, so
+  // they are served separately and explicitly labelled unproven — presenting them
+  // as facts is the failure this split exists to prevent.
   const claimStore = await loadClaims(root);
   const verifyReport = await verifyClaims(root);
-  const verifiedIds = new Set(verifyReport.results.filter((r) => r.status === "verified").map((r) => r.id));
+  const statusById = new Map(verifyReport.results.map((r) => [r.id, r]));
   const taskWords = tokenizeWords(request.task);
   const claimItems: string[] = [];
+  const assertedItems: string[] = [];
   for (const claim of claimStore.claims) {
-    if (!verifiedIds.has(claim.id)) continue; // only serve claims that still hold
+    const result = statusById.get(claim.id);
+    if (!result) continue;
+    if (result.status !== "verified" && result.status !== "unverified") continue; // refuted/stale/missing are never served
     const evPaths = claim.evidence.map((e) => e.path);
     const moduleRelevant = files.length > 0 && evPaths.some((p) => relevantModules.has(toModuleId(root, p)));
-    const wordRelevant = files.length === 0 && [...tokenizeWords(claim.statement)].some((w) => taskWords.has(w) && w.length > 3);
-    if (moduleRelevant || wordRelevant || (files.length === 0 && taskWords.size === 0)) {
-      claimItems.push(`- ${claim.statement} _(evidence: ${evPaths.join(", ")})_`);
-    }
+    const wordRelevant = files.length === 0 && [...tokenizeWords(result.statement)].some((w) => taskWords.has(w) && w.length > 3);
+    if (!(moduleRelevant || wordRelevant || (files.length === 0 && taskWords.size === 0))) continue;
+    const line = `- ${result.statement} _(evidence: ${evPaths.join(", ")})_`;
+    if (result.status === "verified") claimItems.push(line);
+    else assertedItems.push(`${line}${claim.author ? ` — asserted by ${claim.author}` : ""}`);
   }
 
   // --- Conventions & dangerous areas (prose intelligence, if present) -------
@@ -110,7 +118,12 @@ export async function getContext(root: string, request: ContextRequest): Promise
     sections.push({ name: "graph-neighborhood", priority: 80, header: "## Graph neighborhood", items });
   }
   if (claimItems.length > 0) {
-    sections.push({ name: "verified-claims", priority: 100, header: "## Verified facts (hash-checked against current source)", items: claimItems });
+    sections.push({ name: "verified-claims", priority: 100, header: "## Verified facts (re-derived from current source)", items: claimItems });
+  }
+  if (assertedItems.length > 0) {
+    // Lower priority than facts: if the budget is tight, unproven statements are
+    // the first thing to drop.
+    sections.push({ name: "asserted-claims", priority: 40, header: "## Unverified assertions (anchored, but NOT machine-checked — do not treat as fact)", items: assertedItems });
   }
   if (dangerous) {
     sections.push({ name: "dangerous-areas", priority: 75, header: "## Dangerous areas", body: summarize(dangerous, 20) });

@@ -38,6 +38,25 @@ test("GATE_NAMES / isGateName / statusFromFindings basics", () => {
   assert.equal(statusFromFindings([]), "pass");
   assert.equal(statusFromFindings([{ severity: "warning", message: "" }]), "warn");
   assert.equal(statusFromFindings([{ severity: "error", message: "" }]), "fail");
+  // A configurable threshold is what lets an advisory gate become a blocking one.
+  assert.equal(statusFromFindings([{ severity: "warning", message: "" }], "warning"), "fail");
+  assert.equal(statusFromFindings([{ severity: "info", message: "" }], "warning"), "pass");
+});
+
+test("failOn promotes warning-only gates from advisory to blocking", async () => {
+  // env-vars and dead-exports emit no `error` findings, so with the default
+  // threshold they could never fail anything — advisory checks named as gates.
+  const root = await tmp();
+  await write(root, "package.json", JSON.stringify({ main: "src/index.ts" }));
+  await write(root, "src/index.ts", "console.log(1);\n");
+  await write(root, "src/util.ts", "export function orphan() { return 1; }\n");
+
+  const advisory = await runGate("dead-exports", root);
+  assert.equal(advisory.status, "warn", "default threshold keeps it advisory");
+
+  const blocking = await runGate("dead-exports", root, { failOn: "warning" });
+  assert.equal(blocking.status, "fail", "failOn:warning makes the same findings blocking");
+  assert.deepEqual(blocking.findings, advisory.findings, "findings are unchanged — only the threshold moved");
 });
 
 test("env-vars: flags a variable used in code but missing from .env.example", async () => {
@@ -109,7 +128,12 @@ test("migration-lint: passes a clean tree", async () => {
 });
 
 test("extractApiSurface: parses framework routes, decorators, and OpenAPI JSON", () => {
-  const code = extractApiSurface("app.get('/a', h); router.post(\"/b\", h); @Delete('/c')", "src/api.ts");
+  // Route-call syntax is only trusted in a file that actually uses a server
+  // framework — otherwise an HTTP client wrapper reads as a router.
+  const code = extractApiSurface(
+    "const app = express();\napp.get('/a', h); router.post(\"/b\", h); @Delete('/c')",
+    "src/api.ts",
+  );
   assert.ok(code.has("GET /a"));
   assert.ok(code.has("POST /b"));
   assert.ok(code.has("DELETE /c"));
@@ -124,16 +148,49 @@ test("api-diff: fails when a route is removed vs the git base", async () => {
   git(root, "init");
   git(root, "config", "user.email", "t@t.co");
   git(root, "config", "user.name", "t");
-  await write(root, "src/routes.js", "app.get('/x', h); app.delete('/x/:id', h);\n");
+  await write(root, "src/routes.js", "const app = express();\napp.get('/x', h); app.delete('/x/:id', h);\n");
   git(root, "add", "-A");
   git(root, "commit", "-m", "base");
 
   // Remove the DELETE route in the working tree.
-  await write(root, "src/routes.js", "app.get('/x', h);\n");
+  await write(root, "src/routes.js", "const app = express();\napp.get('/x', h);\n");
   const result = await runGate("api-diff", root, { base: "HEAD" });
 
   assert.equal(result.status, "fail");
   assert.ok(result.findings.some((f) => f.severity === "error" && /DELETE \/x\/:id/.test(f.message)));
+});
+
+test("api-diff: an HTTP client call is not mistaken for a route registration", async () => {
+  const root = await tmp();
+  git(root, "init");
+  git(root, "config", "user.email", "t@t.co");
+  git(root, "config", "user.name", "t");
+  // No server framework anywhere — this is an axios-style wrapper.
+  await write(root, "src/client.js", "const api = makeClient();\napi.get('/users');\napi.delete('/users/1');\n");
+  git(root, "add", "-A");
+  git(root, "commit", "-m", "base");
+
+  await write(root, "src/client.js", "const api = makeClient();\napi.get('/users');\n");
+  const result = await runGate("api-diff", root, { base: "HEAD" });
+  assert.equal(result.status, "pass", `client calls must not register as endpoints: ${JSON.stringify(result.findings)}`);
+});
+
+test("api-diff: a route moved between files is not a breaking change", async () => {
+  const root = await tmp();
+  git(root, "init");
+  git(root, "config", "user.email", "t@t.co");
+  git(root, "config", "user.name", "t");
+  await write(root, "src/routes.js", "const app = express();\napp.get('/a', h);\napp.post('/b', h);\n");
+  await write(root, "src/more.js", "const app = express();\n");
+  git(root, "add", "-A");
+  git(root, "commit", "-m", "base");
+
+  // Move POST /b into the other file — the surface is unchanged repo-wide.
+  await write(root, "src/routes.js", "const app = express();\napp.get('/a', h);\n");
+  await write(root, "src/more.js", "const app = express();\napp.post('/b', h);\n");
+
+  const result = await runGate("api-diff", root, { base: "HEAD" });
+  assert.equal(result.status, "pass", `per-file comparison would falsely flag this: ${JSON.stringify(result.findings)}`);
 });
 
 test("api-diff: passes when only additive changes exist", async () => {
@@ -141,11 +198,11 @@ test("api-diff: passes when only additive changes exist", async () => {
   git(root, "init");
   git(root, "config", "user.email", "t@t.co");
   git(root, "config", "user.name", "t");
-  await write(root, "src/routes.js", "app.get('/x', h);\n");
+  await write(root, "src/routes.js", "const app = express();\napp.get('/x', h);\n");
   git(root, "add", "-A");
   git(root, "commit", "-m", "base");
 
-  await write(root, "src/routes.js", "app.get('/x', h); app.post('/y', h);\n");
+  await write(root, "src/routes.js", "const app = express();\napp.get('/x', h); app.post('/y', h);\n");
   const result = await runGate("api-diff", root, { base: "HEAD" });
   assert.equal(result.status, "pass");
   assert.ok(result.findings.some((f) => f.severity === "info" && /POST \/y/.test(f.message)));

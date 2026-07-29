@@ -88,12 +88,14 @@ export async function buildDependencyGraph(root: string, options: BuildOptions =
   const allNodes: GraphNode[] = [...manifestNodes];
   const allEdges: GraphEdge[] = [];
 
+  const parserUnknowns: string[] = [];
   for (let i = 0; i < sourceFiles.length; i += BATCH) {
     const batch = sourceFiles.slice(i, i + BATCH);
     const results = await Promise.all(batch.map((f) => extractImports(f, root)));
-    for (const { nodes, edges } of results) {
+    for (const { nodes, edges, unknowns } of results) {
       allNodes.push(...nodes);
       allEdges.push(...edges);
+      if (unknowns) parserUnknowns.push(...unknowns);
     }
   }
 
@@ -111,8 +113,12 @@ export async function buildDependencyGraph(root: string, options: BuildOptions =
   const nodeIds = new Set(nodes.map((n) => n.id));
   const validEdges = edges.filter((e) => nodeIds.has(e.from));
 
-  // Collect unknowns: edges whose target is not in our node set (external packages not in manifests)
-  const unknowns: string[] = [];
+  // Unknowns are what the graph does NOT know. The previous check
+  // (`!nodeIds.has(edge.to)`) was structurally dead — every parser pushes the
+  // target node before the edge, so it always returned an empty list and the
+  // graph claimed total knowledge. Real unknowns come from the parsers, which
+  // report specifiers they could not resolve to a file on disk.
+  const unknowns = [...new Set(parserUnknowns)];
   for (const edge of validEdges) {
     if (!nodeIds.has(edge.to)) {
       unknowns.push(`unresolved target "${edge.to}" referenced from "${edge.from}"`);
