@@ -1,6 +1,6 @@
 {
   "name": "engineering-intelligence",
-  "version": "2.4.0",
+  "version": "3.0.0",
   "description": "Graph-backed engineering intelligence for AI coding IDEs. Real dependency graphs, MCP server, and installable skills/agents/workflows for 9 IDEs.",
   "type": "module",
   "homepage": "https://github.com/vinideep/engineering-intelligence#readme",
@@ -18,6 +18,7 @@
   "files": [
     "dist",
     "templates",
+    "bench",
     "README.md",
     "LICENSE"
   ],
@@ -28,7 +29,8 @@
     "test:integration": "npm run build && node --test test/install-integration.test.mjs test/mcp.test.mjs",
     "test:graph": "npm run build && node --test test/graph.test.mjs",
     "test:mcp": "npm run build && node --test test/mcp.test.mjs",
-    "prepack": "npm run clean && npm run build"
+    "prepack": "npm run clean && npm run build",
+    "bench": "npm run build && node bench/replay.mjs . --commits 30"
   },
   "keywords": [
     "agent-skills",

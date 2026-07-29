@@ -85,6 +85,55 @@ npx engineering-intelligence install . --ide claude-code --yes
 
 That's it. The agent now plans, implements, validates, and self-documents.
 
+### The v3 loop — what actually runs
+
+Four commands do the real work. Everything else is guidance layered on top.
+
+```bash
+# 1. Map the code. Builds a validated dependency graph; anything it cannot
+#    resolve is reported in `unknowns` rather than guessed.
+npx engineering-intelligence map .
+
+# 2. Compute facts. Extracts module imports, package dependencies and HTTP
+#    routes as *derived* claims — statements the tool can re-compute later.
+npx engineering-intelligence claims derive .
+
+# 3. Work. Inside your IDE, as usual:
+#      /engineering-intelligence Add rate limiting to the auth endpoints
+#    The agent queries `get_context` instead of re-reading your codebase.
+
+# 4. Prove it. Runs YOUR check commands and writes a receipt bound to a
+#    sha256 of every changed file. Exit 1 if anything failed.
+npx engineering-intelligence verify .
+```
+
+Then, any time you want to know whether the docs still match the code:
+
+```bash
+npx engineering-intelligence claims verify --strict   # exit 1 on refuted/stale
+npx engineering-intelligence gate api-diff . --base origin/main
+```
+
+**Turn on enforcement** when your team is ready — both hard gates ship off:
+
+```jsonc
+// .engineering-intelligence/ei.config.json  (yours to edit; never overwritten)
+{
+  "hooks": {
+    "requireValidationOnStop": true,  // block "done" without a passing receipt
+    "blockStaleEdits": false          // deny edits while docs are stale
+  }
+}
+```
+
+**In CI**, the same verdicts that interrupt an edit fail the build:
+
+```bash
+npx engineering-intelligence gate migration-lint . --base origin/main
+npx engineering-intelligence claims verify . --strict
+npx engineering-intelligence verify .
+```
+
 ---
 
 ## 🖥 Supported IDEs
