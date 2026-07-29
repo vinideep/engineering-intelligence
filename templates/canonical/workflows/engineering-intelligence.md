@@ -9,16 +9,17 @@ Use the `engineering-intelligence-skill` capability for the user's accompanying 
 ## Pipeline
 
 1. **Read Intelligence** — Consult `.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/memory/`, `.engineering-intelligence/context/`, `.engineering-intelligence/graph/`
-2. **Select Delivery Mode** — Choose standard Agile, adversarial, TDD, design-first, or hypothesis debugging based on risk
-3. **Write Impact Report** — Create `.engineering-intelligence/reports/IMP-XXX-<summary>.md` before any code edit
-4. **Plan Agile + AI-DLC Work** — Update backlog, acceptance criteria, Definition of Ready, `.engineering-intelligence/aidlc/execution-plan.md`, and `aidlc-state.md`
-5. **Implement** — Make the requested code changes following established patterns
-6. **Test** — Add/update tests proportional to risk; execute and record results
-7. **Safety Gates** — Run freshness, type safety, API compatibility, API snapshot replay, migration safety, convention, acceptance-mapping, dependency-risk, env-var, ADR compliance, LLM prompt-injection, and rollback gates when applicable
-8. **Validate** — Run available linters, type checks, test suites, scans, and architecture checks as environmental backpressure
-9. **Sync Intelligence** — Incrementally update only affected knowledge, memory, context, event, graph artifacts, and AI-DLC artifacts
-10. **Record Change** — Write `.engineering-intelligence/changes/CHG-XXX-<summary>.md` referencing related reports and acceptance verification
-11. **Review Gate** — For high-risk changes, run engineering-change review before completion
+2. **Establish Baseline** — Run `npx engineering-intelligence verify .` before any edit (use `environmental-backpressure-engine` to resolve "no check commands detected" by configuring `hooks.verifyCommands`, never by skipping). A failure here is pre-existing, not something this change caused — note it so the post-implementation result isn't misread as a regression.
+3. **Select Delivery Mode** — Choose standard Agile, adversarial, TDD, design-first, or hypothesis debugging based on risk
+4. **Write Impact Report** — Create `.engineering-intelligence/reports/IMP-XXX-<summary>.md` before any code edit
+5. **Plan Agile + AI-DLC Work** — Update backlog, acceptance criteria, Definition of Ready, `.engineering-intelligence/aidlc/execution-plan.md`, and `aidlc-state.md`
+6. **Implement** — Make the requested code changes following established patterns
+7. **Test** — Add/update tests proportional to risk; execute and record results
+8. **Safety Gates** — Run freshness, type safety, API compatibility, API snapshot replay, migration safety, convention, acceptance-mapping, dependency-risk, env-var, ADR compliance, LLM prompt-injection, and rollback gates when applicable
+9. **Validate** — Re-run `npx engineering-intelligence verify .` (via `environmental-backpressure-engine`) against the finished change. This is the receipt the Stop gate and CI both check — it must pass, or the failure must be recorded as a residual risk, not silently dropped.
+10. **Sync Intelligence** — Incrementally update only affected knowledge, memory, context, event, graph artifacts, and AI-DLC artifacts
+11. **Record Change** — Write `.engineering-intelligence/changes/CHG-XXX-<summary>.md` referencing related reports and acceptance verification
+12. **Review Gate** — For high-risk changes, run engineering-change review before completion
 
 ## Completion Report
 
