@@ -1,4 +1,5 @@
 ---
+name: engineering-intelligence
 description: Implement an engineering request with impact analysis, tests, validation, and intelligence synchronization.
 ---
 

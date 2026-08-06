@@ -1,4 +1,5 @@
 ---
+name: initialize-engineering-intelligence
 description: Initialize evidence-based engineering intelligence for the current project.
 ---
 

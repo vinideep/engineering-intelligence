@@ -1,4 +1,5 @@
 ---
+name: map-architecture
 description: Build or refresh evidence-backed architecture graph intelligence without changing product code.
 ---
 

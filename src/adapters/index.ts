@@ -141,6 +141,18 @@ async function workflowsAt(directory: string, owner: IdeId): Promise<RenderedFil
   );
 }
 
+async function workflowSkillsAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
+  return Promise.all(
+    WORKFLOW_NAMES.map(async (name) =>
+      file(
+        `${directory}/${name}/SKILL.md`,
+        prepareRendered(await readTemplate("workflows", name)),
+        owner,
+      ),
+    ),
+  );
+}
+
 async function agentsAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
   return Promise.all(
     AGENT_NAMES.map(async (name) =>
@@ -200,9 +212,10 @@ interface SkillBundleProfile {
 }
 
 async function skillBundle(owner: IdeId, p: SkillBundleProfile): Promise<RenderedFile[]> {
-  const [index, skills, briefs] = await Promise.all([
+  const [index, skills, workflowSkills, briefs] = await Promise.all([
     generateSkillsIndex(SKILL_NAMES, p.skillsDir),
     skillsAt(p.skillsDir, owner),
+    workflowSkillsAt(p.skillsDir, owner),
     p.emitBriefs ? skillBriefsAt(p.skillsDir, owner) : Promise.resolve([]),
   ]);
   const routing = generateWorkflowRouting(p.skillsDir);
@@ -211,6 +224,7 @@ async function skillBundle(owner: IdeId, p: SkillBundleProfile): Promise<Rendere
     file(p.routingPath, routing, owner),
     ...briefs,
     ...skills,
+    ...workflowSkills,
   ];
 }
 
@@ -376,7 +390,7 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
       ];
     }
     case "codex": {
-      const [bundle, agents, workflows, prompts] = await Promise.all([
+      const [bundle, agents, workflows] = await Promise.all([
         skillBundle(ide, {
           skillsDir: ".agents/skills",
           indexPath: `.agents/skills/${SKILLS_INDEX_FILENAME}`,
@@ -385,13 +399,11 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
         }),
         agentsAsJsonAt(".agents/agents", ide),
         workflowsAt(".agents/workflows", ide),
-        workflowsAt(".codex/prompts", ide),
       ]);
       return [
         ...bundle,
         ...agents,
         ...workflows,
-        ...prompts,
         block("AGENTS.md", sharedInstructions, ide),
       ];
     }

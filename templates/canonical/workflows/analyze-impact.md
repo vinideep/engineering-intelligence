@@ -1,4 +1,5 @@
 ---
+name: analyze-impact
 description: Analyze the impact of a proposed change or existing diff and write an evidence-backed impact report without changing product code.
 ---
 

@@ -1,4 +1,5 @@
 ---
+name: create-project
 description: Create a new project from scratch with full AIDLC — from architectural interview through scaffolding, intelligence initialization, and convention detection.
 ---
 

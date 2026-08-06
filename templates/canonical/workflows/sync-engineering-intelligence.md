@@ -1,4 +1,5 @@
 ---
+name: sync-engineering-intelligence
 description: Incrementally synchronize intelligence artifacts for an identified change without modifying product code.
 ---
 

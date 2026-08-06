@@ -1,4 +1,5 @@
 ---
+name: deliver-backlog
 description: Drive delivery of a decomposed backlog feature by feature, enforcing a human approval gate before implementing each feature, then implementing its tickets through the engineering intelligence pipeline.
 ---
 
