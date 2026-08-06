@@ -376,13 +376,24 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
       ];
     }
     case "codex": {
-      const bundle = await skillBundle(ide, {
-        skillsDir: ".agents/skills",
-        indexPath: `.agents/skills/${SKILLS_INDEX_FILENAME}`,
-        routingPath: `.agents/${WORKFLOW_ROUTING_FILENAME}`,
-        emitBriefs: false,
-      });
-      return [...bundle, block("AGENTS.md", sharedInstructions, ide)];
+      const [bundle, agents, workflows, prompts] = await Promise.all([
+        skillBundle(ide, {
+          skillsDir: ".agents/skills",
+          indexPath: `.agents/skills/${SKILLS_INDEX_FILENAME}`,
+          routingPath: `.agents/${WORKFLOW_ROUTING_FILENAME}`,
+          emitBriefs: false,
+        }),
+        agentsAsJsonAt(".agents/agents", ide),
+        workflowsAt(".agents/workflows", ide),
+        workflowsAt(".codex/prompts", ide),
+      ]);
+      return [
+        ...bundle,
+        ...agents,
+        ...workflows,
+        ...prompts,
+        block("AGENTS.md", sharedInstructions, ide),
+      ];
     }
     case "generic": {
       const bundle = await skillBundle(ide, {

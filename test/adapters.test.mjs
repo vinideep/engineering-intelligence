@@ -33,6 +33,9 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.ok(paths.has(".gemini/commands/initialize-engineering-intelligence.toml"));
   assert.ok(paths.has(".gemini/commands/sync-engineering-intelligence.toml"));
   assert.ok(paths.has(".gemini/commands/scope-requirement.toml"));
+  assert.ok(paths.has(".codex/prompts/sync-engineering-intelligence.md"));
+  assert.ok(paths.has(".codex/prompts/engineering-intelligence.md"));
+  assert.ok(paths.has(".agents/workflows/sync-engineering-intelligence.md"));
   assert.ok(paths.has(".commandcode/skills/engineering-intelligence-skill/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/aidlc-lifecycle-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/type-safety-engine/SKILL.md"));

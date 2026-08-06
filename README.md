@@ -166,7 +166,7 @@ npx engineering-intelligence install . --ide claude-code,cursor,github-copilot -
 | Cursor | `.cursor/rules/` · `.cursor/commands/` |
 | GitHub Copilot | `.github/skills/` · `.github/agents/` · `.github/prompts/` · managed instructions block |
 | Gemini CLI | `.agents/skills/` · `.gemini/commands/` · managed block in `GEMINI.md` |
-| OpenAI Codex | `.agents/skills/` · managed block in `AGENTS.md` |
+| OpenAI Codex | `.agents/skills/` · `.agents/workflows/` · `.codex/prompts/` · managed block in `AGENTS.md` |
 | CommandCode | `.commandcode/skills/` · `.commandcode/commands/` · managed block in `AGENTS.md` |
 | Antigravity | `.agent/skills/` · `.agent/rules/` · `.agent/workflows/` |
 | Antigravity CLI | `.agent/skills/` · `.agent/rules/` · `.agent/workflows/` · managed block in `AGENTS.md` |
