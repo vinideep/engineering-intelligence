@@ -127,6 +127,22 @@ export const WORKFLOW_SKILL_ROUTING: Record<
     primary: ["greenfield-architect", "initialize-intelligence-skill"],
     optional: [],
   },
+  "grill-me": {
+    primary: ["socratic-stress-tester"],
+    optional: ["requirement-scoper", "architecture-review-engine", "nfr-adr-governor"],
+  },
+  "handoff": {
+    primary: ["session-handoff-engine"],
+    optional: ["context-budget-optimizer", "incremental-sync-engine"],
+  },
+  "tdd": {
+    primary: ["vertical-tdd-engine", "testing-intelligence-engine"],
+    optional: ["type-safety-engine", "environmental-backpressure-engine"],
+  },
+  "design-an-interface": {
+    primary: ["interface-design-explorer"],
+    optional: ["type-safety-engine", "architecture-review-engine"],
+  },
 };
 
 export const SKILLS_INDEX_FILENAME = "SKILLS-INDEX.md";
