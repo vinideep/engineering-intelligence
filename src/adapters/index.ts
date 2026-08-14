@@ -24,6 +24,10 @@ const INPUT_WORKFLOWS = new Set<(typeof WORKFLOW_NAMES)[number]>([
   "create-project",
   "decompose-backlog",
   "deliver-backlog",
+  "grill-me",
+  "handoff",
+  "tdd",
+  "design-an-interface",
 ]);
 
 // Slash-command argument hints surfaced by hosts that render a command picker
@@ -37,6 +41,10 @@ const WORKFLOW_ARGUMENT_HINTS: Partial<Record<(typeof WORKFLOW_NAMES)[number], s
   "create-project": "<new project description>",
   "decompose-backlog": "<initiative or epic-sized request to decompose>",
   "deliver-backlog": "<optional FEAT-XXX or EPIC-XXX to deliver>",
+  "grill-me": "<plan or feature to stress-test>",
+  "handoff": "<optional reason or target agent>",
+  "tdd": "<feature or function to build with TDD>",
+  "design-an-interface": "<interface or API to design>",
 };
 
 const sharedInstructions = `# Engineering Intelligence OS
@@ -262,12 +270,13 @@ const AGENT_METADATA: Record<
   "engineering-orchestrator": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/memory", ".engineering-intelligence/changes"],
     agents: ["product-analyst", "system-architect", "change-agent", "test-engineer", "quality-agent", "knowledge-agent"],
+    skills: ["session-handoff-engine"],
     autoRoute: true,
     parallel: false,
   },
   "change-agent": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/changes"],
-    skills: ["engineering-intelligence-skill", "context-budget-optimizer", "aidlc-lifecycle-engine", "impact-analysis-engine", "change-detection-engine", "type-safety-engine", "api-backward-compatibility-engine", "environment-variable-auditor", "adr-compliance-checker", "llm-prompt-injection-guard"],
+    skills: ["engineering-intelligence-skill", "context-budget-optimizer", "aidlc-lifecycle-engine", "impact-analysis-engine", "change-detection-engine", "type-safety-engine", "api-backward-compatibility-engine", "environment-variable-auditor", "adr-compliance-checker", "llm-prompt-injection-guard", "vertical-tdd-engine", "session-handoff-engine", "interface-design-explorer"],
   },
   "quality-agent": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
@@ -279,11 +288,11 @@ const AGENT_METADATA: Record<
   },
   "product-analyst": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/graph"],
-    skills: ["requirement-scoper", "backlog-decomposition-engine", "context-budget-optimizer", "aidlc-lifecycle-engine"],
+    skills: ["requirement-scoper", "backlog-decomposition-engine", "context-budget-optimizer", "aidlc-lifecycle-engine", "socratic-stress-tester"],
   },
   "system-architect": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph", ".engineering-intelligence/memory"],
-    skills: ["aidlc-lifecycle-engine", "nfr-adr-governor", "architecture-review-engine", "graph-engine", "adr-compliance-checker"],
+    skills: ["aidlc-lifecycle-engine", "nfr-adr-governor", "architecture-review-engine", "graph-engine", "adr-compliance-checker", "socratic-stress-tester", "interface-design-explorer"],
   },
   "security-officer": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
@@ -295,7 +304,7 @@ const AGENT_METADATA: Record<
   },
   "test-engineer": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
-    skills: ["testing-intelligence-engine", "environmental-backpressure-engine", "type-safety-engine", "api-backward-compatibility-engine", "contract-test-generator"],
+    skills: ["testing-intelligence-engine", "environmental-backpressure-engine", "type-safety-engine", "api-backward-compatibility-engine", "contract-test-generator", "vertical-tdd-engine"],
   },
   "adversary": {
     context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
@@ -487,6 +496,10 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
         "create-project": "Create and bootstrap a new project with full AI-driven development lifecycle setup.",
         "decompose-backlog": "Autonomously decompose an initiative into an epic, feature, and ticket backlog without modifying product code.",
         "deliver-backlog": "Deliver a decomposed backlog feature by feature with a human approval gate before each feature.",
+        "grill-me": "Stress-test a plan, proposal, or PRD through Socratic questioning.",
+        "handoff": "Serialize active conversation context and working tree state into a handoff packet.",
+        "tdd": "Implement a feature or bugfix using a strict vertical-slice TDD loop.",
+        "design-an-interface": "Explore and compare alternative interface contracts and type definitions.",
       };
       const [bundle, commands] = await Promise.all([
         skillBundle(ide, {

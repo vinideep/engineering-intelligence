@@ -64,6 +64,10 @@ const SKILL_CATEGORIES: Record<string, SkillInfo["category"]> = {
   "testing-intelligence-engine": "implementation",
   "type-safety-engine": "implementation",
   "user-intelligence-engine": "discovery",
+  "socratic-stress-tester": "planning",
+  "session-handoff-engine": "operations",
+  "vertical-tdd-engine": "implementation",
+  "interface-design-explorer": "planning",
 };
 
 /** Title-case a skill id for display: "graph-engine" -> "Graph Engine". */
