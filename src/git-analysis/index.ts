@@ -311,6 +311,24 @@ ${velocityRows || "| — | — | — |"}
 // Public API
 // ---------------------------------------------------------------------------
 
+// Lightweight churn map for graph overlay: file path (repo-relative, forward
+// slashes) -> number of commits touching it in the window. Returns an empty map
+// for non-git directories. Reuses the same commit log + hotspot machinery.
+export function computeChurn(root: string, windowDays = 90): Map<string, number> {
+  const since = parseSince(windowDays);
+  const raw = tryGit(
+    `log --since=${JSON.stringify(since)} --name-only --format="COMMIT:%H|%ae|%cI|%s"`,
+    root,
+  );
+  if (!raw) return new Map();
+  const commits = parseCommitLog(raw);
+  const freq = new Map<string, number>();
+  for (const c of commits) {
+    for (const f of c.files) freq.set(f, (freq.get(f) ?? 0) + 1);
+  }
+  return freq;
+}
+
 export async function runGitAnalysis(root: string, windowDays = 90): Promise<{ reportPath: string; analysis: GitAnalysis }> {
   const since = parseSince(windowDays);
   const raw = tryGit(

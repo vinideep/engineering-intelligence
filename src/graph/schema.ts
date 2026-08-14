@@ -24,6 +24,8 @@ export interface DependencyGraph {
   graphType: "dependency";
   generatedAt: string;
   scope: string;
+  /** Git commit HEAD was at when the graph was built; enables freshness checks. Absent for non-git repos. */
+  commit?: string;
   nodes: GraphNode[];
   edges: GraphEdge[];
   unknowns: string[];
@@ -94,11 +96,15 @@ export function validateGraph(value: unknown): DependencyGraph {
   if (!Array.isArray(v.nodes)) throw new SchemaValidationError("nodes: must be an array");
   if (!Array.isArray(v.edges)) throw new SchemaValidationError("edges: must be an array");
   if (!Array.isArray(v.unknowns)) throw new SchemaValidationError("unknowns: must be an array");
+  if (v.commit !== undefined && typeof v.commit !== "string") {
+    throw new SchemaValidationError("commit: must be a string when present");
+  }
   return {
     schemaVersion: 1,
     graphType: "dependency",
     generatedAt: v.generatedAt,
     scope: v.scope,
+    ...(typeof v.commit === "string" ? { commit: v.commit } : {}),
     nodes: (v.nodes as unknown[]).map(validateNode),
     edges: (v.edges as unknown[]).map(validateEdge),
     unknowns: (v.unknowns as unknown[]).map((u, i) => {

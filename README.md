@@ -27,9 +27,9 @@
 
 ## Why This Exists
 
-AI coding agents forget everything between sessions. They re-read your architecture from scratch, skip impact analysis, drift from your conventions, and have no idea what they changed yesterday. `engineering-intelligence` fixes that — it gives the agent a persistent memory of your project, a discipline to plan before touching code, and the ability to pick up exactly where it left off.
+Developers now switch between AI coding tools constantly — Cursor, Claude Code, Copilot, Gemini. Every switch means re-explaining your codebase from scratch, and every tool keeps its understanding locked inside itself. `engineering-intelligence` makes codebase intelligence a **repo artifact** — like tests or docs — computed by real code and queryable by any AI tool.
 
-| The problem | What this installs |
+| The problem | What this gives you |
 |---|---|
 | Agent re-learns your codebase from scratch every session | Evidence-based knowledge base + architecture graphs that persist across sessions |
 | Jumps straight to code, skips planning | Mandatory impact analysis + Agile planning before any non-trivial change |
@@ -38,7 +38,7 @@ AI coding agents forget everything between sessions. They re-read your architect
 | Tied to one AI tool | One canonical toolkit, rendered natively into **9 AI IDEs** — Claude Code, Cursor, Copilot, Gemini, Codex, Antigravity, CommandCode, and more |
 | Treats every developer the same | **Per-developer intelligence** — a personal, gitignored profile seeded from your git history calibrates responses to your test philosophy and depth; a committed team layer captures shared consensus |
 
-> The installer does **not** inspect your source, call an AI model, or generate docs itself. It ships the skills, agents, and workflows — the real work happens inside your IDE when you invoke them.
+> The **graph engine** and **MCP server** are real, deterministic code that runs on your repo. The skills/agents/workflows layer is structured instructions the installer renders into your IDE — the installer does not inspect your source or call an AI model itself.
 
 ### What it is — and what it isn't
 
@@ -59,31 +59,135 @@ If you want a low-friction start, install it and use just `/initialize-engineeri
 
 ---
 
-## ⚡ Quick Start
+## 🧮 The computed core (not prose)
 
-**Step 1 — Install into your project** (run once per project, from the project root):
+Most "AI codebase memory" is just markdown an LLM wrote and hopes to re-read. The heart of this project is different: a **deterministic graph engine** and an **MCP server** — real code that runs on your repo, produces schema-validated output, and needs no LLM to be correct.
+
+### `engineering-intelligence map` — real dependency & call graph
 
 ```bash
-# Interactive — the CLI will ask which IDE you use
-npx engineering-intelligence
-
-# Or install for a specific IDE directly (no prompt)
-npx engineering-intelligence install . --ide claude-code --yes
+npx engineering-intelligence map .
+# Graph built: .engineering-intelligence/graph/dependency-graph.json
+#   161 nodes, 409 edges (26 source files scanned)
 ```
 
-**Step 2 — Initialize** (run once inside your AI IDE after installing):
+- **Package + import edges** across **6 language families**: JS/TS, Python, Go, Rust, Ruby, Java/Kotlin (manifests + source-level imports).
+- **Function-level call graph** (JS/TS **and Python**): every function/class/method becomes a `symbol:` node, with `defines` edges (module → symbol) and `calls` edges (symbol → symbol). Same-file calls are `verified`; cross-file calls are resolved **import-constrained** (only against modules the caller actually imports) and marked `inferred` — honest confidence, no hallucinated edges.
+- **Git-churn overlay** — every module node is tagged with how often it changed in the last 90 days, so impact answers can flag risky, high-churn code.
+- **Test tagging** — test files are marked so impact analysis can tell you exactly which tests to run.
+- Every node and edge carries `evidence` (`file:line`) and a `confidence` level, validated against a fixed JSON schema before it's written. The graph is stamped with the git commit it was built at, so queries can **auto-refresh** it against your working tree. Stable IDs across runs.
 
-```
-/initialize-engineering-intelligence
+### Ask your graph — from the CLI or from chat
+
+```bash
+# "What breaks if I change this?" — direct + indirect dependents, which tests to run, risk notes
+engineering-intelligence impact src/graph/index.ts
+#   Direct (3): module:src/mcp/index, symbol:src/cli/index#main, symbol:src/mcp/index#startMcpServer
+#   Tests to run (1): test/graph.test.mjs
+
+# "Who calls this function?" — every caller, with call-site evidence and confidence
+engineering-intelligence who-calls buildGraph
+#   ensureFreshGraph  [verified]  src/graph/index.ts:125
+#   main              [inferred]  src/cli/index.ts:284
+#   startMcpServer    [inferred]  src/mcp/index.ts:114
 ```
 
-**Step 3 — Start building:**
+Both commands **auto-refresh** the graph against your working tree first, so the answer always reflects the current code — you never query a stale graph. Computed from the graph by reverse-BFS, not guessed by a model.
 
-```
-/engineering-intelligence Add rate limiting to the authentication endpoints
+### MCP server — your repo's intelligence as tool calls
+
+```bash
+npx ei-mcp .          # stdio MCP server; add it to any MCP-compatible IDE
 ```
 
-That's it. The agent now plans, implements, validates, and self-documents.
+Exposes tools any agent can call: **`map_dependencies`** (build the graph), **`get_graph`** (read it), **`analyze_impact`** (what breaks + which tests to run), **`find_symbol`** (locate a definition by name), **`who_calls`** (find every caller of a function), **`read_knowledge`** (pull knowledge-base docs), plus the **`preflight`/`postflight`** accountability pair (below). Query tools auto-refresh the graph first. Your repo's structure becomes a queryable **service** — no markdown has to be installed into the IDE for an agent to use it.
+
+### 🛫 The Agent Flight Recorder — accountability for AI changes
+
+AI agents write the code. This makes them **show their work**. Before an edit, the agent declares intent + target files; we compute the predicted blast radius from the graph and snapshot the working tree. After the edit, we diff what *actually* changed against that prediction and flag anything out of scope — deterministically, no LLM judging an LLM.
+
+```bash
+# Before editing — declare intent, get the predicted blast radius
+engineering-intelligence preflight --intent "add retry to charge()" src/pay.js
+#   Flight opened: flt-… (predicted radius: 2 files, 2 direct dependents)
+
+# …agent makes its edits…
+
+# After editing — audit actual changes vs. the declaration
+engineering-intelligence postflight --strict
+#   ⚠ FLAGGED — Out-of-bounds changes (1): src/other.js
+```
+
+`postflight --strict` exits non-zero, so it drops straight into a CI gate: **no merge unless the change stayed within its declared scope.** Also available as MCP tools (`preflight`/`postflight`) so the agent runs the whole loop itself.
+
+### 🧾 Memory with receipts — self-invalidating knowledge
+
+Every AI memory product rots silently. This one doesn't: each `file:line` citation in the knowledge base is hashed against the code it points at. When that line changes, the citation flags itself **stale**.
+
+```bash
+engineering-intelligence evidence-record          # snapshot cited lines
+engineering-intelligence evidence-check --strict  # …later: flag citations whose code moved
+```
+
+### `verify` — the knowledge base tells you when it's lying
+
+```bash
+engineering-intelligence verify --strict
+```
+
+A deterministic drift check: every file path and `file:line` citation in your `knowledge-base/` is checked against the current code. Missing files and out-of-range line numbers are reported (and fail CI with `--strict`). No LLM — just proof that the docs still match the code.
+
+### PR impact comments (GitHub Action)
+
+Drop [`templates/github-action/engineering-intelligence-impact.yml`](templates/github-action/engineering-intelligence-impact.yml) into `.github/workflows/` and every PR gets a computed impact comment — direct/indirect dependents, tests to run, high-churn risk notes. See [docs/github-action.md](docs/github-action.md).
+
+### 💸 Token frugality — cheaper than exploring by hand
+
+Most of an agent's token spend is *orientation*: opening 10–15 files to learn the repo, then re-reading more to answer "what else uses this?". We replace that with computed, **shaped** answers — measured on this repo:
+
+| Tool | Before | After |
+|---|---|---|
+| `get_graph` | ~74,600 tokens (full graph) | **~2,450** (−97%) |
+| `map_dependencies` | ~74,600 (embedded graph) | **~60** |
+| repo brief (replaces reading 10–15 files to orient) | ~10–40k | **~370** |
+
+How: a ~370-token **repo brief** instead of the orientation phase; **budget-capped** tool responses (minified, empty fields pruned, big object arrays packed losslessly as `{cols,rows}`); **reversible drill-down** (`get_graph pattern=<id>` expands just the node you need); and **cache-aligned** deterministic output for provider prompt-cache hits.
+
+**Accuracy is never sacrificed for size.** Answer fields (impact `direct` + `testsToRun`, `who_calls` callers, audit verdicts) are marked `mustKeep` and are *never* truncated — if they'd exceed the budget it soft-expands instead. Only *exploration* fields are trimmed, always ranked most-relevant-first and marked with an explicit `+K more` pointer (never silent), and always one drill-down call from the full data. Unlike a neural summarizer, our trimming is explicit, bounded, and reversible. Proven in `test/accuracy.test.mjs`. Escape hatches: `budget: 0`, per-project `config.json` budgets, or `ask --full`. Complementary to transport compressors like [Headroom](https://github.com/headroomlabs-ai/headroom) — they compress the wire, we make the source of truth cheap *and* complete. Details: [docs/token-frugality.md](docs/token-frugality.md).
+
+---
+
+## ⚡ Quick Start
+
+**Four commands do everything.** You don't need to learn a toolbox — these orchestrate the rest.
+
+```bash
+# 1. Stand it up (or bring it current). Detects your IDE, installs adapters,
+#    builds the graph, seeds git signals + a repo brief. Idempotent.
+npx engineering-intelligence setup
+
+# 2. Question the codebase — routing is automatic.
+engineering-intelligence ask "who calls chargeCard"
+engineering-intelligence ask src/payments/charge.ts     # → impact + which tests to run
+
+# 3. Guard an AI edit (accountability loop).
+engineering-intelligence guard "add retry to charge()" src/payments/charge.ts
+#    …agent edits…
+engineering-intelligence guard                          # audits: CLEAN or FLAGGED
+
+# 4. One trust sweep (great in CI).
+engineering-intelligence health --strict
+```
+
+| You want to… | Command |
+|---|---|
+| Set up / upgrade a project | `setup` |
+| Ask "who calls this / what breaks / where is X" | `ask` |
+| Make an AI change accountable | `guard` (before) → `guard` (after) |
+| Check everything is healthy | `health` |
+| Let your IDE's agent do all the above as tools | `mcp` |
+
+> Prefer chat? Inside your IDE it's just two: `/initialize-engineering-intelligence` once, then `/engineering-intelligence <your request>` — the workflow runs impact analysis → implement → validate → document for you. Advanced/low-level commands still exist under `engineering-intelligence --help --all`.
 
 ### The v3 loop — what actually runs
 

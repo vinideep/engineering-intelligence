@@ -4,14 +4,52 @@ import path from "node:path";
 import { Server } from "@modelcontextprotocol/sdk/server";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { buildGraph, analyzeImpact, loadExistingGraph } from "../graph/index.js";
+import { buildGraph, analyzeImpact, loadExistingGraph, ensureFreshGraph, findSymbol, whoCalls } from "../graph/index.js";
+import { preflight, postflight } from "../flight/index.js";
+import { generateBrief, readBrief } from "../brief/index.js";
+import { shape, terseNode, terseEdge, packRows } from "./shaper.js";
 import { readFile as readFileFn } from "node:fs/promises";
+
+// Resolve the token budget for a tool call. Precedence:
+//   explicit args.budget (0 = unlimited) → project config → built-in fallback.
+// Answer fields are never truncated regardless (see mustKeep hints); the budget
+// only bounds exploration fields.
+function budgetOf(args: Record<string, unknown>, config: Record<string, number>, tool: string, fallback: number): number {
+  if (typeof args.budget === "number") return args.budget; // includes 0 = unlimited
+  if (typeof config[tool] === "number") return config[tool];
+  return fallback;
+}
+
+// Optional per-project budget overrides: .engineering-intelligence/config.json
+// { "tokenBudgets": { "analyze_impact": 3000, ... } }
+async function loadBudgetConfig(root: string): Promise<Record<string, number>> {
+  try {
+    const raw = await readFileFn(path.join(root, ".engineering-intelligence", "config.json"), "utf8");
+    const parsed = JSON.parse(raw) as { tokenBudgets?: Record<string, number> };
+    return parsed.tokenBudgets && typeof parsed.tokenBudgets === "object" ? parsed.tokenBudgets : {};
+  } catch {
+    return {};
+  }
+}
+
+const budgetProp = { budget: { type: "number", description: "Optional token budget for the response. Exploration fields are capped to fit (answer fields are never truncated); pass 0 for unlimited." } };
 
 const TOOLS = [
   {
+    name: "get_brief",
+    description:
+      "Get a ~500-token orientation digest of the repo (languages, entry points, most-depended-on modules, hotspots, test layout) — computed from the graph, not an LLM. Read this FIRST instead of opening many files to understand the codebase; it's the cheapest way to orient.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
+      },
+    },
+  },
+  {
     name: "map_dependencies",
     description:
-      "Run the deterministic dependency graph builder on a repository. Parses package manifests (package.json, pyproject.toml, go.mod, Cargo.toml) and source-file imports (JS/TS/Python) to produce a validated dependency-graph.json. Returns the graph as JSON.",
+      "Build/refresh the deterministic dependency + call graph on disk. Returns a small SUMMARY only (counts + path) — the full graph is queried lazily via get_graph, analyze_impact, find_symbol, and who_calls, so it never floods the context.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -24,33 +62,88 @@ const TOOLS = [
   {
     name: "get_graph",
     description:
-      "Read an existing graph file from .engineering-intelligence/graph/ and return it as JSON. Use map_dependencies first if no graph exists yet.",
+      "Query the dependency graph with filters — returns a COMPACT, capped view, not the whole file. Filter with `pattern` (regex over node ids/labels or edge endpoints), `kind` (module/symbol/package), `relation` (imports/defines/calls), and `limit`. Over-budget results are truncated with a `truncated` marker telling you how to expand. Use `full:true` only when you truly need the raw graph.",
     inputSchema: {
       type: "object" as const,
       properties: {
         root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
-        type: {
-          type: "string",
-          enum: ["dependency", "service", "runtime", "business-flow", "data-flow"],
-          description: "Graph type to read. Defaults to 'dependency'.",
-        },
+        type: { type: "string", enum: ["dependency", "service", "runtime", "business-flow", "data-flow"], description: "Graph type. Defaults to 'dependency'." },
+        pattern: { type: "string", description: "Regex to match node id/label or edge from/to. Omit to match all." },
+        kind: { type: "string", description: "Filter nodes by kind (module, symbol, package)." },
+        relation: { type: "string", description: "Filter edges by relation (imports, defines, calls)." },
+        limit: { type: "number", description: "Max nodes and max edges to return (default 100)." },
+        full: { type: "boolean", description: "Return the raw, unfiltered graph (large). Default false." },
+        ...budgetProp,
       },
     },
   },
   {
     name: "analyze_impact",
     description:
-      "Given a list of changed files, traverse the dependency graph and return which modules directly or indirectly import them. Requires a graph built by map_dependencies.",
+      "What breaks if I change these files? Traverses the dependency + call graph and returns impacted modules/functions (`direct`/`indirect`), `details`, `testsToRun`, and `riskNotes`. The ANSWER fields (`direct`, `testsToRun`, `riskNotes`) are never truncated; only exploration (`indirect`, `details`) is capped, ranked most-relevant-first, with a `truncated` marker. `details` is packed as `{cols,rows}` (lossless: each row aligns to cols). Auto-refreshes the graph first.",
     inputSchema: {
       type: "object" as const,
       required: ["changedFiles"],
       properties: {
         root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
-        changedFiles: {
-          type: "array",
-          items: { type: "string" },
-          description: "List of changed file paths (relative to root or absolute).",
-        },
+        changedFiles: { type: "array", items: { type: "string" }, description: "Changed file paths (relative or absolute)." },
+        ...budgetProp,
+      },
+    },
+  },
+  {
+    name: "find_symbol",
+    description:
+      "Locate function/class/method definitions by name. Returns matching symbol nodes with file:line evidence. Use when you know a name but not where it lives.",
+    inputSchema: {
+      type: "object" as const,
+      required: ["name"],
+      properties: {
+        root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
+        name: { type: "string", description: "Symbol name (e.g. \"buildGraph\" or \"ClassName.method\")." },
+        ...budgetProp,
+      },
+    },
+  },
+  {
+    name: "who_calls",
+    description:
+      "What calls this function? Reverse-walks the call graph to find every caller of the named symbol, with call-site file:line evidence and confidence. The `callers` list is the answer and is never truncated; it is packed as `{cols,rows}` (lossless). transitive=true includes indirect callers. Auto-refreshes first.",
+    inputSchema: {
+      type: "object" as const,
+      required: ["name"],
+      properties: {
+        root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
+        name: { type: "string", description: "Symbol name whose callers to find." },
+        transitive: { type: "boolean", description: "If true, include indirect (transitive) callers." },
+        ...budgetProp,
+      },
+    },
+  },
+  {
+    name: "preflight",
+    description:
+      "Before editing: declare intent + target files. Returns a flight id and the predicted blast radius from the graph. Call postflight afterwards to audit that your changes stayed in scope.",
+    inputSchema: {
+      type: "object" as const,
+      required: ["intent"],
+      properties: {
+        root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
+        intent: { type: "string", description: "One-line summary of the change you are about to make." },
+        files: { type: "array", items: { type: "string" }, description: "The files you intend to modify." },
+        ...budgetProp,
+      },
+    },
+  },
+  {
+    name: "postflight",
+    description:
+      "After editing: audit actual changes vs. the preflight declaration. Flags files changed that were neither declared nor in the predicted radius (out-of-bounds), with a clean/flagged verdict. Omit id to close the latest open flight.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        root: { type: "string", description: "Absolute path to the repository root. Defaults to cwd." },
+        id: { type: "string", description: "Flight id from preflight. Omit to use the latest open flight." },
       },
     },
   },
@@ -117,7 +210,7 @@ const TOOLS = [
   {
     name: "read_knowledge",
     description:
-      "List or read files from the knowledge-base/ directory. Omit 'file' to list all knowledge files. Provide 'file' (relative path within knowledge-base/) to read its contents.",
+      "List or read files from the knowledge-base/ directory. Omit 'file' to list all knowledge files (the repo brief is listed first). Provide 'file' to read its contents.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -172,57 +265,139 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args = {} } = request.params;
     const root = (typeof args.root === "string" ? args.root : projectRoot);
+    const text = (t: string, isError = false) => ({ content: [{ type: "text", text: t }], ...(isError ? { isError: true } : {}) });
+    const cfg = await loadBudgetConfig(root);
 
     try {
+      if (name === "get_brief") {
+        await ensureFreshGraph(root);
+        let brief = await readBrief(root);
+        if (!brief) brief = (await generateBrief(root)).markdown;
+        return text(brief);
+      }
+
       if (name === "map_dependencies") {
         const update = args.update === true;
         const files = Array.isArray(args.files) ? (args.files as string[]) : undefined;
         const result = await buildGraph(root, { update, files, write: true });
-        const graph = await loadExistingGraph(
-          path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json"),
-        );
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({
-                summary: {
-                  nodeCount: result.nodeCount,
-                  edgeCount: result.edgeCount,
-                  fileCount: result.fileCount,
-                  wasIncremental: result.wasIncremental,
-                  graphPath: result.graphPath,
-                },
-                graph,
-              }, null, 2),
-            },
-          ],
-        };
+        return text(shape({
+          nodeCount: result.nodeCount,
+          edgeCount: result.edgeCount,
+          fileCount: result.fileCount,
+          wasIncremental: result.wasIncremental,
+          graphPath: result.graphPath,
+          note: "Graph written to disk. Query it with get_graph / analyze_impact / who_calls / find_symbol.",
+        }));
       }
 
       if (name === "get_graph") {
         const type = typeof args.type === "string" ? args.type : "dependency";
+        if (type === "dependency") await ensureFreshGraph(root);
         const graphPath = path.join(root, ".engineering-intelligence", "graph", `${type}-graph.json`);
         const graph = await loadExistingGraph(graphPath);
-        if (!graph) {
-          return {
-            content: [{ type: "text", text: JSON.stringify({ error: `No ${type}-graph.json found. Run map_dependencies first.` }) }],
-            isError: true,
-          };
+        if (!graph) return text(JSON.stringify({ error: `No ${type}-graph.json found. Run map_dependencies first.` }), true);
+
+        if (args.full === true) {
+          return text(shape({ scope: graph.scope, nodes: graph.nodes, edges: graph.edges, unknowns: graph.unknowns }, { budget: budgetOf(args, cfg, "get_graph_full", 100_000) }));
         }
-        return { content: [{ type: "text", text: JSON.stringify(graph, null, 2) }] };
+
+        const re = safeRegex(typeof args.pattern === "string" ? args.pattern : undefined);
+        const kind = typeof args.kind === "string" ? args.kind : undefined;
+        const relation = typeof args.relation === "string" ? args.relation : undefined;
+        const limit = typeof args.limit === "number" && args.limit > 0 ? args.limit : 100;
+
+        const nodes = graph.nodes
+          .filter((n) => (kind ? n.kind === kind : true) && (re ? re.test(n.id) || re.test(n.label) : true))
+          .slice(0, limit)
+          .map(terseNode);
+        const edges = graph.edges
+          .filter((e) => (relation ? e.relation === relation : true) && (re ? re.test(e.from) || re.test(e.to) : true))
+          .slice(0, limit)
+          .map(terseEdge);
+
+        return text(shape(
+          { scope: graph.scope, nodeCount: graph.nodes.length, edgeCount: graph.edges.length, nodes, edges },
+          { budget: budgetOf(args, cfg, "get_graph", 2500), hints: { nodes: { hint: "get_graph pattern=<id> kind=<kind>", priority: 6 }, edges: { hint: "get_graph relation=<rel> pattern=<id>", priority: 4 } } },
+        ));
       }
 
       if (name === "analyze_impact") {
         const changedFiles = Array.isArray(args.changedFiles) ? (args.changedFiles as string[]) : [];
-        if (changedFiles.length === 0) {
-          return {
-            content: [{ type: "text", text: JSON.stringify({ error: "changedFiles is required and must be non-empty" }) }],
-            isError: true,
-          };
-        }
+        if (changedFiles.length === 0) return text(JSON.stringify({ error: "changedFiles is required and must be non-empty" }), true);
+        const fresh = await ensureFreshGraph(root);
         const result = await analyzeImpact(root, changedFiles);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+        // Pack `details` losslessly (cols/rows) — same data, ~40% fewer tokens.
+        const detailsPacked = packRows(
+          result.details as unknown as Array<Record<string, unknown>>,
+          ["id", "kind", "label", "hop", "evidence", "churn", "isTest"],
+        );
+        return text(shape(
+          { ...result, details: detailsPacked, ...(fresh.staleWarning ? { staleWarning: fresh.staleWarning } : {}) },
+          {
+            budget: budgetOf(args, cfg, "analyze_impact", 1500),
+            hints: {
+              // Answer fields — NEVER truncated. A missing dependent is a wrong answer.
+              direct: { hint: "get_graph pattern=<id>", mustKeep: true },
+              testsToRun: { hint: "run these test files", mustKeep: true },
+              riskNotes: { mustKeep: true },
+              // Exploration fields — trimmable, ranked most-relevant-first upstream.
+              details: { hint: "get_graph pattern=<id> (packed: {cols,rows})", priority: 7 },
+              indirect: { hint: "get_graph pattern=<id>", priority: 3 },
+              unknowns: { priority: 2 },
+            },
+          },
+        ));
+      }
+
+      if (name === "find_symbol") {
+        const symName = typeof args.name === "string" ? args.name : "";
+        if (!symName) return text(JSON.stringify({ error: "name is required" }), true);
+        const fresh = await ensureFreshGraph(root);
+        const matches = await findSymbol(root, symName);
+        return text(shape(
+          { matches, ...(fresh.staleWarning ? { staleWarning: fresh.staleWarning } : {}) },
+          { budget: budgetOf(args, cfg, "find_symbol", 1500), hints: { matches: { hint: "who_calls <name>", mustKeep: true } } },
+        ));
+      }
+
+      if (name === "who_calls") {
+        const symName = typeof args.name === "string" ? args.name : "";
+        if (!symName) return text(JSON.stringify({ error: "name is required" }), true);
+        const transitive = args.transitive === true;
+        const fresh = await ensureFreshGraph(root);
+        const result = await whoCalls(root, symName, { transitive });
+        // Pack callers losslessly. callers/matched are the ANSWER — never truncated.
+        const callersPacked = packRows(
+          result.callers as unknown as Array<Record<string, unknown>>,
+          ["id", "label", "kind", "confidence", "evidence", "path"],
+        );
+        return text(shape(
+          { ...result, callers: callersPacked, ...(fresh.staleWarning ? { staleWarning: fresh.staleWarning } : {}) },
+          { budget: budgetOf(args, cfg, "who_calls", 1500), hints: { callers: { hint: "who_calls <caller> transitive=true (packed: {cols,rows})", mustKeep: true }, matched: { hint: "find_symbol <name>", mustKeep: true } } },
+        ));
+      }
+
+      if (name === "preflight") {
+        const intent = typeof args.intent === "string" ? args.intent : "";
+        if (!intent) return text(JSON.stringify({ error: "intent is required" }), true);
+        const files = Array.isArray(args.files) ? (args.files as string[]) : undefined;
+        await ensureFreshGraph(root);
+        const record = await preflight(root, { intent, files });
+        return text(shape(record as unknown as Record<string, unknown>, {
+          budget: budgetOf(args, cfg, "preflight", 1500),
+          hints: { declaredFiles: { mustKeep: true } },
+        }));
+      }
+
+      if (name === "postflight") {
+        const id = typeof args.id === "string" ? args.id : undefined;
+        const result = await postflight(root, { id });
+        if ("error" in result) return text(JSON.stringify(result), true);
+        // The audit verdict + out-of-bounds list is the answer — never truncate.
+        return text(shape(
+          { id: result.record.id, verdict: result.report.verdict, report: result.report },
+          { budget: budgetOf(args, cfg, "postflight", 1500), hints: { report: { mustKeep: true } } },
+        ));
       }
 
       if (name === "run_gate") {
@@ -269,35 +444,24 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
         if (typeof args.file === "string" && args.file) {
           const filePath = path.join(kbDir, args.file);
           try {
-            const content = await readFileFn(filePath, "utf8");
-            return { content: [{ type: "text", text: content }] };
+            return text(await readFileFn(filePath, "utf8"));
           } catch {
-            return {
-              content: [{ type: "text", text: JSON.stringify({ error: `.engineering-intelligence/knowledge-base/${args.file} not found` }) }],
-              isError: true,
-            };
+            return text(JSON.stringify({ error: `.engineering-intelligence/knowledge-base/${args.file} not found` }), true);
           }
         }
-        // List files
         try {
           const entries = await readdir(kbDir, { recursive: true });
           const files = (entries as string[]).filter((e) => e.endsWith(".md") || e.endsWith(".json"));
-          return { content: [{ type: "text", text: JSON.stringify({ files }) }] };
+          return text(shape({ brief: "call get_brief for a ~500-token repo orientation", files }));
         } catch {
-          return { content: [{ type: "text", text: JSON.stringify({ files: [], note: ".engineering-intelligence/knowledge-base/ not found. Run /initialize-engineering-intelligence first." }) }] };
+          return text(JSON.stringify({ files: [], note: "knowledge-base/ not found. Run setup or /initialize-engineering-intelligence first." }));
         }
       }
 
-      return {
-        content: [{ type: "text", text: JSON.stringify({ error: `Unknown tool: ${name}` }) }],
-        isError: true,
-      };
+      return text(JSON.stringify({ error: `Unknown tool: ${name}` }), true);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return {
-        content: [{ type: "text", text: JSON.stringify({ error: message }) }],
-        isError: true,
-      };
+      return text(JSON.stringify({ error: message }), true);
     }
   });
 

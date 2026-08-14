@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -48,11 +49,10 @@ async function packageVersion(): Promise<string> {
   return parsed.version;
 }
 
-function usage(): string {
-  return `engineering-intelligence
+function usage(all = false): string {
+  const core = `engineering-intelligence — codebase intelligence that lives in your repo.
 
-Install engineering intelligence orchestration assets for AI coding IDEs.
-Build a real dependency graph. Start an MCP server for tool-based queries.
+Four commands do everything:
 
 Usage:
   engineering-intelligence install [path] [--ide <id>...] [--yes] [--dry-run] [--force]
@@ -80,6 +80,18 @@ IDE ids: ${IDE_IDS.join(", ")}
 Hook events: session-start, pre-tool-use, post-tool-use, stop
 Gates: env-vars, dead-exports, api-diff, migration-lint
 `;
+  if (!all) return core + "\nRun `engineering-intelligence --help --all` for the full advanced command list.\n";
+  return core + `
+Advanced commands (the 4 verbs above orchestrate these; use directly if you want):
+  install / create / update / uninstall [path] [--ide <id>...] [--dry-run] [--force]
+  map [path] [--type dependency] [--update] [--files a,b,c]
+  impact <file...> [--json]            who-calls <symbol> [--transitive] [--json]
+  verify [path] [--strict] [--json]    visualize [path] [--open]
+  preflight --intent "<s>" [file...]   postflight [--id <flight>] [--strict]
+  evidence-record [path]               evidence-check [path] [--strict] [--json]
+  freshness [path] [--threshold 60]    git-analysis [path] [--window 90]
+  user-profile [path] [--json]
+`;
 }
 
 function parseArgs(args: string[]): Options {
@@ -89,7 +101,7 @@ function parseArgs(args: string[]): Options {
     command = remaining.shift() as Command;
   }
   if (remaining.includes("--help") || remaining.includes("-h")) {
-    output.write(usage());
+    output.write(usage(remaining.includes("--all")));
     process.exit(0);
   }
   const ides: IdeId[] = [];
@@ -217,12 +229,15 @@ function parseArgs(args: string[]): Options {
     } else if (!target) {
       target = arg;
     } else {
-      throw new Error(`Unexpected argument "${arg}".`);
+      positionals.push(arg);
+      if (!target) target = arg;
     }
   }
+  // For commands whose positionals are a payload (not a path), the root is cwd.
+  const positionalIsPayload = command === "impact" || command === "who-calls" || command === "preflight" || command === "ask" || command === "guard";
   return {
     command,
-    root: path.resolve(target ?? process.cwd()),
+    root: path.resolve(positionalIsPayload ? process.cwd() : (target ?? process.cwd())),
     ides: [...new Set(ides)],
     yes,
     dryRun,
@@ -322,6 +337,95 @@ async function main(): Promise<void> {
         return answer.trim().toLowerCase() === "y";
       }
     : undefined;
+
+  if (options.command === "setup") {
+    const { runSetup, mcpRegistrationHint } = await import("../orchestrators/setup.js");
+    const ides = options.ides.length > 0 ? options.ides : undefined;
+    const result = await runSetup(options.root, {
+      ides,
+      packageVersion: version,
+      dryRun: options.dryRun,
+      force: options.force,
+      promptOverwrite,
+    });
+    if (options.json) {
+      output.write(`${JSON.stringify(result, null, 2)}\n`);
+    } else {
+      for (const line of result.logs) output.write(`  ${line}\n`);
+      if (!options.dryRun) output.write(mcpRegistrationHint(options.root, result.ides));
+    }
+    process.exitCode = result.installOp.conflicts > 0 ? 1 : 0;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "ask") {
+    const { runAsk } = await import("../orchestrators/ask.js");
+    const query = options.positionals.join(" ").trim();
+    if (!query) {
+      output.write("Usage: engineering-intelligence ask \"<question>\" | <file...>\n");
+      process.exitCode = 1;
+      if (readline) readline.close();
+      return;
+    }
+    const result = await runAsk(options.root, query, options.positionals, { full: options.full });
+    output.write(options.json ? `${JSON.stringify(result.json, null, 2)}\n` : result.text);
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "guard") {
+    const { preflight, postflight, renderFlightReport } = await import("../flight/index.js");
+    const intent = options.intent || options.positionals[0];
+    const isPreflight = options.positionals.length > 0 || !!options.intent;
+    if (isPreflight) {
+      const files = options.intent ? options.positionals : options.positionals.slice(1);
+      const { ensureFreshGraph } = await import("../graph/index.js");
+      await ensureFreshGraph(options.root);
+      const record = await preflight(options.root, { intent, files });
+      try {
+        const { recordEvidenceHashes } = await import("../evidence/index.js");
+        if (existsSync(path.join(options.root, ".engineering-intelligence", "knowledge-base"))) await recordEvidenceHashes(options.root);
+      } catch { /* best-effort */ }
+      if (options.json) {
+        output.write(`${JSON.stringify(record, null, 2)}\n`);
+      } else {
+        output.write(`Flight opened: ${record.id}\n  Intent: ${record.intent}\n`);
+        output.write(`  Declared files (${record.declaredFiles.length}): ${record.declaredFiles.join(", ") || "none"}\n`);
+        output.write(`  Predicted radius: ${record.predictedRadius.files.length} file(s), ${record.predictedRadius.direct.length} direct dependent(s)\n`);
+        output.write("  …make your edits, then run `engineering-intelligence guard` to audit.\n");
+      }
+    } else {
+      const result = await postflight(options.root, {});
+      if ("error" in result) {
+        output.write(`${result.error}\n`);
+        process.exitCode = 1;
+        if (readline) readline.close();
+        return;
+      }
+      output.write(options.json ? `${JSON.stringify(result.record, null, 2)}\n` : renderFlightReport(result.record, result.report));
+      if (options.strict && result.report.verdict === "flagged") process.exitCode = 1;
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "health") {
+    const { runHealth } = await import("../orchestrators/health.js");
+    const result = await runHealth(options.root);
+    output.write(options.json ? `${JSON.stringify(result.json, null, 2)}\n` : result.text);
+    if (options.openBrowser) {
+      const { generateDashboardHTML } = await import("../visualizer/index.js");
+      const html = await generateDashboardHTML(options.root);
+      const outPath = path.join(options.root, ".engineering-intelligence", "dashboard.html");
+      await mkdir(path.dirname(outPath), { recursive: true });
+      await writeFile(outPath, html, "utf8");
+      output.write(`  Dashboard: ${outPath}\n`);
+    }
+    if (options.strict && !result.ok) process.exitCode = 1;
+    if (readline) readline.close();
+    return;
+  }
 
   if (options.command === "freshness") {
     const { writeFreshnessReport } = await import("../freshness/index.js");
@@ -515,6 +619,138 @@ async function main(): Promise<void> {
     output.write(`Graph built: ${result.graphPath}\n`);
     output.write(`  ${result.nodeCount} nodes, ${result.edgeCount} edges (${result.fileCount} source files scanned)\n`);
     if (result.wasIncremental) output.write("  [incremental update]\n");
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "impact") {
+    const { ensureFreshGraph, analyzeImpact } = await import("../graph/index.js");
+    const files = options.files.length > 0 ? options.files : options.positionals;
+    if (files.length === 0) {
+      output.write("Usage: engineering-intelligence impact <file...> [--json]\n");
+      process.exitCode = 1;
+      if (readline) readline.close();
+      return;
+    }
+    const fresh = await ensureFreshGraph(options.root);
+    const result = await analyzeImpact(options.root, files);
+    if (options.json) {
+      output.write(`${JSON.stringify(fresh.staleWarning ? { ...result, staleWarning: fresh.staleWarning } : result, null, 2)}\n`);
+    } else {
+      output.write(`Impact of changing: ${files.join(", ")}\n`);
+      if (fresh.staleWarning) output.write(`  ⚠ ${fresh.staleWarning}\n`);
+      output.write(`  Direct (${result.direct.length}): ${result.direct.slice(0, 20).join(", ") || "none"}\n`);
+      output.write(`  Indirect (${result.indirect.length}): ${result.indirect.slice(0, 20).join(", ") || "none"}\n`);
+      if (result.testsToRun.length > 0) output.write(`  Tests to run (${result.testsToRun.length}): ${result.testsToRun.join(", ")}\n`);
+      for (const note of result.riskNotes) output.write(`  ⚠ ${note}\n`);
+      if (result.direct.length === 0 && result.indirect.length === 0) {
+        output.write("  No dependents found (or no graph — run `map` first).\n");
+      }
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "who-calls") {
+    const { ensureFreshGraph, whoCalls } = await import("../graph/index.js");
+    const name = options.positionals[0];
+    if (!name) {
+      output.write("Usage: engineering-intelligence who-calls <symbol> [--transitive] [--json]\n");
+      process.exitCode = 1;
+      if (readline) readline.close();
+      return;
+    }
+    const fresh = await ensureFreshGraph(options.root);
+    const result = await whoCalls(options.root, name, { transitive: options.transitive });
+    if (options.json) {
+      output.write(`${JSON.stringify(fresh.staleWarning ? { ...result, staleWarning: fresh.staleWarning } : result, null, 2)}\n`);
+    } else {
+      if (result.unresolved) {
+        output.write(`${result.unresolved}\n`);
+      } else {
+        output.write(`Callers of ${name} (${result.matched.length} definition(s), ${result.callers.length} caller(s)):\n`);
+        for (const c of result.callers) {
+          output.write(`  ${c.label}  [${c.confidence}]  ${c.evidence[0] ?? ""}\n`);
+        }
+        if (result.callers.length === 0) output.write("  No callers found in the graph.\n");
+      }
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "verify") {
+    const { verifyKnowledge, renderVerifyReport } = await import("../verify/index.js");
+    const report = await verifyKnowledge(options.root);
+    if (options.json) {
+      output.write(`${JSON.stringify(report, null, 2)}\n`);
+    } else {
+      output.write(renderVerifyReport(report));
+    }
+    if (options.strict && report.drift > 0) process.exitCode = 1;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "preflight") {
+    const { preflight } = await import("../flight/index.js");
+    if (!options.intent) {
+      output.write("Usage: engineering-intelligence preflight --intent \"<what you're changing>\" [file...]\n");
+      process.exitCode = 1;
+      if (readline) readline.close();
+      return;
+    }
+    const files = options.files.length > 0 ? options.files : options.positionals;
+    const record = await preflight(options.root, { intent: options.intent, files });
+    if (options.json) {
+      output.write(`${JSON.stringify(record, null, 2)}\n`);
+    } else {
+      output.write(`Flight opened: ${record.id}\n`);
+      output.write(`  Intent: ${record.intent}\n`);
+      output.write(`  Declared files (${record.declaredFiles.length}): ${record.declaredFiles.join(", ") || "none"}\n`);
+      output.write(`  Predicted radius: ${record.predictedRadius.files.length} file(s), ${record.predictedRadius.direct.length} direct / ${record.predictedRadius.indirect.length} indirect dependents\n`);
+      output.write(`  Run \`engineering-intelligence postflight --id ${record.id}\` after editing.\n`);
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "postflight") {
+    const { postflight, renderFlightReport } = await import("../flight/index.js");
+    const result = await postflight(options.root, { id: options.id || undefined });
+    if ("error" in result) {
+      output.write(`${result.error}\n`);
+      process.exitCode = 1;
+      if (readline) readline.close();
+      return;
+    }
+    if (options.json) {
+      output.write(`${JSON.stringify(result.record, null, 2)}\n`);
+    } else {
+      output.write(renderFlightReport(result.record, result.report));
+    }
+    if (options.strict && result.report.verdict === "flagged") process.exitCode = 1;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "evidence-record") {
+    const { recordEvidenceHashes } = await import("../evidence/index.js");
+    const snapshot = await recordEvidenceHashes(options.root);
+    output.write(`Recorded ${snapshot.hashes.length} evidence hash(es) to .engineering-intelligence/knowledge-base/.evidence-hashes.json\n`);
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "evidence-check") {
+    const { checkEvidenceHashes, renderEvidenceReport } = await import("../evidence/index.js");
+    const report = await checkEvidenceHashes(options.root);
+    if (options.json) {
+      output.write(`${JSON.stringify(report, null, 2)}\n`);
+    } else {
+      output.write(renderEvidenceReport(report));
+    }
+    if (options.strict && report.stale > 0) process.exitCode = 1;
     if (readline) readline.close();
     return;
   }
