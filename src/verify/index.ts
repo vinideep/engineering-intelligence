@@ -21,7 +21,7 @@
 
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -318,3 +318,81 @@ export async function runVerification(root: string, options: VerifyOptions = {})
   await writeReceipt(root, receipt);
   return { receipt, noCommands: commands.length === 0 };
 }
+
+// ---------------------------------------------------------------------------
+// Knowledge-base reference verification
+// ---------------------------------------------------------------------------
+
+export interface KnowledgeVerificationReport {
+  filesScanned: number;
+  referencesChecked: number;
+  drift: number;
+  details: Array<{ file: string; reference: string; exists: boolean }>;
+}
+
+export async function verifyKnowledge(root: string): Promise<KnowledgeVerificationReport> {
+  const kb = path.join(root, ".engineering-intelligence", "knowledge-base");
+  let files: string[] = [];
+  try {
+    const entries = await readdir(kb);
+    files = entries.filter((e) => e.endsWith(".md")).map((e) => path.join(kb, e));
+  } catch {
+    return { filesScanned: 0, referencesChecked: 0, drift: 0, details: [] };
+  }
+
+  const refRegex = /`([\w./\-]+\.(?:ts|tsx|js|mjs|cjs|py|go|rs|rb|java|kt|json|md|toml|yml|yaml))(?::\d+)?`/g;
+  let referencesChecked = 0;
+  let drift = 0;
+  const details: Array<{ file: string; reference: string; exists: boolean }> = [];
+  const checkedRefs = new Set<string>();
+
+  for (const f of files) {
+    try {
+      const content = await readFile(f, "utf8");
+      let match: RegExpExecArray | null;
+      refRegex.lastIndex = 0;
+      while ((match = refRegex.exec(content)) !== null) {
+        const refPath = match[1];
+        if (checkedRefs.has(refPath)) continue;
+        checkedRefs.add(refPath);
+        referencesChecked++;
+        const targetPath = path.resolve(root, refPath);
+        let exists = false;
+        try {
+          await readFile(targetPath);
+          exists = true;
+        } catch {
+          exists = false;
+        }
+        if (!exists) {
+          drift++;
+          details.push({ file: path.relative(root, f), reference: refPath, exists: false });
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return {
+    filesScanned: files.length,
+    referencesChecked,
+    drift,
+    details,
+  };
+}
+
+export function renderVerifyReport(report: KnowledgeVerificationReport): string {
+  const lines: string[] = ["Knowledge base reference verification", ""];
+  lines.push(`Scanned ${report.filesScanned} file(s), checked ${report.referencesChecked} reference(s).`);
+  if (report.drift === 0) {
+    lines.push("✓ All knowledge-base file citations resolve to existing files on disk.");
+  } else {
+    lines.push(`✗ Found ${report.drift} drifted reference(s):`);
+    for (const d of report.details) {
+      lines.push(`  - In ${d.file}: missing \`${d.reference}\``);
+    }
+  }
+  return lines.join("\n") + "\n";
+}
+

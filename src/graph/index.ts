@@ -215,6 +215,7 @@ export async function analyzeImpact(root: string, changedFiles: string[]): Promi
     const rel = node.id.startsWith("symbol:") ? node.id.slice("symbol:".length).split("#")[0] : node.path;
     if (rel && changedRels.has(rel)) changedIds.add(node.id);
   }
+  const nodeById = new Map<string, GraphNode>(existing.nodes.map((n) => [n.id, n]));
 
   // Reverse adjacency capturing the edge evidence that links importer -> target.
   const reverseAdj = new Map<string, Array<{ from: string; evidence: string[] }>>();

@@ -1,12 +1,34 @@
 import { readdir, readFile, stat } from "node:fs/promises";
+import { execSync } from "node:child_process";
 import path from "node:path";
 import type { DependencyGraph, GraphEdge, GraphNode } from "../schema.js";
 import { parseManifests } from "../parsers/manifest.js";
 import { extractImports } from "../parsers/imports.js";
+import { extractSymbols, resolvePendingCalls, buildGlobalSymbolTable, type PendingCall } from "../parsers/symbols.js";
 
 // Directories to skip when walking source files
 const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "coverage", "__pycache__", ".venv", "venv", "vendor", "target", ".gradle"]);
 const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".go", ".rs", ".rb", ".java", ".kt"]);
+
+function getGitChurn(root: string): Map<string, number> {
+  const churn = new Map<string, number>();
+  try {
+    const output = execSync("git log --name-only --format='' -n 200", {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+      timeout: 10_000,
+    });
+    for (const rawLine of output.split("\n")) {
+      const line = rawLine.trim().replace(/\\/g, "/");
+      if (!line) continue;
+      churn.set(line, (churn.get(line) ?? 0) + 1);
+    }
+  } catch {
+    // Non-git repo or git error
+  }
+  return churn;
+}
 
 async function walkSourceFiles(dir: string, root: string, files: string[] = []): Promise<string[]> {
   let entries: string[];
@@ -39,6 +61,9 @@ function deduplicateNodes(nodes: GraphNode[]): GraphNode[] {
       const existing = seen.get(node.id)!;
       for (const ev of node.evidence) {
         if (!existing.evidence.includes(ev)) existing.evidence.push(ev);
+      }
+      if (node.metadata) {
+        existing.metadata = { ...node.metadata, ...existing.metadata };
       }
     }
   }
@@ -87,22 +112,70 @@ export async function buildDependencyGraph(root: string, options: BuildOptions =
   const BATCH = 50;
   const allNodes: GraphNode[] = [...manifestNodes];
   const allEdges: GraphEdge[] = [];
+  const symbolNodes: GraphNode[] = [];
+  const allPendingCalls: PendingCall[] = [];
 
   const parserUnknowns: string[] = [];
   for (let i = 0; i < sourceFiles.length; i += BATCH) {
     const batch = sourceFiles.slice(i, i + BATCH);
-    const results = await Promise.all(batch.map((f) => extractImports(f, root)));
-    for (const { nodes, edges, unknowns } of results) {
+    const [importResults, symbolResults] = await Promise.all([
+      Promise.all(batch.map((f) => extractImports(f, root))),
+      Promise.all(batch.map((f) => extractSymbols(f, root))),
+    ]);
+    for (const { nodes, edges, unknowns } of importResults) {
       allNodes.push(...nodes);
       allEdges.push(...edges);
       if (unknowns) parserUnknowns.push(...unknowns);
     }
+    for (const { nodes, edges, pendingCalls } of symbolResults) {
+      allNodes.push(...nodes);
+      symbolNodes.push(...nodes);
+      allEdges.push(...edges);
+      allPendingCalls.push(...pendingCalls);
+    }
   }
+
+  // Build module import index for scoped call resolution
+  const importsByModule = new Map<string, Set<string>>();
+  for (const edge of allEdges) {
+    if (edge.relation === "imports") {
+      if (!importsByModule.has(edge.from)) importsByModule.set(edge.from, new Set());
+      importsByModule.get(edge.from)!.add(edge.to);
+    }
+  }
+
+  const globalSymbols = buildGlobalSymbolTable(symbolNodes);
+  const callEdges = resolvePendingCalls(allPendingCalls, globalSymbols, importsByModule);
+  allEdges.push(...callEdges);
 
   // Mark dev dependency edges
   for (const edge of allEdges) {
     if (devNodeIds.has(edge.to) && edge.relation === "imports") {
       edge.metadata = { ...edge.metadata, dev: true };
+    }
+  }
+
+  // Tag test files and attach churn metadata to module nodes
+  const churnMap = getGitChurn(root);
+  const TEST_PATTERN = /(?:^|[\\/])(test|tests|__tests__|spec)(?:[\\/]|\.|\b)|(?:\.test|\.spec)\.[a-z]+$/i;
+
+  for (const node of allNodes) {
+    const relPath = node.path ? node.path.replace(/\\/g, "/") : node.id.replace(/^module:/, "");
+    const isTest = TEST_PATTERN.test(relPath) || TEST_PATTERN.test(node.evidence[0] ?? "");
+    if (isTest) {
+      node.metadata = { ...node.metadata, isTest: true };
+    }
+    if (node.kind === "module") {
+      let churnCount = churnMap.get(relPath);
+      if (churnCount === undefined) {
+        for (const ext of [".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".go", ".rs", ".rb", ".java", ".kt"]) {
+          churnCount = churnMap.get(`${relPath}${ext}`);
+          if (churnCount !== undefined) break;
+        }
+      }
+      if (churnCount !== undefined) {
+        node.metadata = { ...node.metadata, churn: churnCount };
+      }
     }
   }
 

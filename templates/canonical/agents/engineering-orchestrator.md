@@ -27,8 +27,12 @@ When receiving a request, classify it immediately:
 | "Initialize intelligence" | `initialization` | Initialization pipeline |
 | "Understand this codebase", "Explore project" | `discovery` | Discovery pipeline |
 | "Create new project", "Start from scratch" | `creation` | Creation pipeline |
-| "Plan epic X", "Break down initiative Y", "Decompose into tickets" | `decomposition` | Backlog decomposition pipeline (read-only) |
-| "Deliver the backlog", "Build feature FEAT-XXX", "Work the tickets" | `delivery` | Backlog delivery pipeline (gated per feature) |
+| "Decompose backlog", "Plan epic X", "Break down initiative Y" | `decomposition` | Backlog decomposition pipeline (read-only) |
+| "Deliver backlog", "Build feature FEAT-XXX", "Work the tickets" | `delivery` | Backlog delivery pipeline (gated per feature) |
+| "Grill me", "Stress-test plan", "Pre-flight interview" | `grill-me` | Standalone Socratic stress-test shortcut |
+| "Design interface", "Explore API signatures" | `design-an-interface` | Standalone interface exploration shortcut |
+| "Run TDD", "Red-green-refactor loop" | `tdd` | Standalone vertical-slice TDD shortcut |
+| "Handoff session", "Save context state" | `handoff` | Standalone session handoff shortcut |
 | "Map architecture" | `mapping` | Graph engine (read-only) |
 | "Analyze impact of X" | `analysis` | Impact analysis (read-only) |
 | "Sync intelligence" | `sync` | Incremental sync (read-only) |
@@ -72,18 +76,20 @@ When receiving a request, classify it immediately:
 4. Roll up ticket → feature → epic status in `backlog-index.md`; optionally re-sync the tracker
 5. Re-enter the approval gate for every subsequent feature
 
-### Implementation Pipeline
+### Adaptive Implementation Pipeline
 
 1. **Pre-flight**: Read intelligence and AI-DLC state → identify relevant context. Check if discovery has been run; if not, perform discovery inside initialization or requirement scoping.
-2. **Impact**: Run `impact-analysis-engine` → write impact report
-3. **AI-DLC + Agile Plan**: Run `aidlc-lifecycle-engine` → select delivery mode, update backlog, acceptance criteria, state, and unit plan
-4. **Implement**: Execute `engineering-intelligence-skill` → code changes + tests
-5. **Validate**: Run `environmental-backpressure-engine` → tests, type checks, lints, scans — record results honestly
-6. **Govern**: Run `nfr-adr-governor`, `mcp-security-governor`, or `operations-readiness-engine` when triggered by risk
-7. **Sync**: Run `incremental-sync-engine` → update affected intelligence only
-8. **Record**: Run `change-history-engine` → write change record
-9. **Review gate** (high-risk only): Run `engineering-change-review`
-10. **Report**: Summarize work and AI-DLC breadcrumb to the user
+2. **Adaptive Socratic Gauntlet**: If change is `architecture`, `security`, `high`/`critical` risk, or has 3+ ambiguities, invoke `socratic-stress-tester` to stress-test trade-offs before impact planning.
+3. **Impact**: Run `impact-analysis-engine` → write impact report
+4. **AI-DLC + Agile Plan**: Run `aidlc-lifecycle-engine` → select delivery mode, update backlog, acceptance criteria, state, and unit plan.
+5. **Adaptive Interface Exploration**: If introducing new public APIs, exported types, or schema contracts, invoke `interface-design-explorer` to benchmark 3 proposals before writing code.
+6. **Implement**: Execute `engineering-intelligence-skill` → code changes + tests. When in TDD mode or implementing critical business logic, enforce `vertical-tdd-engine`.
+7. **Validate**: Run `environmental-backpressure-engine` → tests, type checks, lints, scans — record results honestly
+8. **Govern**: Run `nfr-adr-governor`, `mcp-security-governor`, or `operations-readiness-engine` when triggered by risk
+9. **Sync & Continuity**: Run `incremental-sync-engine` → update affected intelligence only. If session bounds or pauses occur, serialize state via `session-handoff-engine`.
+10. **Record**: Run `change-history-engine` → write change record
+11. **Review gate** (high-risk only): Run `engineering-change-review`
+12. **Report**: Summarize work and AI-DLC breadcrumb to the user
 
 ### Embedded Delivery Modes
 

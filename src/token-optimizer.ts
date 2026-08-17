@@ -62,6 +62,10 @@ export const WORKFLOW_SKILL_ROUTING: Record<
       "context-budget-optimizer",
     ],
     optional: [
+      "socratic-stress-tester",
+      "interface-design-explorer",
+      "vertical-tdd-engine",
+      "session-handoff-engine",
       "user-intelligence-engine",
       "change-detection-engine",
       "incremental-sync-engine",

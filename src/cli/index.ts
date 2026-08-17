@@ -11,9 +11,9 @@ import { doctor } from "../validation/index.js";
 import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "verify" | "claims" | "context" | "telemetry";
+type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "verify" | "claims" | "context" | "telemetry" | "setup" | "ask" | "guard" | "health" | "impact" | "who-calls" | "preflight" | "postflight" | "evidence-record" | "evidence-check";
 
-const COMMANDS: Command[] = ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "verify", "claims", "context", "telemetry"];
+const COMMANDS: Command[] = ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "verify", "claims", "context", "telemetry", "setup", "ask", "guard", "health", "impact", "who-calls", "preflight", "postflight", "evidence-record", "evidence-check"];
 
 interface Options {
   command: Command;
@@ -33,6 +33,11 @@ interface Options {
   gateName?: string;
   base: string;
   positional?: string;   // action (claims) or task (context)
+  positionals: string[];
+  intent?: string;
+  id?: string;
+  full?: boolean;
+  transitive?: boolean;
   statement?: string;
   evidence?: string;
   confidence?: string;
@@ -128,6 +133,11 @@ function parseArgs(args: string[]): Options {
   let strict = false;
   let host = "claude-code";
   let failOn: string | undefined;
+  const positionals: string[] = [];
+  let intent: string | undefined;
+  let id: string | undefined;
+  let full = false;
+  let transitive = false;
 
   for (let index = 0; index < remaining.length; index += 1) {
     const arg = remaining[index];
@@ -154,6 +164,18 @@ function parseArgs(args: string[]): Options {
       json = true;
     } else if (arg === "--open") {
       openBrowser = true;
+    } else if (arg === "--full") {
+      full = true;
+    } else if (arg === "--transitive") {
+      transitive = true;
+    } else if (arg === "--intent") {
+      intent = remaining[++index];
+    } else if (arg.startsWith("--intent=")) {
+      intent = arg.slice("--intent=".length);
+    } else if (arg === "--id") {
+      id = remaining[++index];
+    } else if (arg.startsWith("--id=")) {
+      id = arg.slice("--id=".length);
     } else if (arg === "--type") {
       const value = remaining[++index];
       if (!value) throw new Error("--type requires a value.");
@@ -253,6 +275,11 @@ function parseArgs(args: string[]): Options {
     gateName,
     base,
     positional,
+    positionals,
+    intent,
+    id,
+    full,
+    transitive,
     statement,
     evidence,
     confidence,
@@ -675,19 +702,6 @@ async function main(): Promise<void> {
         if (result.callers.length === 0) output.write("  No callers found in the graph.\n");
       }
     }
-    if (readline) readline.close();
-    return;
-  }
-
-  if (options.command === "verify") {
-    const { verifyKnowledge, renderVerifyReport } = await import("../verify/index.js");
-    const report = await verifyKnowledge(options.root);
-    if (options.json) {
-      output.write(`${JSON.stringify(report, null, 2)}\n`);
-    } else {
-      output.write(renderVerifyReport(report));
-    }
-    if (options.strict && report.drift > 0) process.exitCode = 1;
     if (readline) readline.close();
     return;
   }

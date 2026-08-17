@@ -254,6 +254,15 @@ export function mcpServerRegistration(): string {
   ) + "\n";
 }
 
+function safeRegex(pattern: string | undefined): RegExp | undefined {
+  if (!pattern) return undefined;
+  try {
+    return new RegExp(pattern, "i");
+  } catch {
+    return undefined;
+  }
+}
+
 export async function startMcpServer(projectRoot: string): Promise<void> {
   const server = new Server(
     { name: "engineering-intelligence", version: "2.3.0" },

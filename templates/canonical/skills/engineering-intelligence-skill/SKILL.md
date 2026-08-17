@@ -85,7 +85,15 @@ Before impact analysis or code edits:
 6. Carry that exact decision into the impact report's freshness-gate line.
 7. Skip stale H2 sections that carry low confidence metadata unless they are refreshed or verified against source.
 
-### 2. Impact Analysis: Write Report
+### 2. Adaptive Pre-Flight Socratic Gauntlet
+
+Before finalizing the impact analysis and planning:
+- **Trigger**: When the request is classified as `architecture`, `security`, cross-cutting (`high`/`critical` risk), or contains 3+ open ambiguities.
+- **Action**: Run `socratic-stress-tester` to challenge edge cases, failure/rollback modes, non-functional requirements, and blast radius.
+- **Output**: Record confirmed assumptions vs. verified facts (`[VERIFIED: path#lines]`) in the impact report before writing code.
+- **Skip Condition**: Skip for localized bugfixes, updates, and low-risk changes with clear specifications.
+
+### 3. Impact Analysis: Write Report
 
 Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>.md`:
 
@@ -123,7 +131,7 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
 - <areas where impact is uncertain>
 ```
 
-### 3. Implement the Change
+### 4. Implement the Change
 
 - Select the adaptive delivery mode inside the existing Engineering Intelligence workflow:
   - Standard Agile delivery for normal feature, bugfix, update, and refactor work
@@ -131,6 +139,12 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
   - TDD delivery for high-reliability business rules and service contracts
   - Design-first delivery for migrations, new architecture, and broad system boundaries
   - Hypothesis debugging for unknown-cause defects
+
+#### Adaptive Interface Contract Exploration
+- **Trigger**: When the request introduces new public APIs, exported types, schema models, or SDK contracts.
+- **Action**: Run `interface-design-explorer` to draft and compare 3 contrasting proposals (*Minimalist*, *Type-Safe/Extensible*, *Performance-Optimized*) before writing production code.
+- **Skip Condition**: Skip when modifying existing internal function bodies or bugfixes.
+
 - Update Agile artifacts when product behavior is in scope:
   - `.engineering-intelligence/aidlc/agile/product-backlog.md`
   - `.engineering-intelligence/aidlc/agile/sprint-plan.md`
@@ -147,16 +161,10 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
 - Respect architectural boundaries from `.engineering-intelligence/memory/architecture-decisions.md`
 - Consult `dangerous-areas.md` before modifying flagged code
 
-#### Strict TDD Red-Green Gate
-
-When TDD delivery mode is selected:
-
-1. Add or update the required tests first.
-2. Run the new/targeted tests before implementation code changes.
-3. Confirm they fail for the expected reason.
-4. Save failing output in `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md`.
-5. Only then implement production code.
-6. If this sequence is skipped, mark the construction unit blocked unless the user explicitly approves non-TDD execution.
+#### Adaptive Vertical TDD Execution
+- **Trigger**: When TDD delivery mode is selected, or when implementing complex business rules, parsers, state machines, or auth logic.
+- **Action**: Use `vertical-tdd-engine` to write vertical slice tests against public interfaces first (RED), write minimal passing code (GREEN), and clean code under tests (REFACTOR). Save failing output in `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md`.
+- If this sequence is skipped, mark the construction unit blocked unless the user explicitly approves non-TDD execution.
 
 ### 4. Add/Update Tests
 
@@ -196,7 +204,7 @@ Before Definition of Done can pass, map every criterion from `.engineering-intel
 
 Missing mappings block the Done gate and must be copied into the CHG record as open items.
 
-### 6. Incremental Sync
+### 6. Incremental Sync & Session Continuity
 
 Use `incremental-sync-engine` to update only affected artifacts:
 - Knowledge docs reflecting changed behavior
@@ -206,6 +214,10 @@ Use `incremental-sync-engine` to update only affected artifacts:
 - Event guidance if API/schema/auth contracts changed
 - AI-DLC lifecycle artifacts if state, plan, NFRs, ADRs, operations readiness, or unit discoveries changed
 - Agile artifacts if backlog, story status, acceptance criteria, Ready/Done gates, or retrospective learning changed
+
+#### Adaptive Session Handoff Trigger
+- **Trigger**: When context window limits approach, work is paused across sessions, or task is transferred to another agent.
+- **Action**: Run `session-handoff-engine` to emit `.engineering-intelligence/handoffs/HO-<date>-<task>.md` with ground truth, modified files, and immediate next commands.
 
 ### 7. Record Change
 
@@ -313,5 +325,6 @@ Summarize to the user:
 ## Cross-References
 
 - Depends on: `initialize-intelligence-skill` (prerequisite), `context-budget-optimizer`, `change-detection-engine`, `impact-analysis-engine`, `graph-engine`, `staleness-detector`
-- Uses during execution: `testing-intelligence-engine`, `type-safety-engine`, `api-backward-compatibility-engine`, `database-migration-safety-engine`, `security-audit-engine`, `environment-variable-auditor`, `adr-compliance-checker`, `llm-prompt-injection-guard`, `incremental-sync-engine`, `change-history-engine`
+- Uses during execution: `testing-intelligence-engine`, `type-safety-engine`, `api-backward-compatibility-engine`, `database-migration-safety-engine`, `security-audit-engine`, `environment-variable-auditor`, `adr-compliance-checker`, `llm-prompt-injection-guard`, `incremental-sync-engine`, `change-history-engine`, `vertical-tdd-engine`
+- Adaptive triggers: `socratic-stress-tester` (for high-risk/ambiguous pre-flight), `interface-design-explorer` (for new public API/types), `session-handoff-engine` (for context/session boundaries)
 - Optional: `engineering-change-review` (for high-risk), `refactoring-planner` (for refactors), `convention-detector` (for convention compliance)

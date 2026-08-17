@@ -82,4 +82,10 @@ test("V2 canonical templates define graph, report, and read-only workflow contra
   const nfrAdr = await readTemplate("skills", "nfr-adr-governor");
   assert.match(nfrAdr, /ADR/);
   assert.match(nfrAdr, /Superseded/);
+  assert.match(implementationSkill, /socratic-stress-tester/);
+  assert.match(implementationSkill, /interface-design-explorer/);
+  assert.match(implementationSkill, /vertical-tdd-engine/);
+  assert.match(implementationSkill, /session-handoff-engine/);
+  assert.match(engineering, /Adaptive Pre-Flight Gauntlet/);
+  assert.match(engineering, /Adaptive Interface Exploration/);
 });
