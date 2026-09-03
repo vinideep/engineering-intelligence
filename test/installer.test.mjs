@@ -3,10 +3,12 @@ import { access, mkdir, mkdtemp, readFile, unlink, writeFile } from "node:fs/pro
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { renderAdapters } from "../dist/adapters/index.js";
 import { install, uninstall, update } from "../dist/installer/index.js";
+import { SKILL_NAMES, WORKFLOW_NAMES } from "../dist/templates.js";
 import { doctor } from "../dist/validation/index.js";
 
-const options = { packageVersion: "0.2.0" };
+const options = { packageVersion: "3.5.0" };
 
 async function project() {
   return mkdtemp(path.join(tmpdir(), "engineering-intelligence-"));
@@ -15,6 +17,39 @@ async function project() {
 async function readable(root, relative) {
   return readFile(path.join(root, relative), "utf8");
 }
+
+test("every adapter renders the complete canonical skill and workflow inventory it supports", async () => {
+  const profiles = {
+    antigravity: { skills: ".agent/skills", workflows: ".agent/workflows", workflowKind: "file" },
+    "antigravity-cli": { skills: ".agents/skills", workflows: ".agents/workflows", workflowKind: "file" },
+    codex: { skills: ".agents/skills", workflows: ".agents/workflows", workflowKind: "file" },
+    generic: { skills: ".agents/skills", workflows: ".agents/skills", workflowKind: "skill" },
+    "claude-code": { skills: ".claude/skills", workflows: ".claude/commands", workflowKind: "file" },
+    cursor: { skills: null, workflows: ".cursor/commands", workflowKind: "file" },
+    "github-copilot": { skills: ".github/skills", workflows: ".github/prompts", workflowKind: "prompt" },
+    "gemini-cli": { skills: ".agents/skills", workflows: ".gemini/commands", workflowKind: "toml" },
+    commandcode: { skills: ".commandcode/skills", workflows: ".commandcode/commands", workflowKind: "file" },
+  };
+
+  for (const [adapter, profile] of Object.entries(profiles)) {
+    const paths = new Set((await renderAdapters([adapter])).map((entry) => entry.path));
+    if (profile.skills) {
+      for (const name of SKILL_NAMES) {
+        assert.ok(paths.has(`${profile.skills}/${name}/SKILL.md`), `${adapter} omitted skill ${name}`);
+      }
+    }
+    for (const name of WORKFLOW_NAMES) {
+      const suffix = profile.workflowKind === "skill"
+        ? `${name}/SKILL.md`
+        : profile.workflowKind === "prompt"
+          ? `${name}.prompt.md`
+          : profile.workflowKind === "toml"
+            ? `${name}.toml`
+            : `${name}.md`;
+      assert.ok(paths.has(`${profile.workflows}/${suffix}`), `${adapter} omitted workflow ${name}`);
+    }
+  }
+});
 
 test("installs shared skills once for overlapping adapters", async () => {
   const root = await project();
@@ -83,6 +118,21 @@ test("doctor recognizes an untouched installation as healthy", async () => {
   assert.equal(actions.filter((action) => action.status !== "unchanged").length, 0);
 });
 
+test("doctor detects package drift and canonical files omitted from the install manifest", async () => {
+  const root = await project();
+  await install(root, ["generic"], options);
+  const manifestPath = path.join(root, ".engineering-intelligence/install-manifest.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  const omitted = manifest.files.find((entry) => entry.path.includes("graph-engine/SKILL.md"));
+  assert.ok(omitted);
+  manifest.packageVersion = "2.3.0";
+  manifest.files = manifest.files.filter((entry) => entry.path !== omitted.path);
+  await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+  const actions = await doctor(root);
+  assert.ok(actions.some((action) => action.path.endsWith("install-manifest.json") && action.status === "error" && action.message.includes("2.3.0")));
+  assert.ok(actions.some((action) => action.path === omitted.path && action.status === "error" && action.message.includes("missing from the install manifest")));
+});
+
 test("dry run does not write installer state or adapter files", async () => {
   const root = await project();
   const result = await install(root, ["claude-code"], { ...options, dryRun: true });
@@ -141,7 +191,7 @@ test("update upgrades a V1-shaped installation with V2 graph and impact assets",
   assert.ok(result.actions.some((action) => action.path === ".agents/skills/graph-engine/SKILL.md" && action.status === "created"));
   assert.ok(result.actions.some((action) => action.path === ".agent/workflows/analyze-impact.md" && action.status === "created"));
   const updatedManifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  assert.equal(updatedManifest.templateVersion, "3.0.0");
+  assert.equal(updatedManifest.templateVersion, "4.0.0");
 });
 
 test("upgrade installs new V2 files while preserving edited managed instructions", async () => {

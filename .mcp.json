@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "engineering-intelligence": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "engineering-intelligence",
+        "mcp"
+      ]
+    }
+  }
+}

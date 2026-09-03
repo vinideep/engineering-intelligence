@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: change-history-engine
 description: Records validated engineering work, impacted systems, tests, synchronized documentation, and outstanding risks. Use after initialization and completed engineering changes.
@@ -19,7 +17,7 @@ Create structured, traceable change records that document what was done, why, wh
 
 ## Change Record Format
 
-Store change records in `$EIchanges/`:
+Store change records in `.engineering-intelligence/changes/`:
 
 - Initialization creates `CHG-000-initialization.md`
 - Subsequent changes create the next numbered `CHG-XXX-<summary>.md`
@@ -68,9 +66,9 @@ Store change records in `$EIchanges/`:
 ## Synchronized Artifacts
 | Artifact | Change |
 |---|---|
-| $EIknowledge-base/04-api-documentation.md | Updated rate limiting section |
-| $EIgraph/runtime-graph.json | Added rate-limiter node |
-| $EIcontext/module-map.md | Added rate-limiter entry |
+| .engineering-intelligence/knowledge-base/04-api-documentation.md | Updated rate limiting section |
+| .engineering-intelligence/graph/runtime-graph.json | Added rate-limiter node |
+| .engineering-intelligence/context/module-map.md | Added rate-limiter entry |
 
 ## Unresolved Risks
 - <any remaining concerns, follow-ups, or known limitations>
@@ -94,11 +92,11 @@ Initial engineering intelligence generated for <project name>.
 ## Generated Artifacts
 | Category | Count | Path |
 |---|---|---|
-| Knowledge Base | 16 documents | $EIknowledge-base/ |
-| Memory | 5 documents | $EImemory/ |
-| Context | 6 maps | $EIcontext/ |
-| Events | 5 guides | $EIevents/ |
-| Graphs | 4 JSON + 1 map | $EIgraph/ |
+| Knowledge Base | 16 documents | .engineering-intelligence/knowledge-base/ |
+| Memory | 5 documents | .engineering-intelligence/memory/ |
+| Context | 6 maps | .engineering-intelligence/context/ |
+| Events | 5 guides | .engineering-intelligence/events/ |
+| Graphs | 4 JSON + 1 map | .engineering-intelligence/graph/ |
 
 ## Confidence Assessment
 - High confidence areas: <list>

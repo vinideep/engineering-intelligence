@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: dead-code-detector
 description: Detects unused exports, unreachable code paths, zombie dependencies, and stale modules by combining static analysis with git history.
@@ -21,7 +19,7 @@ Use this skill during initialization, major refactors, dependency cleanup, and t
 
 ## Output
 
-Write or update `$EIknowledge-base/12-technical-debt.md`:
+Write or update `.engineering-intelligence/knowledge-base/12-technical-debt.md`:
 
 ```markdown
 ## Dead Code Candidates

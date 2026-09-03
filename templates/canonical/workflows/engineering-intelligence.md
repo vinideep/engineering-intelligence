@@ -9,7 +9,7 @@ Use the `engineering-intelligence-skill` capability for the user's accompanying 
 
 ## Pipeline
 
-1. **Read Intelligence** — Consult `.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/memory/`, `.engineering-intelligence/context/`, `.engineering-intelligence/graph/`
+1. **Get trusted context** — Call `get_engineering_context` before direct exploration. Honor ContextPackV2 knowledge trust, EI graph scope, current hashes, provider fallback, conflicts, unknowns, budget, and stop reason; load only the relevant persisted EI slices it identifies.
 2. **Establish Baseline** — Run `npx engineering-intelligence verify .` before any edit (use `environmental-backpressure-engine` to resolve "no check commands detected" by configuring `hooks.verifyCommands`, never by skipping). A failure here is pre-existing, not something this change caused — note it so the post-implementation result isn't misread as a regression.
 3. **Adaptive Pre-Flight Gauntlet** — If the request is classified as `architecture`, `security`, cross-cutting (`high`/`critical` risk), or has 3+ ambiguities, invoke `socratic-stress-tester` to stress-test edge cases and resolve trade-offs before writing the impact report.
 4. **Select Delivery Mode** — Choose standard Agile, adversarial, TDD, design-first, or hypothesis debugging based on risk
@@ -20,7 +20,7 @@ Use the `engineering-intelligence-skill` capability for the user's accompanying 
 9. **Test** — Add/update tests proportional to risk; execute and record results
 10. **Safety Gates** — Run freshness, type safety, API compatibility, API snapshot replay, migration safety, convention, acceptance-mapping, dependency-risk, env-var, ADR compliance, LLM prompt-injection, and rollback gates when applicable
 11. **Validate** — Re-run `npx engineering-intelligence verify .` (via `environmental-backpressure-engine`) against the finished change. This is the receipt the Stop gate and CI both check — it must pass, or the failure must be recorded as a residual risk, not silently dropped.
-12. **Sync Intelligence & Session Continuity** — Incrementally update only affected knowledge, memory, context, event, graph artifacts, and AI-DLC artifacts. If the session is paused or context bounds approach, serialize state via `session-handoff-engine`.
+12. **Sync Intelligence & Session Continuity** — Call `sync_engineering_knowledge`, incrementally update only affected canonical knowledge/memory/context/event/graph artifacts and AI-DLC artifacts it flags, then call `validate_change`. Record provider health and native fallback. If the session is paused or context bounds approach, serialize state via `session-handoff-engine`.
 13. **Record Change** — Write `.engineering-intelligence/changes/CHG-XXX-<summary>.md` referencing related reports and acceptance verification
 14. **Review Gate** — For high-risk changes, run engineering-change review before completion
 

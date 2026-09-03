@@ -12,8 +12,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { buildGraph, validateGraph, analyzeImpact, findSymbol, whoCalls } from "../dist/graph/index.js";
-import { buildDependencyGraph } from "../dist/graph/builders/dependency.js";
+import { buildGraph, validateGraph, analyzeImpact, ensureFreshGraph, findSymbol, whoCalls } from "../dist/graph/index.js";
+import { buildDependencyGraph, mergeIncrementalUpdate } from "../dist/graph/builders/dependency.js";
 import { resolvePendingCalls, buildGlobalSymbolTable } from "../dist/graph/parsers/symbols.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -43,6 +43,7 @@ test("dependency-graph.json exists on disk and passes schema validation", async 
   assert.equal(graph.schemaVersion, 1);
   assert.equal(graph.graphType, "dependency");
   assert.ok(graph.generatedAt, "generatedAt should be set");
+  assert.match(graph.workspaceHash, /^[a-f0-9]{64}$/, "graph should include the current approved-source hash");
   assert.ok(Array.isArray(graph.nodes), "nodes should be an array");
   assert.ok(Array.isArray(graph.edges), "edges should be an array");
   assert.ok(Array.isArray(graph.unknowns), "unknowns should be an array");
@@ -100,6 +101,14 @@ test("node IDs are stable across two consecutive builds", async () => {
   for (const id of firstIds) {
     assert.ok(secondIds.has(id), `Node ID drifted: "${id}" missing from second build`);
   }
+});
+
+test("an unchanged dirty working tree does not rebuild the graph on every query", async () => {
+  const before = JSON.parse(await readFile(GRAPH_PATH, "utf8"));
+  const freshness = await ensureFreshGraph(REPO_ROOT);
+  const after = JSON.parse(await readFile(GRAPH_PATH, "utf8"));
+  assert.equal(freshness.refreshed, false);
+  assert.equal(after.generatedAt, before.generatedAt);
 });
 
 test("all edges reference node IDs that exist in the nodes array", async () => {
@@ -169,6 +178,30 @@ test("analyzeImpact returns direct importers for a changed source file", async (
     hasAdapters || result.direct.length > 0,
     `Expected direct importers of src/types.ts, got: ${JSON.stringify(result)}`,
   );
+});
+
+test("incremental merge preserves inbound imports when only the target changes", async () => {
+  const existing = {
+    schemaVersion: 1,
+    graphType: "dependency",
+    generatedAt: new Date(0).toISOString(),
+    scope: "fixture",
+    nodes: [
+      { id: "module:src/a", kind: "module", label: "a", path: "src/a.ts", confidence: "verified", metadata: {}, evidence: ["src/a.ts"] },
+      { id: "module:src/b", kind: "module", label: "b", path: "src/b.ts", confidence: "verified", metadata: {}, evidence: ["src/b.ts"] },
+    ],
+    edges: [
+      { from: "module:src/a", to: "module:src/b", relation: "imports", confidence: "verified", metadata: {}, evidence: ["src/a.ts:1"] },
+    ],
+    unknowns: [],
+  };
+  const updated = {
+    ...existing,
+    nodes: [existing.nodes[1]],
+    edges: [],
+  };
+  const merged = await mergeIncrementalUpdate(existing, updated, ["src/b.ts"]);
+  assert.ok(merged.edges.some((edge) => edge.from === "module:src/a" && edge.to === "module:src/b"));
 });
 
 // --- v2.2: freshness stamp, test tagging, churn, richer impact --------------

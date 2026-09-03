@@ -10,7 +10,7 @@ Use `change-detection-engine` and `engineering-change-review`.
 ## Procedure
 
 1. **Detect scope** — Identify the implementation diff or changed scope
-2. **Read context** — Load associated impact report, test evidence, and graph artifacts
+2. **Read context** — Call `get_engineering_context`, then load the associated impact report, test evidence, and relevant EI graph slices. Record provider health/fallback; exclude stale and out-of-scope provider evidence.
 3. **Review** — Inspect across five dimensions:
 
 | Dimension | What to Check |
@@ -20,6 +20,7 @@ Use `change-detection-engine` and `engineering-change-review`.
 | Architecture | Boundary respect, pattern compliance, dependency direction |
 | Graph consistency | New/changed nodes and edges reflected |
 | Documentation sync | Knowledge, memory, context accuracy |
+| Evidence trust | Current hashes, verified claims, provider provenance, conflicts/unknowns |
 
 4. **Write report** — Generate `.engineering-intelligence/reports/REV-XXX-<slug>.md` with:
    - Severity-ordered findings (🔴 Blocker → 🟢 Positive)
@@ -34,3 +35,4 @@ Use `change-detection-engine` and `engineering-change-review`.
 - Do not auto-fix findings — report only
 - Include positive observations alongside issues
 - Flag unrun validation honestly
+- Call `validate_change` and include its deterministic verdict without auto-fixing findings

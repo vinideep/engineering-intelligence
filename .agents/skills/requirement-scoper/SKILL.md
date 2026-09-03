@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: requirement-scoper
 description: Iteratively scopes product requirements by acting as a detailed business and technical analyst, asking clarifying questions, and generating a finalized requirement prompt.
@@ -12,14 +10,14 @@ Act as a detailed Business Analyst and Technical Architect persona. Analyze the 
 ## Inputs
 
 - User initial request (scope, feature, or bug details)
-- `$EIknowledge-base/` (existing project domain context)
-- `$EIgraph/` (dependency graphs)
-- `$EImemory/` (durable architecture/business decisions)
+- `.engineering-intelligence/knowledge-base/` (existing project domain context)
+- `.engineering-intelligence/graph/` (dependency graphs)
+- `.engineering-intelligence/memory/` (durable architecture/business decisions)
 
 ## Procedure
 
 1. **Analyze Current Knowledge** — Consult all intelligence inputs:
-   - Identify domain logic in `$EIknowledge-base/` matching the request category
+   - Identify domain logic in `.engineering-intelligence/knowledge-base/` matching the request category
    - Query dependency/service graphs to locate related modules and boundaries
    - Read architecture memory to understand tech constraints and guidelines
    - Scan relevant modules for implicit invariants and dominant implementation constraints before asking questions:
@@ -49,11 +47,11 @@ Act as a detailed Business Analyst and Technical Architect persona. Analyze the 
 
 3. **Iterate with User** — Wait for user responses. Adjust assumptions based on their answers.
 
-4. **Generate Final Requirement Prompt** — Once requirements are clear, output a comprehensive requirements document to `$EIknowledge-base/19-requirements.md`, update Agile artifacts under `$AIDLCagile/`, and formulate the finalized prompt for the development agent.
+4. **Generate Final Requirement Prompt** — Once requirements are clear, output a comprehensive requirements document to `.engineering-intelligence/knowledge-base/19-requirements.md`, update Agile artifacts under `.engineering-intelligence/aidlc/agile/`, and formulate the finalized prompt for the development agent.
 
 ## Output Format
 
-The final requirements document `$EIknowledge-base/19-requirements.md` must follow this structure:
+The final requirements document `.engineering-intelligence/knowledge-base/19-requirements.md` must follow this structure:
 
 ```markdown
 # Requirements: <Feature Name>

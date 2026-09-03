@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: operations-readiness-engine
 description: Produces deployment, observability, rollback, and runbook readiness artifacts for production-bound AI-DLC changes.
@@ -22,7 +20,7 @@ For medium-and-above risk changes, use the rollback planning section even when t
 
 ## Outputs
 
-Write `$AIDLCoperations/operations-readiness.md`:
+Write `.engineering-intelligence/aidlc/operations/operations-readiness.md`:
 
 ```markdown
 # Operations Readiness

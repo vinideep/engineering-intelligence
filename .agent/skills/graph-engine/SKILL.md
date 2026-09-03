@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: graph-engine
 description: Builds and maintains evidence-backed JSON architecture graphs and Mermaid architecture maps representing project dependencies, services, runtime flows, and business processes.
@@ -9,6 +7,10 @@ description: Builds and maintains evidence-backed JSON architecture graphs and M
 
 Build and maintain structured, evidence-backed architecture graphs that enable impact analysis, dependency tracing, and architectural understanding.
 
+**Build the real graph first:** `npx engineering-intelligence map . [--update --files a,b]` produces the computed, schema-validated `dependency-graph.json` from source imports. It resolves specifiers against disk and records anything it cannot resolve in `unknowns` rather than guessing. Use the steps below to derive the service, runtime, and business-flow graphs the CLI does not compute.
+
+EI's normalized graph is canonical. Graphify is an optional code-only extractor behind the provider adapter: fresh agreement with native EI extraction is corroborated evidence; Graphify-only edges remain provider-extracted/unverifiable; conflicts are `contested`; stale or out-of-scope evidence is excluded. Every provider relationship must retain provider/version, commit, source hash/span, extraction class, confidence, freshness, and trust state. Never copy raw Graphify output over EI's graph or treat CCE's internal graph as a second authority.
+
 ## Inputs
 
 - Repository root path
@@ -17,7 +19,7 @@ Build and maintain structured, evidence-backed architecture graphs that enable i
 
 ## Graph Artifacts
 
-All graphs are stored in `$EIgraph/`.
+All graphs are stored in `.engineering-intelligence/graph/`.
 
 ### Graph JSON Schema
 
@@ -197,6 +199,8 @@ Derive Mermaid diagrams from the JSON graphs. Include:
 - Rebuild all graphs on initialization, explicit mapping request, or when structural impact cannot be bounded
 - Do not add `co-change` edges below `0.7` coupling strength
 - Sensitive data propagation to unencrypted channels, logs, or unvalidated sinks must become a security finding in the impact report
+- Apply `ProjectFilePolicy` consistently; imports into excluded generated output are external/generated references, not source modules
+- Do not use `stale`, `contested`, `unverifiable`, or `missing` provider edges to derive verified claims
 
 ## Quality Gates
 
@@ -210,6 +214,8 @@ Derive Mermaid diagrams from the JSON graphs. Include:
 - [ ] Runtime critical paths include function-level nodes where detectable
 - [ ] Sensitive data nodes and propagation edges are annotated in `data-flow-graph.json`
 - [ ] Hot path edges include `metadata.hotness` when evidence exists
+- [ ] Graph contains no secret, provider-cache, vendored, generated-build, or benchmark-fixture source nodes
+- [ ] Provider provenance and trust state survive normalization and reconciliation
 
 ## Cross-References
 

@@ -1,6 +1,5 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
+name: initialize-engineering-intelligence
 description: Initialize evidence-based engineering intelligence for the current project.
 ---
 
@@ -16,28 +15,31 @@ Analyzes this repository thoroughly without changing product code. Produces a co
 
 | Category | Path | Content |
 |---|---|---|
-| Knowledge Base | `$EIknowledge-base/` | 16 evidence-backed documents (00-15) |
-| Memory | `$EImemory/` | 5 durable decision/pattern documents |
-| Context | `$EIcontext/` | 6 compact navigation maps |
-| Events | `$EIevents/` | 5 change-event guidance documents |
-| Graphs | `$EIgraph/` | 4 JSON graphs + architecture-map.md |
-| AI-DLC + Agile | `$AIDLC` | Lifecycle state, audit, discovery placeholders, open questions, Agile backlog/sprint/DoR/DoD, cross-unit discovery log |
-| History | `$EIchanges/CHG-000-initialization.md` | Initialization record |
+| Knowledge Base | `.engineering-intelligence/knowledge-base/` | 16 evidence-backed documents (00-15) |
+| Memory | `.engineering-intelligence/memory/` | 5 durable decision/pattern documents |
+| Context | `.engineering-intelligence/context/` | 6 compact navigation maps |
+| Events | `.engineering-intelligence/events/` | 5 change-event guidance documents |
+| Graphs | `.engineering-intelligence/graph/` | 4 JSON graphs + architecture-map.md |
+| AI-DLC + Agile | `.engineering-intelligence/aidlc/` | Lifecycle state, audit, discovery placeholders, open questions, Agile backlog/sprint/DoR/DoD, cross-unit discovery log |
+| History | `.engineering-intelligence/changes/CHG-000-initialization.md` | Initialization record |
 
 ## Execution Steps
 
-1. **Discover** — Scan repository for packages, runtimes, build systems, APIs, databases, auth, CI, and tests
-2. **Extract** — Generate knowledge-base documents with evidence citations
-3. **Validate** — Audit claims against source code; write validation report
-4. **Generate Memory** — Extract durable decisions and patterns
-5. **Generate Context** — Create concise AI navigation maps
-6. **Build Graphs** — Run `engineering-intelligence map .` (or `npx engineering-intelligence map .`) to generate the real computed dependency graph at `$EIgraph/dependency-graph.json`. Then invoke `graph-engine` to produce service, runtime, and business-flow graphs and `architecture-map.md`
-7. **Initialize AI-DLC + Agile** — Create `aidlc-state.md`, `audit.md`, `open-questions.md`, `execution-plan.md`, `checkpoints.md`, Agile delivery artifacts, and `construction/cross-unit-discoveries.md`
-8. **Audit Memory** — Run memory pruning audit and initialize `$EImemory/regression-patterns.md`
-9. **Record** — Write initialization change record
+1. **Bootstrap deterministically** — Run `engineering-intelligence initialize . --providers auto --yes`. This installs/verifies pinned local providers, applies the shared file policy, creates Graphify structural evidence, reconciles EI's canonical graph, indexes the approved CCE scope, derives claims, and writes the knowledge-generation brief. Report degraded native fallback honestly; use `--require-providers` only when requested.
+2. **Discover** — Read `initialization-evidence.json` and `KNOWLEDGE-GENERATION-BRIEF.md`, then call `get_engineering_context` before direct source exploration. Scan only unresolved packages, runtimes, build systems, APIs, databases, auth, CI, and tests.
+3. **Extract** — Generate EI-owned knowledge-base documents with source citations. Graphify and CCE are evidence providers, never canonical authors.
+4. **Validate** — Audit claims against current source; write validation report; quarantine stale, contested, unverifiable, and out-of-scope evidence
+5. **Generate Memory** — Extract durable decisions and patterns
+6. **Generate Context** — Create concise AI navigation maps
+7. **Build remaining graphs** — Preserve the normalized dependency graph from bootstrap; invoke `graph-engine` for service, runtime, and business-flow graphs and `architecture-map.md`
+8. **Initialize AI-DLC + Agile** — Create `aidlc-state.md`, `audit.md`, `open-questions.md`, `execution-plan.md`, `checkpoints.md`, Agile delivery artifacts, and `construction/cross-unit-discoveries.md`
+9. **Audit Memory** — Run memory pruning audit and initialize `.engineering-intelligence/memory/regression-patterns.md`
+10. **Publish and record** — Require strict claims, citation, knowledge, graph-scope, and health gates before writing the completed initialization record
 
 ## Important
 
 - Do not fabricate details — mark uncertainty clearly
 - Every claim must cite evidence from the repository
+- EI remains canonical; provider health/version/fallback and evidence trust states must be recorded
+- Raw provider tools are unavailable unless expert mode was explicitly enabled
 - Finish with: created artifacts, confidence assessment, and human-review items

@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: nfr-adr-governor
 description: Captures non-functional requirements, maps them to architectural patterns, and governs ADR lifecycle states.
@@ -11,7 +9,7 @@ Use this skill for performance, reliability, security, privacy, compliance, scal
 
 ## NFR Requirements
 
-Write `$AIDLCconstruction/<unit>/nfr-requirements.md`:
+Write `.engineering-intelligence/aidlc/construction/<unit>/nfr-requirements.md`:
 
 ```markdown
 # NFR Requirements: <unit>
@@ -28,7 +26,7 @@ Write `$AIDLCconstruction/<unit>/nfr-requirements.md`:
 
 ## NFR Design
 
-Write `$AIDLCconstruction/<unit>/nfr-design/design.md` with concrete patterns. Examples: circuit breaker with exponential backoff, idempotency keys, bulkheads, rate limits, schema expansion/contraction, cache invalidation, trace correlation, policy-based authorization.
+Write `.engineering-intelligence/aidlc/construction/<unit>/nfr-design/design.md` with concrete patterns. Examples: circuit breaker with exponential backoff, idempotency keys, bulkheads, rate limits, schema expansion/contraction, cache invalidation, trace correlation, policy-based authorization.
 
 ## ADR Lifecycle
 
@@ -45,7 +43,7 @@ Accepted ADRs are immutable. To change one, create a new `Proposed` ADR and mark
 ADR path:
 
 ```text
-$AIDLCconstruction/<unit>/nfr-design/decision-records/ADR-NNNN-<slug>.md
+.engineering-intelligence/aidlc/construction/<unit>/nfr-design/decision-records/ADR-NNNN-<slug>.md
 ```
 
 ADR template:

@@ -40,11 +40,16 @@ When receiving a request, classify it immediately:
 
 ## Coordination Protocol
 
+## Context routing contract
+
+For non-trivial work, call `get_engineering_context` before direct file exploration. EI's knowledge, claims, ADRs, memory, and normalized graph remain canonical; Graphify supplies structural evidence and CCE supplies scoped current code spans. Route through consolidated EI tools by default. Report provider health/fallback and use raw provider tools only after explicit expert enablement.
+
 ### Initialization Pipeline
 
-1. Run `initialize-intelligence-skill` → generates knowledge base, memory, context, events, graphs
-2. Delegates to: `deep-project-knowledge-extractor`, `knowledge-base-validator`, `graph-engine`, `change-history-engine`
-3. Does **not** modify product code
+1. Run `engineering-intelligence initialize . --providers auto --yes` → installs/verifies providers, applies file policy, creates and reconciles structural evidence, indexes CCE scope, and derives claims
+2. Run `initialize-intelligence-skill` from the generated evidence brief → generates EI-owned knowledge base, memory, context, events, and remaining graphs
+3. Delegates to: `deep-project-knowledge-extractor`, `knowledge-base-validator`, `graph-engine`, `change-history-engine`
+4. Publish only after strict knowledge/claim/citation/scope health passes; does **not** modify product code
 
 ### Discovery Pipeline
 
@@ -78,7 +83,7 @@ When receiving a request, classify it immediately:
 
 ### Adaptive Implementation Pipeline
 
-1. **Pre-flight**: Read intelligence and AI-DLC state → identify relevant context. Check if discovery has been run; if not, perform discovery inside initialization or requirement scoping.
+1. **Pre-flight**: Request ContextPackV2 and AI-DLC state → identify verified relevant context, provider fallback, conflicts, and unknowns. Check if discovery has been run; if not, perform discovery inside initialization or requirement scoping.
 2. **Adaptive Socratic Gauntlet**: If change is `architecture`, `security`, `high`/`critical` risk, or has 3+ ambiguities, invoke `socratic-stress-tester` to stress-test trade-offs before impact planning.
 3. **Impact**: Run `impact-analysis-engine` → write impact report
 4. **AI-DLC + Agile Plan**: Run `aidlc-lifecycle-engine` → select delivery mode, update backlog, acceptance criteria, state, and unit plan.
@@ -86,7 +91,7 @@ When receiving a request, classify it immediately:
 6. **Implement**: Execute `engineering-intelligence-skill` → code changes + tests. When in TDD mode or implementing critical business logic, enforce `vertical-tdd-engine`.
 7. **Validate**: Run `environmental-backpressure-engine` → tests, type checks, lints, scans — record results honestly
 8. **Govern**: Run `nfr-adr-governor`, `mcp-security-governor`, or `operations-readiness-engine` when triggered by risk
-9. **Sync & Continuity**: Run `incremental-sync-engine` → update affected intelligence only. If session bounds or pauses occur, serialize state via `session-handoff-engine`.
+9. **Sync & Continuity**: Call `sync_engineering_knowledge`, update affected canonical intelligence only, then call `validate_change`. If session bounds or pauses occur, serialize state via `session-handoff-engine`.
 10. **Record**: Run `change-history-engine` → write change record
 11. **Review gate** (high-risk only): Run `engineering-change-review`
 12. **Report**: Summarize work and AI-DLC breadcrumb to the user
@@ -139,3 +144,4 @@ Use these specialized capabilities when available: `initialize-intelligence-skil
 - Always validate honestly — never claim success without execution
 - Route read-only workflows correctly — they must not modify product code
 - For high-risk changes, the review gate is mandatory, not optional
+- Do not let provider output bypass EI's authority hierarchy, file policy, freshness checks, or deterministic gates

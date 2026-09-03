@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: user-intelligence-engine
 description: Resolves developer identity from git config, seeds a personal user-intelligence profile from git history, observes post-interaction signals to refine preferences, and promotes team-wide consensus to team-preferences.md. Multi-user safe: personal profiles are gitignored; team layer is committed.
@@ -8,6 +6,8 @@ description: Resolves developer identity from git config, seeds a personal user-
 # User Intelligence Engine
 
 Build and maintain a personal developer profile so every workflow response is calibrated to the individual — their test philosophy, implementation depth, communication style, and architecture preferences — without asking onboarding questions.
+
+**Seed from git first:** `npx engineering-intelligence user-profile . [--json]` resolves identity and seeds the profile from git history with zero LLM context, and creates the gitignore entry so personal profiles never land in a teammate's checkout. Use the steps below to refine what the CLI cannot infer.
 
 This capability does not modify product code.
 
@@ -43,7 +43,7 @@ This resolves identity and seeds the profile from git history without consuming 
 ## Profile Storage (multi-user safe)
 
 ```
-$EI
+.engineering-intelligence/
   memory/
     team-preferences.md          ← committed — team consensus layer
     users/                       ← gitignored — never committed
@@ -52,7 +52,7 @@ $EI
   .gitignore                     ← contains: memory/users/
 ```
 
-The `ei user-profile` CLI command creates `$EI.gitignore` with `memory/users/` on first run. Personal profiles never appear in `git status`.
+The `ei user-profile` CLI command creates `.engineering-intelligence/.gitignore` with `memory/users/` on first run. Personal profiles never appear in `git status`.
 
 ## CI Guard
 
@@ -63,7 +63,7 @@ If any of `$CI`, `$GITHUB_ACTIONS`, `$GITLAB_CI`, `$JENKINS_URL`, `$TRAVIS`, `$C
 
 ## Profile Document Structure
 
-`$EImemory/users/<slug>/user-intelligence.md`:
+`.engineering-intelligence/memory/users/<slug>/user-intelligence.md`:
 
 ```markdown
 # User Intelligence Profile
@@ -117,7 +117,7 @@ If any of `$CI`, `$GITHUB_ACTIONS`, `$GITLAB_CI`, `$JENKINS_URL`, `$TRAVIS`, `$C
 ### Mode: seed (first run or `ei user-profile` refresh)
 
 1. Run `npx engineering-intelligence user-profile .` — this handles identity + git seeding.
-2. Read the generated profile at `$EImemory/users/<slug>/user-intelligence.md`.
+2. Read the generated profile at `.engineering-intelligence/memory/users/<slug>/user-intelligence.md`.
 3. Apply **Active Predictions** to the current session immediately.
 
 ### Mode: observe (after each workflow interaction)
@@ -158,7 +158,7 @@ After extracting signals:
 
 When 2 or more developers independently exhibit the same signal for the same dimension:
 
-1. Read all profiles under `$EImemory/users/*/user-intelligence.md`.
+1. Read all profiles under `.engineering-intelligence/memory/users/*/user-intelligence.md`.
 2. Count confirmed signals per dimension across profiles.
 3. If ≥ 2 profiles agree with `medium` or `high` confidence → promote to `team-preferences.md`.
 4. Record the contributing identities and evidence.
@@ -178,9 +178,9 @@ When 2 or more developers independently exhibit the same signal for the same dim
 The context-budget-optimizer loads intelligence in this order:
 
 ```
-Rank 0 (pinned, ~50t): $EImemory/users/<slug>/user-intelligence.md — Active Predictions block only
-Rank 1 (~100t):        $EImemory/team-preferences.md
-Rank 2 (~150t):        $EImemory/coding-patterns.md
+Rank 0 (pinned, ~50t): .engineering-intelligence/memory/users/<slug>/user-intelligence.md — Active Predictions block only
+Rank 1 (~100t):        .engineering-intelligence/memory/team-preferences.md
+Rank 2 (~150t):        .engineering-intelligence/memory/coding-patterns.md
 ...
 ```
 
@@ -211,8 +211,8 @@ coding-patterns   →  applies when both above are silent
 
 - [ ] `ei user-profile .` was run before loading the profile
 - [ ] CI environment check passes before any profile read/write
-- [ ] Personal profile stored under `$EImemory/users/<slug>/`
-- [ ] `$EI.gitignore` contains `memory/users/`
+- [ ] Personal profile stored under `.engineering-intelligence/memory/users/<slug>/`
+- [ ] `.engineering-intelligence/.gitignore` contains `memory/users/`
 - [ ] Active Predictions block is applied before first response in any workflow
 - [ ] Signals extracted from each interaction and logged
 - [ ] Confidence threshold enforced before updating preferences
@@ -223,7 +223,7 @@ coding-patterns   →  applies when both above are silent
 
 - CLI: `npx engineering-intelligence user-profile .` — seeds profile from git history
 - Used by: `context-budget-optimizer` (loads Active Predictions at rank-0), `engineering-intelligence-skill` (pre-flight)
-- Feeds into: `$EImemory/users/<slug>/user-intelligence.md`, `team-preferences.md`
+- Feeds into: `.engineering-intelligence/memory/users/<slug>/user-intelligence.md`, `team-preferences.md`
 - Related: `incremental-sync-engine` (Memory sync manages team-preferences.md), `ongoing-learning-engine` (uncertainty tracking)
 
 This capability does not modify product code.

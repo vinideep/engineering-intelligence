@@ -143,6 +143,14 @@ test("extractApiSurface: parses framework routes, decorators, and OpenAPI JSON",
   assert.ok(oas.has("POST /pets"));
 });
 
+test("extractApiSurface: route-shaped examples in comments are not published as endpoints", () => {
+  const code = extractApiSurface(
+    "// express example: app.get('/not-real', h)\n/* @Post('/also-not-real') */\nexport const note = true;",
+    "src/documented.ts",
+  );
+  assert.deepEqual([...code], []);
+});
+
 test("api-diff: fails when a route is removed vs the git base", async () => {
   const root = await tmp();
   git(root, "init");

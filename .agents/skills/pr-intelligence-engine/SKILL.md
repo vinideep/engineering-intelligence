@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: pr-intelligence-engine
 description: Generates intelligent PR descriptions, reviewer suggestions, impact summaries, and split recommendations from change records and git intelligence. Use before submitting or reviewing pull requests.
@@ -11,11 +9,11 @@ Produce evidence-backed PR artifacts that accelerate review cycles and improve c
 
 ## Inputs
 
-- Change records from `$EIchanges/CHG-XXX-*.md`
+- Change records from `.engineering-intelligence/changes/CHG-XXX-*.md`
 - Git diff or commit range for the PR
-- Ownership mapping from `git-intelligence-engine` (`$EIreports/GIT-intelligence.md`)
+- Ownership mapping from `git-intelligence-engine` (`.engineering-intelligence/reports/GIT-intelligence.md`)
 - Impact report from `impact-analysis-engine` (when available)
-- Architecture decisions from `$EIknowledge-base/`
+- Architecture decisions from `.engineering-intelligence/knowledge-base/`
 
 ## Procedure
 
@@ -79,8 +77,8 @@ Produce evidence-backed PR artifacts that accelerate review cycles and improve c
    - Suggest merge order if dependencies exist between splits
 
 6. **Check Architecture Compliance** — Compare changes against:
-   - `$EIknowledge-base/05-architecture-decisions.md` (ADRs)
-   - `$EIknowledge-base/06-conventions-and-standards.md`
+   - `.engineering-intelligence/knowledge-base/05-architecture-decisions.md` (ADRs)
+   - `.engineering-intelligence/knowledge-base/06-conventions-and-standards.md`
    - Module boundary rules from `dependency-graph.json`
 
    Flag violations with evidence:

@@ -20,12 +20,9 @@
  */
 
 import { createHash } from "node:crypto";
-import { execFile } from "node:child_process";
 import { mkdir, readFile, writeFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
+import { runProcess } from "../process/index.js";
 
 export const RECEIPT_SCHEMA_VERSION = 1;
 const RECEIPT_DIR = ".engineering-intelligence/.verify";
@@ -90,12 +87,8 @@ async function fileMtime(root: string, relPath: string): Promise<number | null> 
 }
 
 async function git(root: string, args: string[]): Promise<string | null> {
-  try {
-    const { stdout } = await execFileAsync("git", args, { cwd: root, maxBuffer: 10 * 1024 * 1024 });
-    return stdout.trim();
-  } catch {
-    return null;
-  }
+  const result = await runProcess({ command: "git", args, cwd: root, maxBuffer: 10 * 1024 * 1024 });
+  return result.exitCode === 0 ? result.stdout.trim() : null;
 }
 
 /**
@@ -253,26 +246,19 @@ export async function coverageFor(root: string, files: string[]): Promise<Covera
 
 async function runOne(root: string, command: string, timeoutMs: number): Promise<CommandRun> {
   const started = Date.now();
-  try {
-    const { stdout, stderr } = await execFileAsync(command, {
-      cwd: root, shell: true, timeout: timeoutMs, maxBuffer: 20 * 1024 * 1024,
-    } as never) as unknown as { stdout: string; stderr: string };
-    return {
-      command,
-      exitCode: 0,
-      durationMs: Date.now() - started,
-      outputTail: `${stdout}${stderr}`.slice(-800) || undefined,
-    };
-  } catch (error) {
-    const e = error as { code?: number; stdout?: string; stderr?: string; killed?: boolean };
-    return {
-      command,
-      // A killed (timed-out) process has no numeric code; treat as failure.
-      exitCode: typeof e.code === "number" ? e.code : 1,
-      durationMs: Date.now() - started,
-      outputTail: `${e.stdout ?? ""}${e.stderr ?? ""}`.slice(-800) || undefined,
-    };
-  }
+  // Verification commands are explicitly configured project commands. Invoke
+  // the platform shell as an argument-array process so all subprocesses still
+  // flow through the shared timeout/output/error contract.
+  const shell = process.platform === "win32"
+    ? { command: "cmd.exe", args: ["/d", "/s", "/c", command] }
+    : { command: "/bin/sh", args: ["-c", command] };
+  const result = await runProcess({ ...shell, cwd: root, timeoutMs, maxBuffer: 20 * 1024 * 1024 });
+  return {
+    command,
+    exitCode: result.exitCode,
+    durationMs: Date.now() - started,
+    outputTail: `${result.stdout}${result.stderr}`.slice(-800) || undefined,
+  };
 }
 
 export interface VerifyResult {
@@ -395,4 +381,3 @@ export function renderVerifyReport(report: KnowledgeVerificationReport): string 
   }
   return lines.join("\n") + "\n";
 }
-

@@ -1,12 +1,14 @@
 ---
 name: impact-analysis-engine
 description: Determines direct and indirect impact of a proposed or implemented change across modules, APIs, schemas, runtime flows, infrastructure, integrations, and tests. Use before implementation and during synchronization.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Impact Analysis Engine
 
 Determine what can break before changing code. Produce a reusable impact report that guides implementation, testing, and synchronization decisions.
+
+Start with the consolidated `analyze_change_impact` tool and a task-specific `get_engineering_context` pack. EI's normalized graph decides the neighborhood; CCE may retrieve exact affected code/tests only within it. Provider-only relationships must be labelled with their trust state, and contested/stale relationships belong in Unknowns rather than the verified impact set. Do not query raw Graphify or CCE tools unless expert mode was explicitly enabled.
 
 ## Inputs
 
@@ -153,6 +155,8 @@ Write `.engineering-intelligence/reports/IMP-XXX-<slug>.md`:
 - [ ] Risk score is justified with evidence
 - [ ] Validation requirements are specific (not generic)
 - [ ] Report ends with the "did not modify product code" statement
+- [ ] Provider health/fallback and excluded stale/contested evidence are reported
+- [ ] Affected code/test spans carry current source hashes and approved-scope provenance
 
 ## Cross-References
 

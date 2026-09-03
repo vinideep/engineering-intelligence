@@ -1,7 +1,7 @@
 ---
 name: knowledge-base-validator
 description: Validates project knowledge documentation against source and configuration evidence, identifying stale, unsupported, or uncertain claims. Use after initialization or documentation synchronization.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Knowledge Base Validator
@@ -9,6 +9,8 @@ version: 3.0.0
 Systematically audit every significant claim in `.engineering-intelligence/knowledge-base/*.md` against actual repository evidence. Produce a structured validation report that identifies exactly what is supported, what is stale, and what needs human review.
 
 **Run the deterministic claim check first:** `npx engineering-intelligence claims verify --json`. Derived claims are re-computed from source, so `verified` means the statement itself still holds and `refuted` means it no longer does. Asserted claims are free text: their evidence is hash-checked (`stale` / `missing`), but the sentence is never machine-checked, so they report `unverified` and must not be treated as confirmed. Work the refuted/stale/missing list first, then audit the `unverified` assertions by hand — those are exactly the statements nothing else can vouch for.
+
+Apply the authority hierarchy during every audit: current source is ground truth; EI artifacts are canonical knowledge; Graphify and CCE are supporting evidence only. Provider agreement can corroborate a source-backed relationship, but provider-only/unverifiable or contested output cannot promote prose to Supported. Record provider version, health, freshness, fallback, and any scope rejection in the validation report.
 
 ## Inputs
 
@@ -113,6 +115,8 @@ Scope: <documents validated>
 - [ ] Cross-document contradictions are listed or explicitly absent
 - [ ] Auto-heal actions are recorded when synchronization mode is active
 - [ ] Recommended actions are actionable
+- [ ] No provider-only, stale, contested, or out-of-scope evidence is categorized as Supported
+- [ ] Strict claims, citation freshness, and cross-document consistency gates pass before publication
 
 ## Cross-References
 

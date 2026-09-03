@@ -4,8 +4,8 @@
  *
  * Validates that:
  *  - The server initializes and responds to the initialize handshake
- *  - tools/list returns the expected 4 tools
- *  - tools/call for get_graph and analyze_impact return valid JSON responses
+ *  - tools/list returns only the consolidated EI control-plane surface
+ *  - hidden legacy wrappers remain callable for compatibility
  */
 
 import assert from "node:assert/strict";
@@ -76,6 +76,7 @@ test("MCP server: initialize, list tools, call get_graph and analyze_impact", as
     const initResponse = await readResponse(proc, 1);
     assert.ok(!initResponse.error, `initialize failed: ${JSON.stringify(initResponse.error)}`);
     assert.equal(initResponse.result?.serverInfo?.name, "engineering-intelligence");
+    assert.equal(initResponse.result?.serverInfo?.version, "3.5.0");
 
     // Notify initialized
     proc.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized", params: {} }) + "\n");
@@ -85,13 +86,8 @@ test("MCP server: initialize, list tools, call get_graph and analyze_impact", as
     const listResponse = await readResponse(proc, 2);
     assert.ok(!listResponse.error, `tools/list failed: ${JSON.stringify(listResponse.error)}`);
     const toolNames = (listResponse.result?.tools ?? []).map((t) => t.name);
-    assert.ok(toolNames.includes("map_dependencies"), `map_dependencies not in tools: ${toolNames}`);
-    assert.ok(toolNames.includes("get_graph"), `get_graph not in tools: ${toolNames}`);
-    assert.ok(toolNames.includes("analyze_impact"), `analyze_impact not in tools: ${toolNames}`);
-    assert.ok(toolNames.includes("read_knowledge"), `read_knowledge not in tools: ${toolNames}`);
-    assert.ok(toolNames.includes("find_symbol"), `find_symbol not in tools: ${toolNames}`);
-    assert.ok(toolNames.includes("who_calls"), `who_calls not in tools: ${toolNames}`);
-    assert.ok(toolNames.includes("get_brief"), `get_brief not in tools: ${toolNames}`);
+    assert.deepEqual([...toolNames].sort(), ["get_engineering_context", "analyze_change_impact", "validate_change", "sync_engineering_knowledge", "provider_status"].sort());
+    assert.ok(!toolNames.some((name) => name.startsWith("provider_graphify_") || name.startsWith("provider_cce_")), "raw provider tools must be hidden by default");
 
     // 3. Call get_graph (graph already built by graph.test.mjs)
     sendRequest(proc, {

@@ -7,6 +7,8 @@ description: Maintains evidence-based knowledge, durable memory, navigation cont
 
 Responsible for the integrity and accuracy of all project intelligence artifacts. Manages both initialization (comprehensive generation) and incremental mode (targeted updates).
 
+EI is the sole canonical knowledge owner. Current repository source is ground truth; Graphify is structural extraction evidence; CCE is scoped retrieval infrastructure. Preserve provider/version, source hash/span, extraction class, confidence, freshness, fallback, and trust state. Provider-only/unverifiable or contested evidence cannot become a verified claim, and stale/out-of-scope evidence must be rejected.
+
 ## Artifact Ownership
 
 | Artifact Category | Path | Initialization | Incremental |
@@ -24,24 +26,26 @@ Responsible for the integrity and accuracy of all project intelligence artifacts
 
 When project intelligence doesn't exist:
 
-1. Run `deep-project-knowledge-extractor` → generate knowledge base
-2. Run `knowledge-base-validator` → validate and write report
-3. Extract durable memory from validated findings
-4. Generate concise navigation context
-5. Generate event guidance from discovered contracts
-6. Run `graph-engine` in full mode → generate all graphs
-7. Write `CHG-000-initialization.md`
+1. Run the deterministic `initialize` bootstrap and read its knowledge-generation brief
+2. Call `get_engineering_context` to retrieve current source evidence inside the EI-approved graph neighborhood
+3. Run `deep-project-knowledge-extractor` → generate EI-owned knowledge base
+4. Run `knowledge-base-validator` → validate and write report
+5. Extract durable memory from validated findings
+6. Generate concise navigation context and event guidance
+7. Preserve the reconciled dependency graph; run `graph-engine` for remaining graphs
+8. Write `CHG-000-initialization.md` only after strict trust gates pass
 
 ## Incremental Mode
 
 After an engineering change:
 
 1. Read impact report for affected artifact list
-2. Delegate to appropriate sync engines:
+2. Call `sync_engineering_knowledge`, then delegate canonical prose updates to appropriate sync engines:
    - `incremental-sync-engine` — the single sync engine covering knowledge-base docs, durable memory, and navigation maps (run `map --update`, `claims verify`, and `freshness` first)
    - `graph-engine` in incremental mode for graphs
 3. Update impact report with sync notes
 4. Write change record via `change-history-engine`
+5. Call `validate_change`; report any unavailable provider or unresolved drift instead of claiming completion
 
 ## Quality Gates Per Artifact Type
 
@@ -61,3 +65,4 @@ After an engineering change:
 - Never invent undocumented implementation facts
 - Never store transient details in durable memory
 - Evidence-back everything — no unsupported claims
+- Raw provider access is expert-only; provider caches are disposable and never durable memory

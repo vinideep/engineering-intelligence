@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: debugging-engine
 description: Performs structured root cause analysis using graph intelligence, log correlation, error propagation tracing, and reproduction step generation. Produces evidence-backed debug reports with fix suggestions and impact analysis.
@@ -13,8 +11,8 @@ Systematically diagnose issues through evidence-driven root cause analysis, leve
 
 - Bug report or error description (symptoms, error messages, stack traces)
 - Repository root path
-- Graph intelligence from `$EIgraph/` (when available)
-- Project intelligence from `$EIknowledge-base/` and `$EI`
+- Graph intelligence from `.engineering-intelligence/graph/` (when available)
+- Project intelligence from `.engineering-intelligence/knowledge-base/` and `.engineering-intelligence/`
 - Optional: log output, reproduction steps from reporter, environment details
 
 ## Procedure
@@ -101,11 +99,11 @@ Systematically diagnose issues through evidence-driven root cause analysis, leve
 
    When applicable, invoke `impact-analysis-engine` on the proposed fix to assess its blast radius.
 
-7. **Generate Debug Report** — Write `$EIreports/DEBUG-XXX-<slug>.md`.
+7. **Generate Debug Report** — Write `.engineering-intelligence/reports/DEBUG-XXX-<slug>.md`.
 
 ## Output Format
 
-Write `$EIreports/DEBUG-XXX-<slug>.md`:
+Write `.engineering-intelligence/reports/DEBUG-XXX-<slug>.md`:
 
 ```markdown
 # DEBUG-XXX: <descriptive title>

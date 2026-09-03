@@ -1,8 +1,11 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { execSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { runProcessSync } from "../process/index.js";
+import { collectProjectFiles, ProjectFilePolicy } from "../project-files/index.js";
 import { validateGraph, type DependencyGraph, type GraphNode } from "./schema.js";
 import { buildDependencyGraph, loadExistingGraph, mergeIncrementalUpdate } from "./builders/dependency.js";
+import { reconcileGraphifyEvidence } from "./provider-evidence.js";
 
 export type { DependencyGraph, GraphNode, GraphEdge, Confidence } from "./schema.js";
 export { validateGraph, SchemaValidationError } from "./schema.js";
@@ -13,6 +16,7 @@ export interface BuildGraphOptions {
   update?: boolean;
   files?: string[];
   write?: boolean;
+  providerEvidence?: boolean;
 }
 
 export interface BuildGraphResult {
@@ -25,11 +29,21 @@ export interface BuildGraphResult {
 
 // Current git HEAD sha, or undefined for non-git dirs.
 function gitHead(root: string): string | undefined {
-  try {
-    return execSync("git rev-parse HEAD", { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 10_000 }).trim() || undefined;
-  } catch {
-    return undefined;
+  const result = runProcessSync({ command: "git", args: ["rev-parse", "HEAD"], cwd: root, timeoutMs: 10_000 });
+  return result.exitCode === 0 ? result.stdout.trim() || undefined : undefined;
+}
+
+async function graphWorkspaceHash(root: string): Promise<string> {
+  const policy = await ProjectFilePolicy.load(root);
+  const files = await collectProjectFiles(policy, { accept: (rel) => SOURCE_EXT_RE.test(rel) });
+  files.sort((a, b) => a.localeCompare(b));
+  const hash = createHash("sha256");
+  for (const file of files) {
+    const relative = path.relative(root, file).replace(/\\/g, "/");
+    hash.update(relative).update("\0");
+    hash.update(await readFile(file)).update("\0");
   }
+  return hash.digest("hex");
 }
 
 export async function buildGraph(root: string, options: BuildGraphOptions = {}): Promise<BuildGraphResult> {
@@ -56,6 +70,16 @@ export async function buildGraph(root: string, options: BuildGraphOptions = {}):
   // Stamp the graph with the current commit for freshness checks.
   const head = gitHead(root);
   if (head) result.graph.commit = head;
+  result.graph.workspaceHash = await graphWorkspaceHash(root);
+
+  // EI remains canonical. Fresh Graphify output can corroborate or enrich the
+  // native graph, while stale/out-of-scope provider evidence is rejected.
+  if (options.providerEvidence !== false) {
+    const reconciliation = await reconcileGraphifyEvidence(root, result.graph);
+    result.graph = reconciliation.graph;
+  }
+  result.nodeCount = result.graph.nodes.length;
+  result.edgeCount = result.graph.edges.length;
 
   // Validate before writing
   validateGraph(result.graph);
@@ -100,25 +124,24 @@ function graphFilePath(root: string): string {
 // changes. Returns null if git can't answer (e.g. unknown commit) so the caller
 // can decide to full-rebuild.
 function changedSinceStamp(root: string, stampCommit: string | undefined): string[] | null {
-  try {
-    const files = new Set<string>();
-    if (stampCommit) {
-      const head = gitHead(root);
-      if (head && head !== stampCommit) {
-        const out = execSync(`git diff --name-only ${stampCommit} ${head}`, { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 15_000 });
-        for (const f of out.split("\n")) if (f.trim()) files.add(f.trim());
-      }
+  const files = new Set<string>();
+  if (stampCommit) {
+    const head = gitHead(root);
+    if (head && head !== stampCommit) {
+      const diff = runProcessSync({ command: "git", args: ["diff", "--name-only", stampCommit, head], cwd: root, timeoutMs: 15_000 });
+      if (diff.exitCode !== 0) return null;
+      for (const file of diff.stdout.split("\n")) if (file.trim()) files.add(file.trim());
     }
-    // Uncommitted (working tree + staged) changes.
-    const porcelain = execSync("git status --porcelain", { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 15_000 });
-    for (const line of porcelain.split("\n")) {
-      const f = line.slice(3).trim();
-      if (f) files.add(f.includes(" -> ") ? f.split(" -> ")[1] : f);
-    }
-    return [...files].filter((f) => SOURCE_EXT_RE.test(f));
-  } catch {
-    return null;
   }
+  // `--untracked-files=all` prevents Git from collapsing an untracked source
+  // directory into one `?? dir/` row that would fail the extension filter.
+  const status = runProcessSync({ command: "git", args: ["status", "--porcelain", "--untracked-files=all"], cwd: root, timeoutMs: 15_000 });
+  if (status.exitCode !== 0) return null;
+  for (const line of status.stdout.split("\n")) {
+    const file = line.slice(3).trim();
+    if (file) files.add(file.includes(" -> ") ? file.split(" -> ")[1] : file);
+  }
+  return [...files].filter((file) => SOURCE_EXT_RE.test(file));
 }
 
 // Ensure the on-disk graph reflects the current working tree. Best-effort: any
@@ -136,11 +159,24 @@ export async function ensureFreshGraph(root: string): Promise<FreshnessResult> {
     }
   }
 
+  // A commit stamp alone cannot describe a dirty working tree. The source hash
+  // prevents the same uncommitted files from forcing an incremental rebuild on
+  // every query, while still detecting byte changes and new/deleted files.
+  let workspaceHashChanged = false;
+  if (existing.workspaceHash) {
+    try {
+      if (existing.workspaceHash === await graphWorkspaceHash(root)) return { refreshed: false };
+      workspaceHashChanged = true;
+    } catch {
+      // Fall through to the Git-based compatibility path.
+    }
+  }
+
   const changed = changedSinceStamp(root, existing.commit);
   if (changed === null) {
     // Git couldn't answer (unknown commit / not a repo). If there was a stamp,
     // history may have diverged — rebuild fully; otherwise leave as-is.
-    if (existing.commit) {
+    if (existing.commit || workspaceHashChanged) {
       try {
         await buildGraph(root, { write: true });
         return { refreshed: true };
@@ -150,7 +186,17 @@ export async function ensureFreshGraph(root: string): Promise<FreshnessResult> {
     }
     return { refreshed: false };
   }
-  if (changed.length === 0) return { refreshed: false };
+  if (changed.length === 0) {
+    if (workspaceHashChanged) {
+      try {
+        await buildGraph(root, { write: true });
+        return { refreshed: true };
+      } catch (e) {
+        return { refreshed: false, staleWarning: `workspace changed but full rebuild failed: ${e instanceof Error ? e.message : String(e)}` };
+      }
+    }
+    return { refreshed: false };
+  }
 
   try {
     if (changed.length <= 200) {

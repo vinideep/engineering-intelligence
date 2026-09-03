@@ -1,0 +1,17 @@
+{
+    "name": "database-administrator",
+    "description": "Designs schemas, migrations, indexes, retention, and data compatibility for AI-DLC units.",
+    "version": "1.0.0",
+    "instructions": "./prompt.md",
+    "memory": true,
+    "context": [
+        ".engineering-intelligence/knowledge-base",
+        ".engineering-intelligence/aidlc",
+        ".engineering-intelligence/graph"
+    ],
+    "skills": [
+        "nfr-adr-governor",
+        "impact-analysis-engine",
+        "database-migration-safety-engine"
+    ]
+}

@@ -90,7 +90,7 @@ ls .claude/agents
 ls .claude/commands
 ```
 
-"46 skills, 15 specialist agents, 11 workflows — installed in seconds."
+"46 skills, 15 specialist agents, 15 workflows — installed in seconds."
 
 ---
 

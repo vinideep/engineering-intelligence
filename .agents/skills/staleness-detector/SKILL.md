@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: staleness-detector
 description: Compares knowledge-base document timestamps against related source file modification times, scores each document 0-100 for freshness, triggers incremental sync when freshness drops below threshold, and adds freshness metadata to document headers.
@@ -9,14 +7,16 @@ description: Compares knowledge-base document timestamps against related source 
 
 Monitor the freshness of all engineering intelligence documents by comparing their last-updated timestamps against the modification times of the source files they describe. Produce a freshness report and trigger incremental sync for stale documents.
 
+**Run the deterministic scorer first:** `npx engineering-intelligence freshness . [--threshold 60] [--json]` computes each document's 0-100 freshness from its cited evidence paths and their git history, and writes the report. Documents with no citations are reported `unverifiable` rather than fresh. Use the steps below to act on that output, not to recompute it by hand.
+
 This capability does not modify product code.
 
 ## Inputs
 
 - Repository root path
-- Knowledge base directory (`$EIknowledge-base/`)
-- Memory directory (`$EImemory/`)
-- Context directory (`$EIcontext/`)
+- Knowledge base directory (`.engineering-intelligence/knowledge-base/`)
+- Memory directory (`.engineering-intelligence/memory/`)
+- Context directory (`.engineering-intelligence/context/`)
 - Optional: specific document or module to check
 - Optional: custom freshness threshold (default: 60)
 
@@ -28,15 +28,15 @@ This capability does not modify product code.
    npx engineering-intelligence freshness .
    ```
 
-   This runs the deterministic staleness formula in milliseconds and writes `$EIreports/FRESHNESS-report.md`. If the report exists and was generated within the last 10 minutes, **read it directly and skip steps 1–8**. The Pre-Implementation Drift Decision in the report replaces manual computation.
+   This runs the deterministic staleness formula in milliseconds and writes `.engineering-intelligence/reports/FRESHNESS-report.md`. If the report exists and was generated within the last 10 minutes, **read it directly and skip steps 1–8**. The Pre-Implementation Drift Decision in the report replaces manual computation.
 
    Only fall through to steps 1–8 if the CLI is unavailable.
 
 1. **Inventory knowledge documents** — Enumerate all documents in:
-   - `$EIknowledge-base/*.md` (00 through 16)
-   - `$EImemory/*.md`
-   - `$EIcontext/*.md`
-   - `$EIgraph/*.json`
+   - `.engineering-intelligence/knowledge-base/*.md` (00 through 16)
+   - `.engineering-intelligence/memory/*.md`
+   - `.engineering-intelligence/context/*.md`
+   - `.engineering-intelligence/graph/*.json`
 
    For each document, extract:
    - Document path
@@ -125,7 +125,7 @@ This capability does not modify product code.
    | Referenced file moved | Update evidence citations, re-verify claims |
    | Multiple documents stale for same module | Recommend module-level re-discovery |
 
-7. **Generate FRESHNESS-report.md** — Write to `$EIreports/FRESHNESS-report.md`:
+7. **Generate FRESHNESS-report.md** — Write to `.engineering-intelligence/reports/FRESHNESS-report.md`:
 
    ```markdown
    # Freshness Report
@@ -197,7 +197,7 @@ This capability does not modify product code.
 - [ ] Score interpretation matches the defined status table
 - [ ] Freshness metadata is injected without modifying document content
 - [ ] Section-level confidence metadata is added for H2 sections where evidence can be resolved
-- [ ] FRESHNESS-report.md exists at `$EIreports/FRESHNESS-report.md`
+- [ ] FRESHNESS-report.md exists at `.engineering-intelligence/reports/FRESHNESS-report.md`
 - [ ] Structural changes (deleted/moved files) are detected and reported
 - [ ] Documents below threshold are queued for incremental sync
 - [ ] Module-level aggregation is included in the report
@@ -208,7 +208,7 @@ This capability does not modify product code.
 - Used by: `ongoing-learning-engine` (for freshness monitoring)
 - Uses: `incremental-sync-engine` (to refresh stale documents)
 - Consumed by: `engineering-intelligence-skill`, `engineering-orchestrator`
-- Feeds into: `$EIreports/FRESHNESS-report.md`
+- Feeds into: `.engineering-intelligence/reports/FRESHNESS-report.md`
 - Related: `knowledge-base-validator` (validates content accuracy; staleness-detector validates currency)
 
 This capability does not modify product code.

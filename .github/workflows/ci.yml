@@ -8,12 +8,18 @@ on:
 
 jobs:
   test:
-    name: Test (Node ${{ matrix.node }})
-    runs-on: ubuntu-latest
+    name: Test (${{ matrix.name }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        node: ["20", "22"]
+        include:
+          - { name: Linux x64, runner: ubuntu-24.04, node: "20" }
+          - { name: Linux x64, runner: ubuntu-24.04, node: "22" }
+          - { name: Linux arm64, runner: ubuntu-24.04-arm, node: "22" }
+          - { name: macOS x64, runner: macos-15-intel, node: "22" }
+          - { name: macOS arm64, runner: macos-15, node: "22" }
+          - { name: Windows x64, runner: windows-2025, node: "22" }
     steps:
       - uses: actions/checkout@v4
 
@@ -31,3 +37,64 @@ jobs:
 
       - name: Integration tests
         run: npm run test:integration
+
+      - name: Deterministic disposable benchmark
+        run: npm run test:benchmark -- --dry-run
+
+  package-and-audit:
+    name: Package and dependency audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Package dry run
+        run: npm pack --dry-run
+      - name: Production dependency vulnerability gate
+        run: npm audit --omit=dev --audit-level=high
+
+  provider-smoke:
+    name: Providers (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux x64, runner: ubuntu-24.04 }
+          - { name: Linux arm64, runner: ubuntu-24.04-arm }
+          - { name: macOS x64, runner: macos-15-intel }
+          - { name: macOS arm64, runner: macos-15 }
+          - { name: Windows x64, runner: windows-2025 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: astral-sh/setup-uv@v7
+      - run: npm ci
+      - run: npm run build
+      - name: Install pinned provider tuple
+        run: node dist/cli/index.js providers install . --json
+      - name: Bootstrap and verify a disposable provider-backed repository
+        run: npm run test:provider-smoke -- --quick
+
+  provider-accuracy:
+    name: Provider accuracy corpus
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: astral-sh/setup-uv@v7
+      - run: npm ci
+      - run: npm run build
+      - name: Install pinned provider tuple
+        run: node dist/cli/index.js providers install . --json
+      - name: Enforce provider-backed Recall@10 and source trust
+        run: npm run test:provider-smoke

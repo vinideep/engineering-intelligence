@@ -135,6 +135,8 @@ function renderBrief(root: string, graph: DependencyGraph | null, pkg: Record<st
   lines.push(`# Repo Brief — ${scope}`);
   lines.push("");
   lines.push("<!-- Generated deterministically from the dependency graph. ~500-token orientation digest. -->");
+  lines.push("<!-- freshness derives from the current graph and package manifest evidence below. -->");
+  lines.push("(evidence: .engineering-intelligence/graph/dependency-graph.json, package.json)");
   lines.push("");
   lines.push(`- **Scale**: ${modules.length} source modules, ${symbols.length} symbols, ${packages.length} external packages, ${graph.edges.length} edges.`);
   if (langs.length) lines.push(`- **Languages**: ${langs.join(", ")}.`);

@@ -18,6 +18,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { computeFreshness } from "../freshness/index.js";
+import { defaultEiConfig, loadEiConfig } from "../config/index.js";
 
 export type HookEvent = "session-start" | "pre-tool-use" | "post-tool-use" | "stop";
 
@@ -92,9 +93,8 @@ const CONFIG_PATH = ".engineering-intelligence/ei.config.json";
 
 export async function loadHookConfig(root: string): Promise<HookConfig> {
   try {
-    const raw = await readFile(path.join(root, CONFIG_PATH), "utf8");
-    const parsed = JSON.parse(raw) as { hooks?: Partial<HookConfig> };
-    return { ...DEFAULT_HOOK_CONFIG, ...(parsed.hooks ?? {}) };
+    const config = await loadEiConfig(root);
+    return { ...DEFAULT_HOOK_CONFIG, ...(config.hooks ?? {}) } as HookConfig;
   } catch {
     return { ...DEFAULT_HOOK_CONFIG };
   }
@@ -158,19 +158,15 @@ export function cursorHookSettings(): string {
 
 /** The default config file the installer seeds. Exported so the adapter renders it. */
 export function defaultConfigFile(): string {
-  return JSON.stringify(
-    {
-      hooks: {
+  return JSON.stringify(defaultEiConfig({
+    hooks: {
         freshnessThreshold: DEFAULT_HOOK_CONFIG.freshnessThreshold,
         blockStaleEdits: DEFAULT_HOOK_CONFIG.blockStaleEdits,
         requireValidationOnStop: DEFAULT_HOOK_CONFIG.requireValidationOnStop,
         // Empty = auto-detect the project's own check commands.
         verifyCommands: DEFAULT_HOOK_CONFIG.verifyCommands,
-      },
     },
-    null,
-    2,
-  ) + "\n";
+  }), null, 2) + "\n";
 }
 
 // ---------------------------------------------------------------------------

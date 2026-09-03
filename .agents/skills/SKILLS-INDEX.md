@@ -49,3 +49,7 @@
 | `backlog-decomposition-engine` | Autonomously decomposes a high-level initiative into a durable Epic to Feature to Ticket backlog with stabl… |
 | `issue-tracker-sync-engine` | Mirrors the local Epic to Feature to Ticket backlog to an external issue tracker such as GitHub Issues, kee… |
 | `user-intelligence-engine` | Resolves developer identity from git config, seeds a personal user-intelligence profile from git history, o… |
+| `socratic-stress-tester` | Interactively interrogates architectural proposals, PRDs, trade-offs, security assumptions, and edge cases … |
+| `session-handoff-engine` | Serializes in-flight tasks, verified facts, unverified assumptions, and next steps into a durable handoff a… |
+| `vertical-tdd-engine` | Enforces a strict vertical-slice Red-Green-Refactor loop targeting public API surfaces. Tests first, minima… |
+| `interface-design-explorer` | Explores and compares alternative interface contracts and TypeScript type definitions across multiple desig… |

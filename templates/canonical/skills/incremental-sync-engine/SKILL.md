@@ -1,7 +1,7 @@
 ---
 name: incremental-sync-engine
 description: Synchronizes only the intelligence artifacts affected by a completed change — knowledge base, durable memory, navigation context, events, graphs, claims, and reports. The single sync engine; use for explicit synchronization or after implementation.
-version: 4.0.0
+version: 5.0.0
 ---
 
 # Sync Engine
@@ -15,9 +15,10 @@ Update only the intelligence affected by a specific change; never regenerate unr
 
 ## Deterministic first steps (run the tools, don't hand-simulate)
 
-1. **Refresh the graph** for changed files: `npx engineering-intelligence map . --update --files <a,b,c>` — preserves stable node IDs, rebuilds only what changed.
-2. **Re-check evidence** the knowledge base already committed to: `npx engineering-intelligence claims verify --json` — derived claims are re-computed (`verified` / `refuted`), asserted claims are hash-checked (`unverified` / `stale` / `missing`). Refuted, stale and missing claims are your precise worklist. After code changes, re-run `npx engineering-intelligence claims derive .` so the derived baseline matches reality.
+1. **Run consolidated synchronization**: call `sync_engineering_knowledge` with the changed files. It refreshes Graphify evidence when healthy, rebuilds/reconciles EI's canonical graph, reindexes CCE's isolated approved source mirror, falls back natively when required, derives claims, and returns knowledge/evidence drift that still needs model synthesis.
+2. **Re-check evidence** the knowledge base already committed to: `npx engineering-intelligence claims verify --json` — derived claims are re-computed (`verified` / `refuted`), asserted claims are hash-checked (`unverified` / `stale` / `missing`). Refuted, stale and missing claims are your precise worklist.
 3. **Score document freshness**: `npx engineering-intelligence freshness . --json` — flags which knowledge/memory/context docs lag their cited source.
+4. **Update canonical prose narrowly**, then call `validate_change` and re-run strict claims/evidence/health checks. Never refresh citation hashes merely to hide drift.
 
 These replace the old prose "confidence decay" heuristic (which nothing enforced) with real, evidence-level signals.
 
@@ -85,6 +86,8 @@ Keep `.engineering-intelligence/context/` maps concise and navigational (tables,
 - [ ] Evidence citations added for changed claims; durable facts recorded as claims
 - [ ] `claims verify` reports no refuted/stale/missing claims left unaddressed for the change scope
 - [ ] Context maps reference real paths; impact report updated with sync notes
+- [ ] Provider graph/index freshness and native fallback status are recorded
+- [ ] No stale, contested, or out-of-scope provider result entered canonical knowledge
 
 ## Cross-References
 

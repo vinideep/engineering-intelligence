@@ -4,16 +4,18 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { fileURLToPath } from "node:url";
 import { isIdeId } from "../adapters/index.js";
 import { install, uninstall, update } from "../installer/index.js";
 import { doctor } from "../validation/index.js";
 import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
+import { packageVersion } from "../version.js";
+import type { ProviderName } from "../providers/types.js";
+import type { ProviderPolicy } from "../config/index.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "verify" | "claims" | "context" | "telemetry" | "setup" | "ask" | "guard" | "health" | "impact" | "who-calls" | "preflight" | "postflight" | "evidence-record" | "evidence-check";
+type Command = "initialize" | "providers" | "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "verify" | "claims" | "context" | "telemetry" | "setup" | "ask" | "guard" | "health" | "impact" | "who-calls" | "preflight" | "postflight" | "evidence-record" | "evidence-check";
 
-const COMMANDS: Command[] = ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "verify", "claims", "context", "telemetry", "setup", "ask", "guard", "health", "impact", "who-calls", "preflight", "postflight", "evidence-record", "evidence-check"];
+const COMMANDS: Command[] = ["initialize", "providers", "install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "verify", "claims", "context", "telemetry", "setup", "ask", "guard", "health", "impact", "who-calls", "preflight", "postflight", "evidence-record", "evidence-check"];
 
 interface Options {
   command: Command;
@@ -46,12 +48,12 @@ interface Options {
   strict: boolean;
   host: string;
   failOn?: string;
-}
-
-async function packageVersion(): Promise<string> {
-  const packageJson = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../package.json");
-  const parsed = JSON.parse(await readFile(packageJson, "utf8")) as { version: string };
-  return parsed.version;
+  providerPolicy?: ProviderPolicy;
+  offline: boolean;
+  requireProviders: boolean;
+  expertMode: boolean;
+  providerAction?: "status" | "install" | "repair" | "upgrade" | "expose" | "hide" | "purge";
+  providerName?: ProviderName;
 }
 
 function usage(all = false): string {
@@ -61,6 +63,8 @@ Four commands do everything:
 
 Usage:
   engineering-intelligence install [path] [--ide <id>...] [--yes] [--dry-run] [--force]
+  engineering-intelligence initialize [path] [--providers auto|full|native] [--offline] [--require-providers] [--yes] [--dry-run]
+  engineering-intelligence providers status|install|repair|upgrade|expose|hide|purge [graphify|cce] [path]
   engineering-intelligence create [path] [--ide <id>...] [--yes]
   engineering-intelligence update [path] [--dry-run] [--force]
   engineering-intelligence doctor [path] [--json]
@@ -133,6 +137,12 @@ function parseArgs(args: string[]): Options {
   let strict = false;
   let host = "claude-code";
   let failOn: string | undefined;
+  let providerPolicy: ProviderPolicy | undefined;
+  let offline = false;
+  let requireProviders = false;
+  let expertMode = false;
+  let providerAction: Options["providerAction"];
+  let providerName: ProviderName | undefined;
   const positionals: string[] = [];
   let intent: string | undefined;
   let id: string | undefined;
@@ -160,6 +170,20 @@ function parseArgs(args: string[]): Options {
       dryRun = true;
     } else if (arg === "--force") {
       force = true;
+    } else if (arg === "--providers") {
+      const value = remaining[++index];
+      if (value !== "auto" && value !== "full" && value !== "native") throw new Error("--providers requires auto, full, or native.");
+      providerPolicy = value;
+    } else if (arg.startsWith("--providers=")) {
+      const value = arg.slice("--providers=".length);
+      if (value !== "auto" && value !== "full" && value !== "native") throw new Error("--providers requires auto, full, or native.");
+      providerPolicy = value;
+    } else if (arg === "--offline") {
+      offline = true;
+    } else if (arg === "--require-providers") {
+      requireProviders = true;
+    } else if (arg === "--expert") {
+      expertMode = true;
     } else if (arg === "--json") {
       json = true;
     } else if (arg === "--open") {
@@ -248,6 +272,11 @@ function parseArgs(args: string[]): Options {
       gateName = arg;
     } else if ((command === "claims" || command === "context") && positional === undefined) {
       positional = arg;
+    } else if (command === "providers" && providerAction === undefined) {
+      if (!["status", "install", "repair", "upgrade", "expose", "hide", "purge"].includes(arg)) throw new Error(`Unknown providers action "${arg}".`);
+      providerAction = arg as Options["providerAction"];
+    } else if (command === "providers" && providerName === undefined && (arg === "graphify" || arg === "cce")) {
+      providerName = arg;
     } else if (!target) {
       target = arg;
     } else {
@@ -288,11 +317,17 @@ function parseArgs(args: string[]): Options {
     strict,
     host,
     failOn,
+    providerPolicy,
+    offline,
+    requireProviders,
+    expertMode,
+    providerAction,
+    providerName,
   };
 }
 
 async function selectIdes(options: Options, readline: any): Promise<IdeId[]> {
-  if ((options.command !== "install" && options.command !== "create") || options.ides.length > 0) {
+  if ((options.command !== "install" && options.command !== "create" && options.command !== "initialize") || options.ides.length > 0) {
     return options.ides;
   }
   if (options.yes || !readline) {
@@ -364,6 +399,83 @@ async function main(): Promise<void> {
         return answer.trim().toLowerCase() === "y";
       }
     : undefined;
+
+  if (options.command === "providers") {
+    const { PROVIDER_NAMES, providerStatus, installProvider, inspectProjectProviderRuns, prepareProviders, purgeProjectProviderCache } = await import("../providers/index.js");
+    const { setProviderExpertMode } = await import("../config/index.js");
+    const action = options.providerAction ?? "status";
+    if (action === "expose" || action === "hide") {
+      if (action === "expose" && !options.expertMode) {
+        output.write("Raw provider evidence is an expert surface. Re-run `providers expose --expert` to enable it explicitly.\n");
+        process.exitCode = 2;
+      } else {
+        await setProviderExpertMode(options.root, action === "expose");
+        output.write(action === "expose" ? "Expert provider tools enabled for the EI MCP server.\n" : "Expert provider tools hidden; consolidated EI tools remain available.\n");
+      }
+      if (readline) readline.close();
+      return;
+    }
+    if (action === "purge") {
+      await purgeProjectProviderCache(options.root);
+      output.write("Removed the project-local provider indexes and manifests. Shared provider installations were preserved.\n");
+      if (readline) readline.close();
+      return;
+    }
+    const names = options.providerName ? [options.providerName] : [...PROVIDER_NAMES];
+    if (action === "install" || action === "repair" || action === "upgrade") {
+      const statuses = [];
+      for (const name of names) statuses.push(await installProvider(name, { dryRun: options.dryRun }));
+      if (!options.dryRun) await prepareProviders(options.root, { installMissing: false });
+      if (options.json) output.write(`${JSON.stringify(statuses, null, 2)}\n`);
+      else for (const status of statuses) output.write(`${status.displayName}: ${status.health} — ${status.message}\n`);
+      process.exitCode = statuses.some((status) => status.health !== "healthy" && !options.dryRun) ? 1 : 0;
+      if (readline) readline.close();
+      return;
+    }
+    const { loadEiConfig } = await import("../config/index.js");
+    const providerConfig = await loadEiConfig(options.root);
+    const disabled = providerConfig.providers.policy === "native";
+    const [statuses, projectRuns] = await Promise.all([
+      Promise.all(names.map((name) => providerStatus(name, { disabled }))),
+      inspectProjectProviderRuns(options.root, { disabled }),
+    ]);
+    const selectedRuns = projectRuns.filter((status) => names.includes(status.name));
+    if (options.json) output.write(`${JSON.stringify({ policy: providerConfig.providers.policy, requireProviders: providerConfig.providers.requireProviders, binaries: statuses, projectRuns: selectedRuns }, null, 2)}\n`);
+    else {
+      for (const status of statuses) output.write(`${status.displayName} binary: ${status.health} — ${status.message}\n`);
+      for (const status of selectedRuns) output.write(`${status.name} project state: ${status.health} — ${status.message}\n`);
+    }
+    const hardFailure = statuses.some((status) => status.health === "error") || (providerConfig.providers.requireProviders && (statuses.some((status) => status.health !== "healthy") || selectedRuns.some((status) => status.health !== "current")));
+    process.exitCode = hardFailure ? 1 : 0;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "initialize") {
+    const ides = await selectIdes(options, readline);
+    const { runInitialization } = await import("../orchestrators/initialize.js");
+    const result = await runInitialization(options.root, {
+      ides,
+      packageVersion: version,
+      policy: options.providerPolicy,
+      offline: options.offline,
+      requireProviders: options.requireProviders,
+      dryRun: options.dryRun,
+      force: options.force,
+      expertMode: options.expertMode,
+      promptOverwrite,
+    });
+    if (options.json) output.write(`${JSON.stringify(result, null, 2)}\n`);
+    else {
+      for (const line of result.logs) output.write(`  ${line}\n`);
+      if (!options.dryRun && result.generationBriefPath) {
+        output.write(`Initialization evidence is ready. Run the installed initialize-engineering-intelligence workflow to synthesize and validate EI-owned knowledge from ${result.generationBriefPath}.\n`);
+      }
+    }
+    process.exitCode = result.ok ? 0 : 1;
+    if (readline) readline.close();
+    return;
+  }
 
   if (options.command === "setup") {
     const { runSetup, mcpRegistrationHint } = await import("../orchestrators/setup.js");
@@ -576,7 +688,7 @@ async function main(): Promise<void> {
   }
 
   if (options.command === "context") {
-    const { getContext } = await import("../context/index.js");
+    const { getEngineeringContext } = await import("../context/orchestrator.js");
     const task = options.positional ?? "";
     if (!task) {
       output.write('context requires a task, e.g. context "add rate limiting" --files src/auth.ts\n');
@@ -584,12 +696,12 @@ async function main(): Promise<void> {
       if (readline) readline.close();
       return;
     }
-    const pack = await getContext(options.root, { task, files: options.files, budget: options.budget });
+    const pack = await getEngineeringContext(options.root, { task, files: options.files, budget: options.budget });
     if (options.json) {
       output.write(`${JSON.stringify(pack, null, 2)}\n`);
     } else {
       output.write(pack.markdown);
-      output.write(`\n<!-- ~${pack.tokensEstimated}/${pack.budget} tokens; included: ${pack.included.join(", ") || "none"}${pack.omitted.length ? `; omitted (budget): ${pack.omitted.join(", ")}` : ""} -->\n`);
+      output.write(`\n<!-- ${pack.tokenAllocation.used}/${pack.tokenAllocation.budget} evidence tokens; confidence: ${pack.overallConfidence.toFixed(2)}; CCE fallback: ${pack.providers.cce.fallback} -->\n`);
     }
     if (readline) readline.close();
     return;
@@ -795,9 +907,9 @@ async function main(): Promise<void> {
     await writeFile(outPath, html, "utf8");
     output.write(`Dashboard generated: ${outPath}\n`);
     if (options.openBrowser) {
-      const { exec } = await import("node:child_process");
-      const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
-      exec(`${cmd} ${JSON.stringify(outPath)}`);
+      const { runProcess } = await import("../process/index.js");
+      const command = process.platform === "darwin" ? "open" : process.platform === "win32" ? "explorer.exe" : "xdg-open";
+      await runProcess({ command, args: [outPath], timeoutMs: 15_000 });
     }
     if (readline) readline.close();
     return;

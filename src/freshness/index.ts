@@ -1,6 +1,7 @@
-import { readFile, writeFile, mkdir, access } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
+import { runProcessSync } from "../process/index.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,33 +38,20 @@ export interface FreshnessReport {
 // Git helpers
 // ---------------------------------------------------------------------------
 
-function tryGit(args: string, cwd: string): string {
-  try {
-    return execSync(`git ${args}`, {
-      encoding: "utf8",
-      cwd,
-      stdio: ["pipe", "pipe", "pipe"],
-      timeout: 10_000,
-    }).trim();
-  } catch {
-    return "";
-  }
+function tryGit(args: string[], cwd: string): string {
+  const result = runProcessSync({ command: "git", args, cwd, timeoutMs: 10_000 });
+  return result.exitCode === 0 ? result.stdout.trim() : "";
 }
 
 function gitLastModified(filePath: string, root: string): Date | null {
-  const iso = tryGit(`log -1 --format=%cI -- ${JSON.stringify(filePath)}`, root);
+  const iso = tryGit(["log", "-1", "--format=%cI", "--", filePath], root);
   if (!iso) return null;
   const d = new Date(iso);
   return isNaN(d.getTime()) ? null : d;
 }
 
 function fileExists(filePath: string): boolean {
-  try {
-    execSync(`test -e ${JSON.stringify(filePath)}`, { stdio: "pipe" });
-    return true;
-  } catch {
-    return false;
-  }
+  return existsSync(filePath);
 }
 
 // ---------------------------------------------------------------------------

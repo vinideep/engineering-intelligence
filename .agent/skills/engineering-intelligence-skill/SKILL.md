@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: engineering-intelligence-skill
 description: Executes engineering changes with impact analysis, implementation, tests, validation, and incremental synchronization of project intelligence. Use for feature, bugfix, update, refactor, architecture, infrastructure, or security requests.
@@ -12,7 +10,7 @@ The core implementation skill for engineering work. Use after project intelligen
 ## Inputs
 
 - User request describing the desired change
-- Repository with initialized intelligence (`$EIknowledge-base/`, `$EI`)
+- Repository with initialized intelligence (`.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/`)
 
 ## Request Classification
 
@@ -50,7 +48,7 @@ Record the depth on line 2 of the impact report header. For **Minimal** depth, l
 Before reading any project intelligence:
 
 1. Run `npx engineering-intelligence user-profile .` if the profile doesn't yet exist.
-2. Resolve identity: `git config user.email` → `$EImemory/users/<slug>/user-intelligence.md`.
+2. Resolve identity: `git config user.email` → `.engineering-intelligence/memory/users/<slug>/user-intelligence.md`.
 3. Skip if CI environment detected (`$CI`, `$GITHUB_ACTIONS`, etc.).
 4. Load the **Active Predictions block only** (~50t) and apply immediately:
    - Test generation policy (always / on-request / inferred-rarely)
@@ -63,14 +61,14 @@ This calibrates the entire workflow before a single line of code is written or r
 
 ### 1. Pre-Flight: Read Intelligence
 
-Use `context-budget-optimizer` before loading broad intelligence. Do not read all of `$EIknowledge-base/` or all graph JSON by default. Build `$EIcontext/context-manifest.md`, then load only relevant slices:
-- `$EIknowledge-base/` — only H2 sections relevant to the changed modules, APIs, schemas, or risk areas
-- `$AIDLC` — `aidlc-state.md`, active checkpoint, active unit, acceptance criteria, and execution-plan rows relevant to the request
-- `$EImemory/` — only matching decisions, constraints, conventions, regression patterns, and ADR references
-- `$EIcontext/` — module/service/runtime rows near the change scope
-- `$EIgraph/` — only relevant nodes/edges by graph proximity
+Use `context-budget-optimizer` and call `get_engineering_context` before loading broad intelligence or opening source files. Treat its ContextPackV2 route, trust state, graph neighborhood, evidence hashes, conflicts, provider fallbacks, required gates, and stop reason as the pre-flight contract. Do not read all of `.engineering-intelligence/knowledge-base/` or all graph JSON by default. Build `.engineering-intelligence/context/context-manifest.md`, then load only relevant slices:
+- `.engineering-intelligence/knowledge-base/` — only H2 sections relevant to the changed modules, APIs, schemas, or risk areas
+- `.engineering-intelligence/aidlc/` — `aidlc-state.md`, active checkpoint, active unit, acceptance criteria, and execution-plan rows relevant to the request
+- `.engineering-intelligence/memory/` — only matching decisions, constraints, conventions, regression patterns, and ADR references
+- `.engineering-intelligence/context/` — module/service/runtime rows near the change scope
+- `.engineering-intelligence/graph/` — only relevant nodes/edges by graph proximity
 
-**If intelligence is missing or stale**: Run `initialize-intelligence-skill` first.
+**If intelligence is missing or stale**: Run `initialize-intelligence-skill` first. When only a provider is unavailable, continue with the pack's native fallback and report degradation; never bypass stale EI knowledge by trusting provider output directly.
 
 Token rule: keep initial intelligence loading under 40% of the available context budget whenever possible. Lazy-load safety-gate evidence only when the trigger applies.
 
@@ -86,9 +84,17 @@ Before impact analysis or code edits:
 6. Carry that exact decision into the impact report's freshness-gate line.
 7. Skip stale H2 sections that carry low confidence metadata unless they are refreshed or verified against source.
 
-### 2. Impact Analysis: Write Report
+### 2. Adaptive Pre-Flight Socratic Gauntlet
 
-Before any code edit, write `$EIreports/IMP-XXX-<summary>.md`:
+Before finalizing the impact analysis and planning:
+- **Trigger**: When the request is classified as `architecture`, `security`, cross-cutting (`high`/`critical` risk), or contains 3+ open ambiguities.
+- **Action**: Run `socratic-stress-tester` to challenge edge cases, failure/rollback modes, non-functional requirements, and blast radius.
+- **Output**: Record confirmed assumptions vs. verified facts (`[VERIFIED: path#lines]`) in the impact report before writing code.
+- **Skip Condition**: Skip for localized bugfixes, updates, and low-risk changes with clear specifications.
+
+### 3. Impact Analysis: Write Report
+
+Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>.md`:
 
 ```markdown
 # IMP-XXX: <summary>
@@ -124,7 +130,7 @@ Before any code edit, write `$EIreports/IMP-XXX-<summary>.md`:
 - <areas where impact is uncertain>
 ```
 
-### 3. Implement the Change
+### 4. Implement the Change
 
 - Select the adaptive delivery mode inside the existing Engineering Intelligence workflow:
   - Standard Agile delivery for normal feature, bugfix, update, and refactor work
@@ -132,32 +138,32 @@ Before any code edit, write `$EIreports/IMP-XXX-<summary>.md`:
   - TDD delivery for high-reliability business rules and service contracts
   - Design-first delivery for migrations, new architecture, and broad system boundaries
   - Hypothesis debugging for unknown-cause defects
+
+#### Adaptive Interface Contract Exploration
+- **Trigger**: When the request introduces new public APIs, exported types, schema models, or SDK contracts.
+- **Action**: Run `interface-design-explorer` to draft and compare 3 contrasting proposals (*Minimalist*, *Type-Safe/Extensible*, *Performance-Optimized*) before writing production code.
+- **Skip Condition**: Skip when modifying existing internal function bodies or bugfixes.
+
 - Update Agile artifacts when product behavior is in scope:
-  - `$AIDLCagile/product-backlog.md`
-  - `$AIDLCagile/sprint-plan.md`
-  - `$AIDLCagile/acceptance-criteria.md`
-  - `$AIDLCagile/definition-of-ready.md`
-  - `$AIDLCagile/definition-of-done.md`
-- Update `$AIDLCexecution-plan.md` and `$AIDLCaidlc-state.md`
-- Split broad changes into construction units and keep `$AIDLCconstruction/cross-unit-discoveries.md` current
+  - `.engineering-intelligence/aidlc/agile/product-backlog.md`
+  - `.engineering-intelligence/aidlc/agile/sprint-plan.md`
+  - `.engineering-intelligence/aidlc/agile/acceptance-criteria.md`
+  - `.engineering-intelligence/aidlc/agile/definition-of-ready.md`
+  - `.engineering-intelligence/aidlc/agile/definition-of-done.md`
+- Update `.engineering-intelligence/aidlc/execution-plan.md` and `.engineering-intelligence/aidlc/aidlc-state.md`
+- Split broad changes into construction units and keep `.engineering-intelligence/aidlc/construction/cross-unit-discoveries.md` current
 - Edit only the files necessary for the request
-- Follow existing coding patterns from `$EImemory/coding-patterns.md`
-- Read conventions from `$EIknowledge-base/16-conventions.md` and `$EImemory/coding-patterns.md` — match naming patterns, import style, error handling patterns, and code structure
+- Follow existing coding patterns from `.engineering-intelligence/memory/coding-patterns.md`
+- Read conventions from `.engineering-intelligence/knowledge-base/16-conventions.md` and `.engineering-intelligence/memory/coding-patterns.md` — match naming patterns, import style, error handling patterns, and code structure
 - If conventions document is missing or outdated, run `convention-detector` first
 - After generating or modifying each file, compare it against `coding-patterns.md` for naming, import order, error handling, logging, folder structure, test style, and framework idioms. Auto-correct minor violations. Structural convention violations become review findings and block completion when critical.
-- Respect architectural boundaries from `$EImemory/architecture-decisions.md`
+- Respect architectural boundaries from `.engineering-intelligence/memory/architecture-decisions.md`
 - Consult `dangerous-areas.md` before modifying flagged code
 
-#### Strict TDD Red-Green Gate
-
-When TDD delivery mode is selected:
-
-1. Add or update the required tests first.
-2. Run the new/targeted tests before implementation code changes.
-3. Confirm they fail for the expected reason.
-4. Save failing output in `$AIDLCconstruction/<unit>/build-and-test/build-and-test-summary.md`.
-5. Only then implement production code.
-6. If this sequence is skipped, mark the construction unit blocked unless the user explicitly approves non-TDD execution.
+#### Adaptive Vertical TDD Execution
+- **Trigger**: When TDD delivery mode is selected, or when implementing complex business rules, parsers, state machines, or auth logic.
+- **Action**: Use `vertical-tdd-engine` to write vertical slice tests against public interfaces first (RED), write minimal passing code (GREEN), and clean code under tests (REFACTOR). Save failing output in `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md`.
+- If this sequence is skipped, mark the construction unit blocked unless the user explicitly approves non-TDD execution.
 
 ### 4. Add/Update Tests
 
@@ -179,13 +185,13 @@ When TDD delivery mode is selected:
 - Run `environment-variable-auditor` when environment variable reads, validation schemas, deployment config, or CI secrets change
 - Run `adr-compliance-checker` when accepted ADRs or architecture decisions apply to the changed area
 - Run `llm-prompt-injection-guard` when user-controlled data reaches prompts, RAG, agent tools, LLM calls, or durable AI memory
-- Write `$AIDLCconstruction/<unit>/build-and-test/build-and-test-summary.md` for non-trivial units
+- Write `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md` for non-trivial units
 - **Never claim validation passed unless it actually ran and passed**
 - Record partial or failed validation honestly
 
 #### Acceptance Criteria Verification Matrix
 
-Before Definition of Done can pass, map every criterion from `$AIDLCagile/acceptance-criteria.md` to evidence:
+Before Definition of Done can pass, map every criterion from `.engineering-intelligence/aidlc/agile/acceptance-criteria.md` to evidence:
 
 ```markdown
 ## Acceptance Criteria Verification Matrix
@@ -197,9 +203,9 @@ Before Definition of Done can pass, map every criterion from `$AIDLCagile/accept
 
 Missing mappings block the Done gate and must be copied into the CHG record as open items.
 
-### 6. Incremental Sync
+### 6. Incremental Sync & Session Continuity
 
-Use `incremental-sync-engine` to update only affected artifacts:
+Call `sync_engineering_knowledge` after edits, then use `incremental-sync-engine` to update only the affected canonical prose and durable artifacts it flags:
 - Knowledge docs reflecting changed behavior
 - Memory entries if decisions/patterns changed
 - Context maps if module/service topology changed
@@ -208,9 +214,15 @@ Use `incremental-sync-engine` to update only affected artifacts:
 - AI-DLC lifecycle artifacts if state, plan, NFRs, ADRs, operations readiness, or unit discoveries changed
 - Agile artifacts if backlog, story status, acceptance criteria, Ready/Done gates, or retrospective learning changed
 
+Run `validate_change` after synchronization. Completion requires current graph/index evidence, re-derived claims, applicable deterministic gates, and explicit reporting of any unavailable provider or validation. Provider caches are disposable; EI artifacts remain durable authority.
+
+#### Adaptive Session Handoff Trigger
+- **Trigger**: When context window limits approach, work is paused across sessions, or task is transferred to another agent.
+- **Action**: Run `session-handoff-engine` to emit `.engineering-intelligence/handoffs/HO-<date>-<task>.md` with ground truth, modified files, and immediate next commands.
+
 ### 7. Record Change
 
-Create `$EIchanges/CHG-XXX-<summary>.md`:
+Create `.engineering-intelligence/changes/CHG-XXX-<summary>.md`:
 
 ```markdown
 # CHG-XXX: <summary>
@@ -303,6 +315,8 @@ Summarize to the user:
 - [ ] Change record references the correct impact report
 - [ ] High-risk changes went through review gate
 - [ ] Generated code follows detected project conventions (naming, imports, structure)
+- [ ] ContextPackV2 was used before direct exploration and its trust/fallback state was honored
+- [ ] Post-edit graph, provider index, derived claims, validation, and affected EI knowledge were synchronized
 
 ## Rules
 
@@ -314,5 +328,6 @@ Summarize to the user:
 ## Cross-References
 
 - Depends on: `initialize-intelligence-skill` (prerequisite), `context-budget-optimizer`, `change-detection-engine`, `impact-analysis-engine`, `graph-engine`, `staleness-detector`
-- Uses during execution: `testing-intelligence-engine`, `type-safety-engine`, `api-backward-compatibility-engine`, `database-migration-safety-engine`, `security-audit-engine`, `environment-variable-auditor`, `adr-compliance-checker`, `llm-prompt-injection-guard`, `incremental-sync-engine`, `change-history-engine`
+- Uses during execution: `testing-intelligence-engine`, `type-safety-engine`, `api-backward-compatibility-engine`, `database-migration-safety-engine`, `security-audit-engine`, `environment-variable-auditor`, `adr-compliance-checker`, `llm-prompt-injection-guard`, `incremental-sync-engine`, `change-history-engine`, `vertical-tdd-engine`
+- Adaptive triggers: `socratic-stress-tester` (for high-risk/ambiguous pre-flight), `interface-design-explorer` (for new public API/types), `session-handoff-engine` (for context/session boundaries)
 - Optional: `engineering-change-review` (for high-risk), `refactoring-planner` (for refactors), `convention-detector` (for convention compliance)

@@ -45,6 +45,12 @@ function isCodeFile(rel: string): boolean {
   return /\.(tsx?|jsx?|mjs|cjs)$/.test(rel);
 }
 
+function withoutComments(content: string): string {
+  return content
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:])\/\/[^\n\r]*/gm, "$1");
+}
+
 /** Extract a normalized set of `METHOD path` endpoints from one file's contents. */
 export function extractApiSurface(content: string, relPath: string): Set<string> {
   const surface = new Set<string>();
@@ -72,15 +78,16 @@ export function extractApiSurface(content: string, relPath: string): Set<string>
   }
 
   if (isCodeFile(relPath)) {
+    const executable = withoutComments(content);
     let m: RegExpExecArray | null;
     // Fresh regexes per call: `g` regexes carry a mutable lastIndex and this is
     // invoked repeatedly (base and head, per file).
-    if (FRAMEWORK_MARKER.test(content)) {
+    if (FRAMEWORK_MARKER.test(executable)) {
       const routeCall = new RegExp(ROUTE_CALL.source, "gi");
-      while ((m = routeCall.exec(content)) !== null) surface.add(`${m[1].toUpperCase()} ${m[2]}`);
+      while ((m = routeCall.exec(executable)) !== null) surface.add(`${m[1].toUpperCase()} ${m[2]}`);
     }
     const decorator = new RegExp(ROUTE_DECORATOR.source, "gi");
-    while ((m = decorator.exec(content)) !== null) surface.add(`${m[1].toUpperCase()} ${m[2] ?? ""}`.trim());
+    while ((m = decorator.exec(executable)) !== null) surface.add(`${m[1].toUpperCase()} ${m[2] ?? ""}`.trim());
   }
   return surface;
 }

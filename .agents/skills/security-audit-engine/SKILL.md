@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: security-audit-engine
 description: Performs evidence-based security audits covering dependency vulnerabilities, auth/authz patterns, secrets detection, OWASP Top 10 compliance, and input validation. Use during initialization, before releases, or when security-sensitive changes are detected.
@@ -14,7 +12,7 @@ Identify security risks through systematic, evidence-backed analysis of dependen
 - Repository root path
 - Mode: `full` (comprehensive audit) or `targeted` (specific area or post-change)
 - Optional: scope constraints (specific modules, change diff)
-- Optional: previous assessment (`$EIknowledge-base/20-security-assessment.md`) for delta comparison
+- Optional: previous assessment (`.engineering-intelligence/knowledge-base/20-security-assessment.md`) for delta comparison
 
 ## Procedure
 
@@ -94,19 +92,19 @@ Identify security risks through systematic, evidence-backed analysis of dependen
    | Output encoding | Is output encoded to prevent XSS? |
    | Rate limiting | Are endpoints rate-limited? |
 
-6. **Generate Assessment** — Write findings to `$EIknowledge-base/20-security-assessment.md`.
+6. **Generate Assessment** — Write findings to `.engineering-intelligence/knowledge-base/20-security-assessment.md`.
 
 7. **Targeted Dependency-Risk Output** — During implementation runs triggered by new or upgraded packages, write a lighter unit artifact instead of conflating the result with a full audit:
 
    ```text
-   $AIDLCconstruction/<unit>/dependency-risk-summary.md
+   .engineering-intelligence/aidlc/construction/<unit>/dependency-risk-summary.md
    ```
 
    This summary must include CVE, license, maintenance, and bundle impact findings for changed dependencies. Critical CVEs block completion.
 
 ## Output Format
 
-Write `$EIknowledge-base/20-security-assessment.md`:
+Write `.engineering-intelligence/knowledge-base/20-security-assessment.md`:
 
 ```markdown
 # Security Assessment
@@ -188,6 +186,6 @@ Write `$EIknowledge-base/20-security-assessment.md`:
 
 - Depends on: `deep-project-knowledge-extractor` (project structure understanding)
 - Used by: `engineering-intelligence-skill`, `impact-analysis-engine` (security risk scoring)
-- Updates: `$EIknowledge-base/20-security-assessment.md`
+- Updates: `.engineering-intelligence/knowledge-base/20-security-assessment.md`
 
 This capability is analytical only. It must not modify product code.

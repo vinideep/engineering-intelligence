@@ -1,6 +1,6 @@
-import { readFile, writeFile, mkdir, access } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { execSync } from "node:child_process";
+import { runProcessSync } from "../process/index.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,17 +49,9 @@ export interface UserProfile {
 // Git helpers
 // ---------------------------------------------------------------------------
 
-function tryGit(args: string, cwd: string): string {
-  try {
-    return execSync(`git ${args}`, {
-      encoding: "utf8",
-      cwd,
-      stdio: ["pipe", "pipe", "pipe"],
-      timeout: 15_000,
-    }).trim();
-  } catch {
-    return "";
-  }
+function tryGit(args: string[], cwd: string): string {
+  const result = runProcessSync({ command: "git", args, cwd, timeoutMs: 15_000 });
+  return result.exitCode === 0 ? result.stdout.trim() : "";
 }
 
 // ---------------------------------------------------------------------------
@@ -104,9 +96,9 @@ function detectIdesInUse(root: string): string[] {
 }
 
 export function resolveIdentity(root: string): UserIdentity {
-  const email = tryGit("config user.email", root) || `${process.env["USER"] ?? "user"}@local`;
-  const name = tryGit("config user.name", root) || email.split("@")[0];
-  const remoteUrl = tryGit("remote get-url origin", root);
+  const email = tryGit(["config", "user.email"], root) || `${process.env["USER"] ?? "user"}@local`;
+  const name = tryGit(["config", "user.name"], root) || email.split("@")[0];
+  const remoteUrl = tryGit(["remote", "get-url", "origin"], root);
   const gitHubUsername = remoteUrl ? extractGitHubUsername(remoteUrl) : undefined;
 
   let ideInUse: string[] = [];
@@ -131,10 +123,7 @@ const CONVENTIONAL_PATTERN = /^(feat|fix|chore|docs|style|refactor|test|build|ci
 
 export function seedFromGitHistory(root: string, email: string): GitHistorySignals {
   // Limit to last 200 commits by this author to keep it fast
-  const log = tryGit(
-    `log --author=${JSON.stringify(email)} --name-only --format="COMMIT:%s" -200`,
-    root,
-  );
+  const log = tryGit(["log", `--author=${email}`, "--name-only", "--format=COMMIT:%s", "-200"], root);
 
   if (!log) {
     return {
@@ -200,10 +189,7 @@ export function seedFromGitHistory(root: string, email: string): GitHistorySigna
 
   // Avg lines changed (numstat — separate call, skip on timeout)
   let avgLinesChanged = 0;
-  const numstat = tryGit(
-    `log --author=${JSON.stringify(email)} --numstat --format="" -100`,
-    root,
-  );
+  const numstat = tryGit(["log", `--author=${email}`, "--numstat", "--format=", "-100"], root);
   if (numstat) {
     let totalLines = 0;
     let lineCount = 0;

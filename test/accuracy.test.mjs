@@ -7,14 +7,55 @@
  */
 
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { buildGraph, analyzeImpact, whoCalls } from "../dist/graph/index.js";
 import { shape, packRows, unpackRows, BUDGET_EXPANDED_NOTE } from "../dist/mcp/shaper.js";
+import { nativeScopedSearch } from "../dist/providers/cce.js";
+import { ProjectFilePolicy } from "../dist/project-files/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
+
+test("30-query golden corpus meets native Recall@10, source-span, and scope-leakage gates", async () => {
+  const corpus = JSON.parse(await readFile(path.join(REPO_ROOT, "bench/context-golden.json"), "utf8"));
+  assert.ok(corpus.queries.length >= 30, "the release corpus must contain at least 30 queries");
+  const policy = await ProjectFilePolicy.load(REPO_ROOT);
+  let expected = 0;
+  let recalled = 0;
+  let validSpans = 0;
+  let spans = 0;
+  let leakage = 0;
+
+  for (const item of corpus.queries) {
+    const chunks = await nativeScopedSearch(REPO_ROOT, item.query, item.scope, 10);
+    const paths = new Set(chunks.map((chunk) => chunk.path));
+    for (const expectedPath of item.expected) {
+      expected += 1;
+      if (paths.has(expectedPath)) recalled += 1;
+    }
+    for (const chunk of chunks) {
+      spans += 1;
+      const source = await readFile(path.join(REPO_ROOT, chunk.path), "utf8");
+      const lines = source.split("\n");
+      const content = lines.slice(chunk.startLine - 1, chunk.endLine).join("\n");
+      const hash = createHash("sha256").update(content).digest("hex");
+      if (chunk.startLine >= 1 && chunk.endLine >= chunk.startLine && chunk.endLine <= lines.length && hash === chunk.contentHash) validSpans += 1;
+      const decision = await policy.explainExisting(chunk.path);
+      const inScope = item.scope.some((scope) => chunk.path === scope || chunk.path.startsWith(`${scope}/`));
+      if (!decision.included || !inScope) leakage += 1;
+    }
+  }
+
+  const recallAt10 = recalled / expected;
+  const spanValidity = spans === 0 ? 0 : validSpans / spans;
+  assert.ok(recallAt10 >= corpus.thresholds.recallAt10, `Recall@10 ${recallAt10.toFixed(3)} must be >= ${corpus.thresholds.recallAt10}`);
+  assert.equal(spanValidity, corpus.thresholds.validCurrentSpans, "every returned source span must match the current file hash");
+  assert.equal(leakage, corpus.thresholds.scopeLeakage, "retrieval must not leak outside the EI-approved scope");
+});
 
 // Mirror the analyze_impact handler (src/mcp/index.ts).
 function shapeImpact(result, budget) {

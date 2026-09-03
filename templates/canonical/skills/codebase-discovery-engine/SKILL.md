@@ -1,7 +1,7 @@
 ---
 name: codebase-discovery-engine
 description: Autonomously explores and deeply understands a codebase before asking any questions. Scans repo structure, identifies tech stack with confidence scores, builds architecture hypotheses, maps entry points, detects conventions, analyzes git history, and produces a structured discovery report. Invoke when onboarding to a new repository or when deep understanding is required.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Codebase Discovery Engine
@@ -9,6 +9,12 @@ version: 3.0.0
 Autonomously explore and understand a codebase with minimal human interaction. The engine operates in four phases: automated discovery, hypothesis verification, targeted clarification, and confidence reporting. The goal is to build a comprehensive mental model of the project before asking any questions.
 
 This capability does not modify product code.
+
+## Context source and scope
+
+Prefer EI's persisted, verified intelligence over re-exploration. If initialization evidence exists, read `.engineering-intelligence/context/initialization-evidence.json` and request `get_engineering_context` before scanning files. Apply the shared EI project file policy to every discovery pass; record why a root/path was included or excluded. Graphify may corroborate structural hypotheses, and CCE may retrieve exact spans inside the EI-approved neighborhood, but neither provider owns canonical conclusions.
+
+If provider health is degraded, continue with native EI extraction and report the fallback. Exclude stale, contested, unverifiable, secret-bearing, generated, vendored, provider-cache, and escaped-symlink evidence from high-confidence findings. Raw provider access is reserved for explicit expert mode.
 
 ## Inputs
 
@@ -417,6 +423,8 @@ Scope: <full repo | specific scope>
 - [ ] Git history analysis includes hotspots and change velocity
 - [ ] Monorepo detection was performed (even if result is "not a monorepo")
 - [ ] Unknowns and uncertainties are explicitly listed
+- [ ] Provider health, version, fallback, and evidence trust states are reported
+- [ ] File-policy decisions prove no disallowed-scope leakage
 
 ## Cross-References
 

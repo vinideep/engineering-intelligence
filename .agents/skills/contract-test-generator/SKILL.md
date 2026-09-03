@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: contract-test-generator
 description: Generates consumer-driven contract test stubs for service boundaries based on API contracts and service graph topology.
@@ -11,7 +9,7 @@ Use this skill when service boundaries, API clients, webhooks, events, GraphQL s
 
 ## Procedure
 
-1. Read `service-graph.json`, `$EIknowledge-base/04-api-documentation.md`, OpenAPI/GraphQL/protobuf schemas, and existing contract tests.
+1. Read `service-graph.json`, `.engineering-intelligence/knowledge-base/04-api-documentation.md`, OpenAPI/GraphQL/protobuf schemas, and existing contract tests.
 2. Detect the project’s contract-test framework if any: Pact, Spring Cloud Contract, protobuf conformance tests, schema snapshots, custom integration harness, or plain test framework.
 3. Generate or recommend stubs matching the project’s exact test structure and assertion style.
 4. Cover canonical scenarios:
@@ -24,7 +22,7 @@ Use this skill when service boundaries, API clients, webhooks, events, GraphQL s
 
 ## Output
 
-Write `$AIDLCconstruction/<unit>/contract-test-plan.md`:
+Write `.engineering-intelligence/aidlc/construction/<unit>/contract-test-plan.md`:
 
 ```markdown
 # Contract Test Plan: <unit>

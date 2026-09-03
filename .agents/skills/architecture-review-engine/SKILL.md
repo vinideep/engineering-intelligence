@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: architecture-review-engine
 description: Reviews architecture decisions, dependency health, structural quality, and identifies architectural smells. Use during refactoring planning or periodic architecture assessment.
@@ -11,9 +9,9 @@ Systematically assess architectural quality using evidence from code, graphs, an
 
 ## Inputs
 
-- `$EIgraph/` (dependency, service, runtime graphs)
-- `$EIknowledge-base/02-architecture.md`
-- `$EImemory/architecture-decisions.md`
+- `.engineering-intelligence/graph/` (dependency, service, runtime graphs)
+- `.engineering-intelligence/knowledge-base/02-architecture.md`
+- `.engineering-intelligence/memory/architecture-decisions.md`
 - Specific scope or concern (optional)
 
 ## Review Checklist
@@ -68,7 +66,7 @@ Systematically assess architectural quality using evidence from code, graphs, an
 
 ## Output Format
 
-Write `$EIknowledge-base/16-architecture-review.md`:
+Write `.engineering-intelligence/knowledge-base/16-architecture-review.md`:
 
 ```markdown
 # Architecture Review

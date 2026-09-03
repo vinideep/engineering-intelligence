@@ -7,6 +7,8 @@ description: Analyze the impact of a proposed change or existing diff and write 
 
 Use `change-detection-engine`, `impact-analysis-engine`, and `graph-engine` when graph intelligence is missing or stale.
 
+Begin with `get_engineering_context`, then call `analyze_change_impact`. EI's normalized graph determines scope; CCE supplies current source/test spans only inside that scope. Put provider-only, contested, stale, or rejected relationships in Unknowns instead of presenting them as verified impact. Raw provider access requires explicit expert mode.
+
 ## Input
 
 Analyze the user-supplied scope: proposed change description, working-tree diff, commit/range, or explicit changed paths. If the scope is ambiguous, ask for clarification instead of assuming.
@@ -26,6 +28,7 @@ Write `.engineering-intelligence/reports/IMP-XXX-<slug>.md` covering:
 | Intelligence artifacts | Knowledge, memory, context, events, and graphs needing sync |
 | Evidence | File path citations for all claims |
 | Unknowns | Areas where impact is uncertain |
+| Provider state | Versions, health, fallback, stale/scope rejections |
 
 ## Rules
 

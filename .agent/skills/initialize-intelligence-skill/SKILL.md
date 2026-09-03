@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: initialize-intelligence-skill
 description: Initializes project engineering intelligence by analyzing repository evidence and generating knowledge, context, memory, event guidance, architecture graphs, and an initialization change record. Invoke when onboarding a repository or when asked to initialize engineering intelligence.
@@ -9,7 +7,23 @@ description: Initializes project engineering intelligence by analyzing repositor
 
 Create a trustworthy, evidence-backed project intelligence baseline. Analyze only artifacts present in source code, configuration, tests, infrastructure, and existing documentation. Mark unknowns and uncertainties explicitly — never invent architecture, APIs, schemas, or business rules.
 
-**Record durable facts as verifiable claims.** For each material, code-backed statement you would put in the knowledge base, also record it as a claim bound to its exact evidence span: `npx engineering-intelligence claims add --statement "<fact>" --evidence "<path>:<start>-<end>"` (writes `$EIclaims/claims.json`, pinning a content hash of the cited lines). This lets `claims verify` and `get_context` later prove — deterministically, with no LLM — whether each fact still holds against the current source. Prefer line-scoped evidence for precise, low-noise staleness detection.
+## EI-owned initialization protocol
+
+Start with `npx engineering-intelligence initialize . --providers auto --yes`. This deterministic bootstrap applies the shared project file policy, verifies or installs EI's pinned local providers, runs Graphify in code-only mode against an isolated mirror, reconciles that evidence with EI's native graph, indexes the approved source universe in CCE, derives claims, and writes `.engineering-intelligence/context/KNOWLEDGE-GENERATION-BRIEF.md`.
+
+Authority never transfers to a provider:
+
+1. Current repository source, tests, manifests, and Git are ground truth.
+2. EI's knowledge base, claims, ADRs, memory, and normalized graph are canonical engineering intelligence.
+3. Graphify supplies structural extraction evidence only.
+4. CCE supplies current code spans only.
+5. Model synthesis must preserve provenance, confidence, freshness, conflicts, and unknowns.
+
+Read the generation brief and `initialization-evidence.json` before direct exploration. Use `get_engineering_context` for evidence packs; do not call raw provider tools unless the user enabled expert mode. A missing or failed provider is an explicit degraded state with native EI fallback. Use `--require-providers` only when the user wants provider absence to be a hard failure.
+
+**Compute the derived-fact baseline first:** `npx engineering-intelligence claims derive .` extracts module imports, package dependencies and HTTP routes from source and records them as *derived* claims. Their statements are generated from the extracted descriptor, so `claims verify` can RE-COMPUTE them and genuinely prove whether each still holds — that is the only kind of claim allowed to be called a fact.
+
+For durable statements the derivation cannot express, record an *asserted* claim: `npx engineering-intelligence claims add --statement "<fact>" --evidence "<path>:<start>-<end>" --author "<who>"`. Be clear about what this does and does not buy you: the evidence span is hash-pinned, so edits to the cited lines are detected, but nothing checks that your sentence is TRUE of that code. Asserted claims report `unverified` and `get_context` serves them under an explicit unverified heading. Never write an asserted claim to make something look confirmed.
 
 ## Inputs
 
@@ -20,7 +34,7 @@ Create a trustworthy, evidence-backed project intelligence baseline. Analyze onl
 
 Generate the following artifacts in order:
 
-### Knowledge Base (`$EIknowledge-base/`)
+### Knowledge Base (`.engineering-intelligence/knowledge-base/`)
 
 | Document | Purpose |
 |---|---|
@@ -41,7 +55,7 @@ Generate the following artifacts in order:
 | `14-glossary.md` | Domain terms, abbreviations, naming conventions |
 | `15-validation-report.md` | Evidence audit of all claims made above |
 
-### Durable Memory (`$EImemory/`)
+### Durable Memory (`.engineering-intelligence/memory/`)
 
 | Document | Content |
 |---|---|
@@ -51,7 +65,7 @@ Generate the following artifacts in order:
 | `project-constraints.md` | Performance budgets, compatibility, regulatory |
 | `technology-decisions.md` | Stack choices, version policies, deprecation plans |
 
-### Navigation Context (`$EIcontext/`)
+### Navigation Context (`.engineering-intelligence/context/`)
 
 | Document | Content |
 |---|---|
@@ -62,7 +76,7 @@ Generate the following artifacts in order:
 | `dangerous-areas.md` | Fragile code, missing tests, race conditions |
 | `dependency-map.md` | External deps → internal consumers → risk |
 
-### Event Guidance (`$EIevents/`)
+### Event Guidance (`.engineering-intelligence/events/`)
 
 | Document | Trigger |
 |---|---|
@@ -72,7 +86,7 @@ Generate the following artifacts in order:
 | `feature-added.md` | When new user-facing features are introduced |
 | `infrastructure-changed.md` | When CI, deployment, or infra config changes |
 
-### Architecture Graphs (`$EIgraph/`)
+### Architecture Graphs (`.engineering-intelligence/graph/`)
 
 | Artifact | Content |
 |---|---|
@@ -86,7 +100,7 @@ Generate the following artifacts in order:
 
 | Artifact | Content |
 |---|---|
-| `$EIchanges/CHG-000-initialization.md` | Record of this initialization run |
+| `.engineering-intelligence/changes/CHG-000-initialization.md` | Record of this initialization run |
 
 ## Procedure
 
@@ -103,9 +117,9 @@ Generate the following artifacts in order:
    - Freshness scores for any pre-existing intelligence documents
    - Hotspots, ownership, and coupling for the repository
 
-   Read the generated profile at `$EImemory/users/<slug>/user-intelligence.md` and apply Active Predictions for the rest of this session. Skip if CI environment is detected.
+   Read the generated profile at `.engineering-intelligence/memory/users/<slug>/user-intelligence.md` and apply Active Predictions for the rest of this session. Skip if CI environment is detected.
 
-1. **Discover** — Scan for: package manifests, workspace configs, runtimes (`package.json`, `go.mod`, `Cargo.toml`, `pyproject.toml`, etc.), build systems, entrypoints, CI configs, Dockerfiles, deployment manifests, environment examples, database schemas/migrations, API definitions, auth configs, test suites.
+1. **Discover** — Begin from the policy-filtered initialization evidence and ContextPackV2. Scan source only for unresolved sections: package manifests, workspace configs, runtimes (`package.json`, `go.mod`, `Cargo.toml`, `pyproject.toml`, etc.), build systems, entrypoints, CI configs, Dockerfiles, deployment manifests, environment examples, database schemas/migrations, API definitions, auth configs, test suites. Never treat `dist/`, provider caches, vendored code, secrets, or benchmark fixtures as production architecture.
 
 2. **Trace Architecture** — Follow imports, dependency injection, middleware registration, route definitions, event handlers, and service boundaries. Map the critical runtime flows from code evidence, not assumptions.
 
@@ -132,6 +146,8 @@ Generate the following artifacts in order:
 
 10. **Report** — Summarize: total artifacts created, evidence coverage percentage estimate, high-confidence vs low-confidence areas, explicit list of items requiring human review.
 
+11. **Publish only after trust gates** — Run `claims verify --strict`, `evidence-check --strict`, strict health, and cross-document validation. Provider-only or contested relationships cannot become material claims. If any gate fails, keep the generated work explicitly degraded and do not describe initialization as complete.
+
 ## Quality Gates
 
 - [ ] Every knowledge document has at least one evidence citation
@@ -141,6 +157,10 @@ Generate the following artifacts in order:
 - [ ] Memory contains only durable, long-lived knowledge
 - [ ] Context maps are concise (< 150 lines each)
 - [ ] CHG-000 record exists and lists all generated artifacts
+- [ ] Provider health/fallback is recorded and raw provider output remains non-canonical
+- [ ] Approved source scope contains no provider cache, secret, vendor, generated-build, or benchmark-fixture leakage
+- [ ] Every non-empty repository has a meaningful derived claim baseline
+- [ ] No unresolved material citation drift remains before publication
 
 ## Cross-References
 

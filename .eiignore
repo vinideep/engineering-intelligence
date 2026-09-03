@@ -1,0 +1,8 @@
+# Internal provider/retrieval benchmark. It is indexed separately as a fixture.
+benchmark/
+
+# Local benchmark automation is not part of the product architecture graph.
+scripts/
+
+# Parser fixtures contain source snippets and intentionally fake imports/routes.
+test/fixtures/

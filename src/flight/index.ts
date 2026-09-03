@@ -1,7 +1,7 @@
 import { mkdir, writeFile, readFile, readdir } from "node:fs/promises";
-import { execSync } from "node:child_process";
 import path from "node:path";
 import { analyzeImpact } from "../graph/index.js";
+import { runProcessSync } from "../process/index.js";
 
 // ---------------------------------------------------------------------------
 // The Agent Flight Recorder — accountability for AI code changes.
@@ -48,31 +48,25 @@ function flightDir(root: string): string {
   return path.join(root, ".engineering-intelligence", "flight");
 }
 
-function git(root: string, args: string): string | null {
-  try {
-    return execSync(`git ${args}`, { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 15_000 }).trim();
-  } catch {
-    return null;
-  }
+function git(root: string, args: string[]): string | null {
+  const result = runProcessSync({ command: "git", args, cwd: root, timeoutMs: 15_000 });
+  return result.exitCode === 0 ? result.stdout.trim() : null;
 }
 
 // Raw (untrimmed) git output — required for `status --porcelain`, whose fixed
 // 2-char status column would be corrupted by trimming the leading space.
-function gitRaw(root: string, args: string): string | null {
-  try {
-    return execSync(`git ${args}`, { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 15_000 });
-  } catch {
-    return null;
-  }
+function gitRaw(root: string, args: string[]): string | null {
+  const result = runProcessSync({ command: "git", args, cwd: root, timeoutMs: 15_000 });
+  return result.exitCode === 0 ? result.stdout : null;
 }
 
 function head(root: string): string | null {
-  return git(root, "rev-parse HEAD") || null;
+  return git(root, ["rev-parse", "HEAD"]) || null;
 }
 
 // Files with uncommitted (working tree + staged) modifications, source only.
 function dirtyFiles(root: string): string[] {
-  const porcelain = gitRaw(root, "status --porcelain");
+  const porcelain = gitRaw(root, ["status", "--porcelain"]);
   if (porcelain === null) return [];
   const out: string[] = [];
   for (const line of porcelain.split("\n")) {
@@ -174,7 +168,7 @@ function actualChangesSince(root: string, record: FlightRecord): string[] {
 
   const current = head(root);
   if (record.baselineCommit && current && current !== record.baselineCommit) {
-    const diff = git(root, `diff --name-only ${record.baselineCommit} ${current}`);
+    const diff = git(root, ["diff", "--name-only", record.baselineCommit, current]);
     if (diff) {
       for (const f of diff.split("\n")) {
         const t = f.trim();

@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: testing-intelligence-engine
 description: Determines risk-based testing needs for engineering changes and identifies coverage gaps in critical runtime flows. Use during implementation and validation.
@@ -11,11 +9,11 @@ Determine the minimum sufficient test coverage for a change based on risk assess
 
 ## Inputs
 
-- Impact report (`$EIreports/IMP-XXX-*.md`)
+- Impact report (`.engineering-intelligence/reports/IMP-XXX-*.md`)
 - Existing test patterns in the repository
 - Change classification (feature, bugfix, refactor, etc.)
 - Coverage reports when available (`coverage-final.json`, `coverage.xml`, `lcov.info`, `go test -cover`, pytest coverage output)
-- Agile acceptance criteria from `$AIDLCagile/acceptance-criteria.md`
+- Agile acceptance criteria from `.engineering-intelligence/aidlc/agile/acceptance-criteria.md`
 
 ## Risk-Based Test Selection Matrix
 
@@ -67,7 +65,7 @@ Determine the minimum sufficient test coverage for a change based on risk assess
    - Data migration and rollback tests for schema changes
 
    **For API/service integration changes**:
-   - Generate integration test stubs from `$EIknowledge-base/04-api-documentation.md` and `service-graph.json`
+   - Generate integration test stubs from `.engineering-intelligence/knowledge-base/04-api-documentation.md` and `service-graph.json`
    - Cover happy path, auth failure, downstream timeout, and validation error
    - Match existing test framework, describe/it nesting, mock setup, assertion library, and factory style
 
@@ -87,11 +85,11 @@ Determine the minimum sufficient test coverage for a change based on risk assess
 
 6. **Verify Acceptance Criteria** — Produce an Acceptance Criteria Verification Matrix mapping every criterion to automated tests, manual verification, or an unavailable check. Missing mappings block Definition of Done.
 
-7. **Propose Regression Patterns** — For bugfixes, compare against `$EImemory/regression-patterns.md`. Reuse matching templates. If a new recurring bug category is found, propose a durable pattern to `incremental-sync-engine` (Memory sync), which owns durable persistence to `regression-patterns.md`.
+7. **Propose Regression Patterns** — For bugfixes, compare against `.engineering-intelligence/memory/regression-patterns.md`. Reuse matching templates. If a new recurring bug category is found, propose a durable pattern to `incremental-sync-engine` (Memory sync), which owns durable persistence to `regression-patterns.md`.
 
 ## Output
 
-### Per-Change Testing (in `$EIchanges/CHG-XXX-*.md`)
+### Per-Change Testing (in `.engineering-intelligence/changes/CHG-XXX-*.md`)
 
 ```markdown
 ## Tests
@@ -102,7 +100,7 @@ Determine the minimum sufficient test coverage for a change based on risk assess
 - Coverage gaps: <untested areas remaining>
 ```
 
-### Broad Testing Strategy (in `$EIknowledge-base/17-testing-strategy.md`)
+### Broad Testing Strategy (in `.engineering-intelligence/knowledge-base/17-testing-strategy.md`)
 
 Only update when documenting project-wide testing posture:
 
@@ -160,4 +158,4 @@ Only update when documenting project-wide testing posture:
 
 - Depends on: `impact-analysis-engine` (for risk assessment)
 - Used by: `engineering-intelligence-skill` (step 4: tests and validation)
-- Updates: `$EIknowledge-base/17-testing-strategy.md` (broad posture only)
+- Updates: `.engineering-intelligence/knowledge-base/17-testing-strategy.md` (broad posture only)

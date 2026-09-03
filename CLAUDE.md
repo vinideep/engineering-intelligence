@@ -14,13 +14,25 @@ This repository uses installed engineering intelligence workflows.
 - **Prefer persisted intelligence over re-exploration.** Before reading source files to understand the codebase, read the persisted knowledge base in `.engineering-intelligence/knowledge-base/`, context maps in `.engineering-intelligence/context/`, and architecture graphs in `.engineering-intelligence/graph/`. Re-read source only for the specific files a task touches. Run `sync-engineering-intelligence` to refresh these artifacts incrementally rather than re-deriving from scratch each session.
 - **Route before loading skills.** Consult the installed `WORKFLOW-ROUTING.md` and `SKILLS-INDEX.md` in your IDE's skills directory before opening any individual `SKILL.md`. Load only the 1-3 skills relevant to the current request.
 
+## Tools (prefer these over reasoning by hand)
+
+These run deterministically. Use them instead of inferring the answer from source — they are the difference between a computed fact and a guess. Available over MCP (server `engineering-intelligence`) and as CLI commands:
+
+- `get_engineering_context` — build ContextPackV2 from verified EI knowledge, canonical structure, and current scoped code
+- `analyze_change_impact` — compute direct and indirect impact, affected tests, risks, and unknowns
+- `validate_change` — run impact, safety gates, claims, knowledge, and citation validation
+- `sync_engineering_knowledge` — refresh affected graph, provider indexes, claims, and knowledge health after edits
+- `provider_status` — report pinned provider health, versions, fallbacks, and remediation
+
+CLI equivalents: `npx engineering-intelligence map|gate <name>|verify|freshness|context|claims verify|git-analysis .`. `gate` and `verify` exit non-zero on failure, so they work in CI too.
+
 ## Token-Efficient Skill Loading (Claude Code)
 
 **Three-tier loading protocol** — follow this order on every invocation:
 
 **Tier 1 — Routing (load once, always pinned)**
 1. `.claude/WORKFLOW-ROUTING.md` — primary/optional skill map per command (~400t)
-2. `.claude/skills/SKILLS-INDEX.md` — one-line description of all 42 skills (~1,500t)
+2. `.claude/skills/SKILLS-INDEX.md` — one-line description of all 46 skills (~1,500t)
 
 **Tier 2 — Brief (load per identified skill, ~150t each)**
 Load `.claude/skills/<name>/SKILL-BRIEF.md` for each primary skill identified in the routing table.
@@ -31,10 +43,6 @@ Load `.claude/skills/<name>/SKILL.md` immediately before executing that skill's 
 Never skip this step — the brief does not contain the complete procedure.
 
 Load **optional** skills only when the request explicitly requires that capability.
-
-Path aliases used in skill and command files (expand before writing file paths):
-- `$AIDLC` = `.engineering-intelligence/aidlc/`
-- `$EI` = `.engineering-intelligence/`
 
 ## Enforcement Hooks (Claude Code)
 

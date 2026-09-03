@@ -14,6 +14,7 @@
         "requirement-scoper",
         "backlog-decomposition-engine",
         "context-budget-optimizer",
-        "aidlc-lifecycle-engine"
+        "aidlc-lifecycle-engine",
+        "socratic-stress-tester"
     ]
 }

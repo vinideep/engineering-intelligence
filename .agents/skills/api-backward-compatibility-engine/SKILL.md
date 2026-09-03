@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: api-backward-compatibility-engine
 description: Diffs API contracts (additive/deprecated/breaking), requires versioning or migration notes for breaking changes, and captures/replays request-response snapshots to catch semantic regressions.
@@ -14,7 +12,7 @@ Use this skill when routes, handlers, request schemas, response schemas, GraphQL
 ## Procedure
 
 1. **Load Current API Contract**
-   - `$EIknowledge-base/04-api-documentation.md`
+   - `.engineering-intelligence/knowledge-base/04-api-documentation.md`
    - OpenAPI / Swagger specs
    - GraphQL schemas
    - Protobuf / gRPC definitions
@@ -45,7 +43,7 @@ Use this skill when routes, handlers, request schemas, response schemas, GraphQL
 
 ## Snapshot & Replay Verification
 
-Contract diffing catches *declared* breaks; snapshots catch *observed* ones. For changed endpoints, capture request/response pairs and replay them to detect semantic regressions the static diff misses. Store snapshots under `$EIsnapshots/`.
+Contract diffing catches *declared* breaks; snapshots catch *observed* ones. For changed endpoints, capture request/response pairs and replay them to detect semantic regressions the static diff misses. Store snapshots under `.engineering-intelligence/snapshots/`.
 
 1. **Select scenarios** for changed endpoints from `04-api-documentation.md`, `service-graph.json`, route files, and existing API tests: happy path, auth failure, validation error, downstream/dependency failure, edge-case response shape.
 2. **Capture pre-change** request/response pairs before implementation when feasible; if runtime capture is unavailable, extract examples from existing tests or API docs and mark confidence accordingly.
@@ -53,11 +51,11 @@ Contract diffing catches *declared* breaks; snapshots catch *observed* ones. For
 4. **Classify differences**: `expected` (intentional, covered by acceptance criteria), `compatible` (additive/non-contractual), `regression-candidate` (semantic difference that may break callers), `breaking` (incompatible response/status without approval).
 5. **Block on unexplained regressions**: `regression-candidate` and `breaking` diffs block Definition of Done until resolved, approved, or recorded as open risk.
 
-Write `$EIsnapshots/<unit>/snapshot-report.md` with the pre-change/post-change sources, a replay-results table (scenario, endpoint, pre-change, post-change, classification, evidence), blocking differences, and approval rationale.
+Write `.engineering-intelligence/snapshots/<unit>/snapshot-report.md` with the pre-change/post-change sources, a replay-results table (scenario, endpoint, pre-change, post-change, classification, evidence), blocking differences, and approval rationale.
 
 ## Output
 
-Write `$AIDLCconstruction/<unit>/api-compatibility.md`:
+Write `.engineering-intelligence/aidlc/construction/<unit>/api-compatibility.md`:
 
 ```markdown
 # API Backward Compatibility: <unit>

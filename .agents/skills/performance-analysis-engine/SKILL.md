@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: performance-analysis-engine
 description: Identifies performance issues through static analysis of database query patterns, frontend bundle size, render performance, API response patterns, and caching opportunities. Use during initialization, before releases, or when performance-sensitive changes are detected.
@@ -14,7 +12,7 @@ Identify performance risks and optimization opportunities through evidence-based
 - Repository root path
 - Mode: `full` (comprehensive analysis) or `targeted` (specific area or post-change)
 - Optional: scope constraints (specific modules, change diff)
-- Optional: previous assessment (`$EIknowledge-base/21-performance-assessment.md`) for delta comparison
+- Optional: previous assessment (`.engineering-intelligence/knowledge-base/21-performance-assessment.md`) for delta comparison
 
 ## Procedure
 
@@ -79,11 +77,11 @@ Identify performance risks and optimization opportunities through evidence-based
 
    Review existing caching infrastructure (Redis, Memcached, in-memory, HTTP) and identify gaps.
 
-6. **Generate Assessment** — Write findings to `$EIknowledge-base/21-performance-assessment.md`.
+6. **Generate Assessment** — Write findings to `.engineering-intelligence/knowledge-base/21-performance-assessment.md`.
 
 ## Output Format
 
-Write `$EIknowledge-base/21-performance-assessment.md`:
+Write `.engineering-intelligence/knowledge-base/21-performance-assessment.md`:
 
 ```markdown
 # Performance Assessment
@@ -152,6 +150,6 @@ Write `$EIknowledge-base/21-performance-assessment.md`:
 
 - Depends on: `deep-project-knowledge-extractor` (project structure and technology understanding)
 - Used by: `engineering-intelligence-skill`, `impact-analysis-engine` (performance risk scoring)
-- Updates: `$EIknowledge-base/21-performance-assessment.md`
+- Updates: `.engineering-intelligence/knowledge-base/21-performance-assessment.md`
 
 This capability is analytical only. It must not modify product code.

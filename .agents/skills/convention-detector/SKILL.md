@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: convention-detector
 description: Detects and codifies project conventions by analyzing naming patterns, import organization, code structure, API patterns, test patterns, git conventions, and architecture patterns. Produces a conventions document and enhances coding-patterns memory.
@@ -135,11 +133,11 @@ This capability does not modify product code.
 
    A pattern must exceed `>70%` adherence to be treated as a convention. Structural means the violation changes file placement, layer ownership, dependency direction, API envelope, persistence access, or lifecycle hook usage rather than simple naming.
 
-10. **Write conventions document** — Generate `$EIknowledge-base/16-conventions.md` following the output format below.
+10. **Write conventions document** — Generate `.engineering-intelligence/knowledge-base/16-conventions.md` following the output format below.
 
-11. **Enhance coding patterns memory** — Update `$EImemory/coding-patterns.md` with durable conventions that are unlikely to change.
+11. **Enhance coding patterns memory** — Update `.engineering-intelligence/memory/coding-patterns.md` with durable conventions that are unlikely to change.
 
-## Output: `$EIknowledge-base/16-conventions.md`
+## Output: `.engineering-intelligence/knowledge-base/16-conventions.md`
 
 ```markdown
 # Project Conventions
@@ -186,7 +184,7 @@ Sample size: <N files analyzed across M modules>
 | ... | ... | ... | ... |
 ```
 
-## Output: `$EImemory/coding-patterns.md` (Enhanced)
+## Output: `.engineering-intelligence/memory/coding-patterns.md` (Enhanced)
 
 Add a `## Conventions` section with only durable patterns that pass the durability check: "Will this convention still be relevant after 10+ more changes?"
 
@@ -200,7 +198,7 @@ Add a `## Conventions` section with only durable patterns that pass the durabili
 - [ ] Each convention has an adherence rate and evidence citation
 - [ ] Exceptions to conventions are listed (not hidden)
 - [ ] Convention violations include severity and blocking decision
-- [ ] `$EIknowledge-base/16-conventions.md` exists and follows the output format
+- [ ] `.engineering-intelligence/knowledge-base/16-conventions.md` exists and follows the output format
 - [ ] `coding-patterns.md` is enhanced with a Conventions section
 - [ ] Only patterns with >70% adherence are classified as conventions
 
@@ -208,7 +206,7 @@ Add a `## Conventions` section with only durable patterns that pass the durabili
 
 - Depends on: `codebase-discovery-engine` (tech stack context)
 - Used by: `initialize-intelligence-skill`, `engineering-intelligence-skill`
-- Feeds into: `$EIknowledge-base/16-conventions.md`, `$EImemory/coding-patterns.md`
+- Feeds into: `.engineering-intelligence/knowledge-base/16-conventions.md`, `.engineering-intelligence/memory/coding-patterns.md`
 - Consumed by: `ongoing-learning-engine` (for convention drift detection)
 
 This capability does not modify product code.

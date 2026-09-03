@@ -1,6 +1,5 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
+name: create-project
 description: Create a new project from scratch with full AIDLC — from architectural interview through scaffolding, intelligence initialization, and convention detection.
 ---
 
@@ -19,12 +18,12 @@ A complete, scaffolded project with:
 | Category | Content |
 |---|---|
 | Project scaffold | Directory structure, configuration, dependencies, build system |
-| Knowledge Base | `$EIknowledge-base/` — initialized project intelligence |
-| Memory | `$EImemory/` — initial decisions and patterns |
-| Context | `$EIcontext/` — AI navigation maps |
-| Graphs | `$EIgraph/` — initial architecture graphs |
-| Conventions | `$EIknowledge-base/06-conventions-and-standards.md` — detected and configured conventions |
-| Change Record | `$EIchanges/CHG-000-initialization.md` — project creation record |
+| Knowledge Base | `.engineering-intelligence/knowledge-base/` — initialized project intelligence |
+| Memory | `.engineering-intelligence/memory/` — initial decisions and patterns |
+| Context | `.engineering-intelligence/context/` — AI navigation maps |
+| Graphs | `.engineering-intelligence/graph/` — initial architecture graphs |
+| Conventions | `.engineering-intelligence/knowledge-base/06-conventions-and-standards.md` — detected and configured conventions |
+| Change Record | `.engineering-intelligence/changes/CHG-000-initialization.md` — project creation record |
 
 ## Execution Steps
 
@@ -32,7 +31,7 @@ A complete, scaffolded project with:
    - Gather requirements: domain, scale, team size, deployment targets
    - Explore technology choices: language, framework, database, infrastructure
    - Define architecture: monolith vs microservices, API style, data patterns
-   - Record decisions as ADRs in `$EIknowledge-base/05-architecture-decisions.md`
+   - Record decisions as ADRs in `.engineering-intelligence/knowledge-base/05-architecture-decisions.md`
    - Produce a project blueprint before proceeding
 
 2. **Scaffold Project** — Based on the architectural blueprint:
@@ -54,7 +53,7 @@ A complete, scaffolded project with:
    - Codify the conventions established during scaffolding
    - Document naming patterns, file organization, and code style
    - Record testing conventions and patterns
-   - Update `$EIknowledge-base/06-conventions-and-standards.md`
+   - Update `.engineering-intelligence/knowledge-base/06-conventions-and-standards.md`
 
 ## Rules
 

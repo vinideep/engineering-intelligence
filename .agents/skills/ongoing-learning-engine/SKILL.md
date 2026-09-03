@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: ongoing-learning-engine
 description: Handles post-initialization continuous learning by detecting uncertainty, logging learning events, triggering targeted re-discovery, updating memory with newly learned patterns, tracking knowledge freshness scores, and enforcing staleness detection rules.
@@ -42,7 +40,7 @@ The ongoing learning engine activates under these conditions:
    - A convention violation is found in new code (drift vs intentional change)
    - Business logic encountered that has no corresponding documentation
 
-2. **Log uncertainty event** — Write to `$EIevents/uncertainty-log.md`:
+2. **Log uncertainty event** — Write to `.engineering-intelligence/events/uncertainty-log.md`:
 
    ```markdown
    ## <timestamp> — Uncertainty Event
@@ -147,8 +145,8 @@ The ongoing learning engine activates under these conditions:
 
 | File | Purpose |
 |---|---|
-| `$EIevents/uncertainty-log.md` | Append-only log of all uncertainty events |
-| `$EIreports/FRESHNESS-report.md` | Current freshness scores per module (shared with `staleness-detector`) |
+| `.engineering-intelligence/events/uncertainty-log.md` | Append-only log of all uncertainty events |
+| `.engineering-intelligence/reports/FRESHNESS-report.md` | Current freshness scores per module (shared with `staleness-detector`) |
 | Updated knowledge base documents | Corrected or expanded knowledge |
 | Updated memory documents | New durable patterns and decisions |
 
@@ -170,7 +168,7 @@ The ongoing learning engine activates under these conditions:
 - Depends on: `codebase-discovery-engine` (for targeted re-discovery techniques)
 - Uses: `staleness-detector` (for freshness scoring), `incremental-sync-engine` (for knowledge updates)
 - Consumed by: `engineering-intelligence-skill`, `engineering-orchestrator`
-- Feeds into: `$EIevents/uncertainty-log.md`, all knowledge base documents
+- Feeds into: `.engineering-intelligence/events/uncertainty-log.md`, all knowledge base documents
 - Related: `convention-detector` (for convention drift detection)
 
 This capability does not modify product code.

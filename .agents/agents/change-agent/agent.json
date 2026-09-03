@@ -20,6 +20,9 @@
         "api-backward-compatibility-engine",
         "environment-variable-auditor",
         "adr-compliance-checker",
-        "llm-prompt-injection-guard"
+        "llm-prompt-injection-guard",
+        "vertical-tdd-engine",
+        "session-handoff-engine",
+        "interface-design-explorer"
     ]
 }

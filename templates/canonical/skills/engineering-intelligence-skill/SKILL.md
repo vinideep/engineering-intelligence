@@ -1,7 +1,7 @@
 ---
 name: engineering-intelligence-skill
 description: Executes engineering changes with impact analysis, implementation, tests, validation, and incremental synchronization of project intelligence. Use for feature, bugfix, update, refactor, architecture, infrastructure, or security requests.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Engineering Intelligence Implementation
@@ -62,14 +62,14 @@ This calibrates the entire workflow before a single line of code is written or r
 
 ### 1. Pre-Flight: Read Intelligence
 
-Use `context-budget-optimizer` before loading broad intelligence. Do not read all of `.engineering-intelligence/knowledge-base/` or all graph JSON by default. Build `.engineering-intelligence/context/context-manifest.md`, then load only relevant slices:
+Use `context-budget-optimizer` and call `get_engineering_context` before loading broad intelligence or opening source files. Treat its ContextPackV2 route, trust state, graph neighborhood, evidence hashes, conflicts, provider fallbacks, required gates, and stop reason as the pre-flight contract. Do not read all of `.engineering-intelligence/knowledge-base/` or all graph JSON by default. Build `.engineering-intelligence/context/context-manifest.md`, then load only relevant slices:
 - `.engineering-intelligence/knowledge-base/` — only H2 sections relevant to the changed modules, APIs, schemas, or risk areas
 - `.engineering-intelligence/aidlc/` — `aidlc-state.md`, active checkpoint, active unit, acceptance criteria, and execution-plan rows relevant to the request
 - `.engineering-intelligence/memory/` — only matching decisions, constraints, conventions, regression patterns, and ADR references
 - `.engineering-intelligence/context/` — module/service/runtime rows near the change scope
 - `.engineering-intelligence/graph/` — only relevant nodes/edges by graph proximity
 
-**If intelligence is missing or stale**: Run `initialize-intelligence-skill` first.
+**If intelligence is missing or stale**: Run `initialize-intelligence-skill` first. When only a provider is unavailable, continue with the pack's native fallback and report degradation; never bypass stale EI knowledge by trusting provider output directly.
 
 Token rule: keep initial intelligence loading under 40% of the available context budget whenever possible. Lazy-load safety-gate evidence only when the trigger applies.
 
@@ -206,7 +206,7 @@ Missing mappings block the Done gate and must be copied into the CHG record as o
 
 ### 6. Incremental Sync & Session Continuity
 
-Use `incremental-sync-engine` to update only affected artifacts:
+Call `sync_engineering_knowledge` after edits, then use `incremental-sync-engine` to update only the affected canonical prose and durable artifacts it flags:
 - Knowledge docs reflecting changed behavior
 - Memory entries if decisions/patterns changed
 - Context maps if module/service topology changed
@@ -214,6 +214,8 @@ Use `incremental-sync-engine` to update only affected artifacts:
 - Event guidance if API/schema/auth contracts changed
 - AI-DLC lifecycle artifacts if state, plan, NFRs, ADRs, operations readiness, or unit discoveries changed
 - Agile artifacts if backlog, story status, acceptance criteria, Ready/Done gates, or retrospective learning changed
+
+Run `validate_change` after synchronization. Completion requires current graph/index evidence, re-derived claims, applicable deterministic gates, and explicit reporting of any unavailable provider or validation. Provider caches are disposable; EI artifacts remain durable authority.
 
 #### Adaptive Session Handoff Trigger
 - **Trigger**: When context window limits approach, work is paused across sessions, or task is transferred to another agent.
@@ -314,6 +316,8 @@ Summarize to the user:
 - [ ] Change record references the correct impact report
 - [ ] High-risk changes went through review gate
 - [ ] Generated code follows detected project conventions (naming, imports, structure)
+- [ ] ContextPackV2 was used before direct exploration and its trust/fallback state was honored
+- [ ] Post-edit graph, provider index, derived claims, validation, and affected EI knowledge were synchronized
 
 ## Rules
 

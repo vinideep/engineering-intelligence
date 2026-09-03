@@ -1,8 +1,6 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: question-file-engine
-description: Writes structured MCQ clarification files to $AIDLCopen-questions/ instead of asking questions inline. Creates durable decision artifacts and enables context reset between question creation and answer processing. Use when a request has 3+ ambiguities or scope is unclear.
+description: Writes structured MCQ clarification files to .engineering-intelligence/aidlc/open-questions/ instead of asking questions inline. Creates durable decision artifacts and enables context reset between question creation and answer processing. Use when a request has 3+ ambiguities or scope is unclear.
 ---
 
 # Question File Engine
@@ -20,7 +18,7 @@ Write structured clarification question files rather than asking questions inlin
 
 - Original request or initiative description
 - Ambiguity analysis from calling skill (requirement-scoper, backlog-decomposition-engine)
-- Optional: project architecture from `$EIknowledge-base/`, `$EI graph/`
+- Optional: project architecture from `.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/graph/`
 
 ## Procedure
 
@@ -39,7 +37,7 @@ Cap at 8 questions per file. Write a second file for additional batches.
 
 ### 2. Write the Question File
 
-Save to `$AIDLC open-questions/YYYYMMDD-{slug}.md`:
+Save to `.engineering-intelligence/aidlc/open-questions/YYYYMMDD-{slug}.md`:
 
 ```markdown
 # Clarification Questions: {topic}
@@ -83,7 +81,7 @@ Guidelines for good questions:
 
 After writing the file, output exactly this and nothing else:
 
-> Questions written to `$AIDLC open-questions/{filename}`.
+> Questions written to `.engineering-intelligence/aidlc/open-questions/{filename}`.
 >
 > **Next step:** Open the file, check boxes to select your answers (you may select multiple), then return here and say **"questions answered, continue"**.
 
@@ -100,7 +98,7 @@ When user signals answers are ready:
 
 ## Output
 
-- `$AIDLC open-questions/YYYYMMDD-{slug}.md` — question file (before resume)
+- `.engineering-intelligence/aidlc/open-questions/YYYYMMDD-{slug}.md` — question file (before resume)
 - On resume: confirmed decision set, referenced by path in the calling skill's output
 
 ## Rules
@@ -108,4 +106,4 @@ When user signals answers are ready:
 - Never ask 3+ questions inline — always write a question file.
 - Never guess or assume answers to unresolved questions.
 - Always re-read the file from disk on resume; never trust in-memory question content.
-- Log confirmed decisions in `$EIknowledge-base/19-requirements.md` section `## 4. Iterated QA Log`.
+- Log confirmed decisions in `.engineering-intelligence/knowledge-base/19-requirements.md` section `## 4. Iterated QA Log`.

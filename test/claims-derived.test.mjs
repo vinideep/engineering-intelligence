@@ -14,7 +14,7 @@
  */
 
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -28,6 +28,7 @@ import {
 } from "../dist/claims/index.js";
 import { deriveFacts, factKey, renderFact } from "../dist/claims/derive.js";
 import { getContext } from "../dist/context/index.js";
+import { buildGraph } from "../dist/graph/index.js";
 
 async function project(files) {
   const root = await mkdtemp(path.join(tmpdir(), "ei-derived-"));
@@ -42,7 +43,7 @@ async function project(files) {
 const SAMPLE = {
   "package.json": JSON.stringify({ name: "demo", dependencies: { express: "^4" } }),
   "src/auth.ts": "export function requireUser(req, res, next) { next(); }\n",
-  "src/routes.ts": "import { requireUser } from './auth.js';\nconst app = express();\napp.get('/users', requireUser, h);\n",
+  "src/routes.ts": "import { helper } from 'undeclared-helper';\nimport { requireUser } from './auth.js';\nconst app = express();\napp.get('/users', requireUser, h);\n",
 };
 
 test("deriveFacts computes imports, dependencies and routes from source", async () => {
@@ -52,7 +53,36 @@ test("deriveFacts computes imports, dependencies and routes from source", async 
 
   assert.ok(keys.includes("module-imports|src/routes.ts|src/auth.ts"), `expected the import fact, got: ${keys.join(", ")}`);
   assert.ok(keys.includes("package-dependency|express"));
+  assert.ok(!keys.includes("package-dependency|undeclared-helper"), "an imported package is not necessarily a declared dependency");
   assert.ok(keys.includes("http-route|GET|/users|src/routes.ts"));
+  await rm(root, { recursive: true, force: true });
+});
+
+test("provider-only structural evidence cannot be promoted into a derived EI claim", async () => {
+  const root = await project(SAMPLE);
+  await buildGraph(root); // writes the canonical graph fixture
+  const graphPath = path.join(root, ".engineering-intelligence/graph/dependency-graph.json");
+  const graph = JSON.parse(await readFile(graphPath, "utf8"));
+  graph.edges.push({
+    from: "module:src/auth",
+    to: "module:src/routes",
+    relation: "imports",
+    confidence: "inferred",
+    metadata: {
+      provider: "graphify",
+      providerVersion: "test",
+      trustState: "unverifiable",
+      corroborated: false,
+    },
+    evidence: ["src/auth.ts:1"],
+  });
+  await writeFile(graphPath, `${JSON.stringify(graph, null, 2)}\n`, "utf8");
+
+  const keys = (await deriveFacts(root)).map(factKey);
+  assert.ok(!keys.includes("module-imports|src/auth.ts|src/routes.ts"));
+  await deriveClaims(root);
+  const store = await loadClaims(root);
+  assert.ok(!store.claims.some((claim) => claim.statement === "Module `src/auth.ts` imports `src/routes.ts`."));
   await rm(root, { recursive: true, force: true });
 });
 

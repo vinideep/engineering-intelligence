@@ -20,11 +20,12 @@
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { buildGraph, loadExistingGraph } from "../graph/index.js";
+import { buildDependencyGraph } from "../graph/builders/dependency.js";
 import { extractApiSurface } from "../gates/api-diff.js";
 import { walkFiles } from "../gates/index.js";
 
 export type DerivedFact =
+  | { type: "source-file"; path: string; evidence: string }
   | { type: "module-imports"; from: string; to: string; evidence: string }
   | { type: "package-dependency"; name: string; evidence: string }
   | { type: "http-route"; method: string; route: string; file: string; evidence: string };
@@ -32,6 +33,7 @@ export type DerivedFact =
 /** Stable identity for a fact, used to compare a recorded claim against a fresh derivation. */
 export function factKey(fact: DerivedFact): string {
   switch (fact.type) {
+    case "source-file":         return `source-file|${fact.path}`;
     case "module-imports":      return `module-imports|${fact.from}|${fact.to}`;
     case "package-dependency":  return `package-dependency|${fact.name}`;
     case "http-route":          return `http-route|${fact.method}|${fact.route}|${fact.file}`;
@@ -44,6 +46,7 @@ export function factKey(fact: DerivedFact): string {
  */
 export function renderFact(fact: DerivedFact): string {
   switch (fact.type) {
+    case "source-file":        return `Source module \`${fact.path}\` is in EI's approved project scope.`;
     case "module-imports":     return `Module \`${fact.from}\` imports \`${fact.to}\`.`;
     case "package-dependency": return `\`${fact.name}\` is a declared package dependency.`;
     case "http-route":         return `HTTP route \`${fact.method} ${fact.route}\` is defined in \`${fact.file}\`.`;
@@ -63,19 +66,29 @@ const CODE_FILE = /\.(tsx?|jsx?|mjs|cjs)$/;
 export async function deriveFacts(root: string): Promise<DerivedFact[]> {
   const facts: DerivedFact[] = [];
 
-  const graphFile = path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json");
-  let graph = await loadExistingGraph(graphFile);
-  if (!graph) {
-    await buildGraph(root);
-    graph = await loadExistingGraph(graphFile);
-  }
+  // Claims must be checked against source, not against a previously persisted
+  // graph that may have been incrementally refreshed or enriched by a provider.
+  // Build an in-memory native graph for every derivation; provider evidence is
+  // deliberately absent from this authority path.
+  const { graph } = await buildDependencyGraph(root);
 
-  if (graph) {
+  {
     const byId = new Map(graph.nodes.map((n) => [n.id, n]));
+    for (const node of graph.nodes) {
+      if (node.kind !== "module" || !node.path || node.confidence !== "verified") continue;
+      facts.push({ type: "source-file", path: node.path, evidence: node.path });
+    }
     for (const edge of graph.edges) {
       // Only runtime module→module coupling. Type-only edges are compile-time and
       // package edges are covered by package-dependency below.
       if (edge.relation !== "imports") continue;
+      // Provider-only and contested relationships are useful exploration
+      // evidence, but they are not canonical facts. Only native relationships
+      // (which have no provider trust marker) or source-corroborated fresh
+      // relationships may be promoted into EI's derived claim registry.
+      const trustState = edge.metadata?.trustState;
+      if (trustState && trustState !== "fresh") continue;
+      if (edge.metadata?.provider === "graphify" && edge.metadata?.corroborated !== true) continue;
       const from = byId.get(edge.from);
       const to = byId.get(edge.to);
       if (!from?.path || !to?.path) continue;          // unresolved — not a fact we can state
@@ -89,6 +102,7 @@ export async function deriveFacts(root: string): Promise<DerivedFact[]> {
     }
     for (const node of graph.nodes) {
       if (node.kind !== "package") continue;
+      if (node.metadata?.declared !== true) continue;
       if (node.metadata && (node.metadata as Record<string, unknown>).dev === true) continue;
       facts.push({
         type: "package-dependency",
@@ -103,6 +117,7 @@ export async function deriveFacts(root: string): Promise<DerivedFact[]> {
   const codeFiles = await walkFiles(root, (rel) => CODE_FILE.test(rel));
   for (const abs of codeFiles) {
     const rel = path.relative(root, abs).replace(/\\/g, "/");
+    if (/(^|\/)(?:test|tests|__tests__|fixtures)(\/|$)/i.test(rel)) continue;
     let content = "";
     try { content = await readFile(abs, "utf8"); } catch { continue; }
     for (const endpoint of extractApiSurface(content, rel)) {

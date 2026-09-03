@@ -62,6 +62,40 @@ test("CLI writes WORKFLOW-ROUTING.md and SKILLS-INDEX.md for claude-code", async
   assert.match(index, /aidlc-lifecycle-engine/, "index should list at least one skill name");
 });
 
+test("CLI initialize performs a complete native-only bootstrap without provider pretence", async () => {
+  const root = await tmpProject();
+  await mkdir(path.join(root, "src"), { recursive: true });
+  await writeFile(path.join(root, "src", "main.ts"), "export const main = true;\n");
+  const result = cli(["initialize", root, "--ide", "generic", "--providers", "native", "--yes", "--json"]);
+  assert.equal(result.status, 0, `initialize exited ${result.status}:\n${result.stdout}\n${result.stderr}`);
+  const parsed = JSON.parse(result.stdout);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.degraded, false);
+  assert.ok(parsed.providers.statuses.every((status) => status.health === "disabled"));
+  assert.ok(parsed.evidence.graph.nodes > 0);
+  assert.ok(parsed.evidence.claims.total > 0);
+  assert.equal(parsed.evidence.knowledge.status, "ready", "one command must publish a hash-pinned EI-owned baseline without requiring a model");
+  assert.match(await read(root, ".engineering-intelligence/context/KNOWLEDGE-GENERATION-BRIEF.md"), /canonical knowledge base/);
+  assert.match(await read(root, ".engineering-intelligence/knowledge-base/00-project-overview.md"), /EI owns canonical knowledge/);
+  const config = JSON.parse(await read(root, ".engineering-intelligence/ei.config.json"));
+  assert.equal(config.providers.policy, "native", "the requested provider policy must survive future task runs");
+});
+
+test("CLI requires explicit expert acknowledgement before exposing raw provider tools", async () => {
+  const root = await tmpProject();
+  const denied = cli(["providers", "expose", root]);
+  assert.equal(denied.status, 2);
+  assert.match(denied.stdout, /--expert/);
+  const exposed = cli(["providers", "expose", root, "--expert"]);
+  assert.equal(exposed.status, 0);
+  let config = JSON.parse(await read(root, ".engineering-intelligence/ei.config.json"));
+  assert.equal(config.providers.exposeRawMcp, true);
+  const hidden = cli(["providers", "hide", root]);
+  assert.equal(hidden.status, 0);
+  config = JSON.parse(await read(root, ".engineering-intelligence/ei.config.json"));
+  assert.equal(config.providers.exposeRawMcp, false);
+});
+
 test("on-disk skills start with frontmatter and use literal paths", async () => {
   const root = await tmpProject();
   const result = cli(["install", root, "--ide", "claude-code", "--yes"]);

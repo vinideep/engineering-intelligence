@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>Turn any AI coding IDE into a disciplined engineering team.</strong><br>
-  One install drops 42 skills, 15 specialist agents, and 11 workflows into your repo —<br>
+  One install drops 46 skills, 15 specialist agents, and 15 workflows into your repo —<br>
   teaching the agent to plan, implement, validate, and keep its own project knowledge in sync.
 </p>
 
@@ -34,7 +34,7 @@ Developers now switch between AI coding tools constantly — Cursor, Claude Code
 | Agent re-learns your codebase from scratch every session | Evidence-based knowledge base + architecture graphs that persist across sessions |
 | Jumps straight to code, skips planning | Mandatory impact analysis + Agile planning before any non-trivial change |
 | Ad-hoc one-shot prompts, no continuity | Autonomous Epic → Feature → Ticket backlog with a human approval gate per feature |
-| Skill and instruction files burn context on every call | Tiered loading: routing table → brief → full skill — loads only the **1–3 skills a task needs, not all 42** |
+| Skill and instruction files burn context on every call | Tiered loading: routing table → brief → full skill — loads only the **1–3 skills a task needs, not all 46** |
 | Tied to one AI tool | One canonical toolkit, rendered natively into **9 AI IDEs** — Claude Code, Cursor, Copilot, Gemini, Codex, Antigravity, CommandCode, and more |
 | Treats every developer the same | **Per-developer intelligence** — a personal, gitignored profile seeded from your git history calibrates responses to your test philosophy and depth; a committed team layer captures shared consensus |
 
@@ -53,7 +53,7 @@ Being precise about this up front, so you can decide if it fits:
 **What it isn't**
 - The *skills* are guidance, not interception — their effect depends on the model following them (strong models more, smaller ones less). But the toolkit is **no longer pure prose**: deterministic `gate` commands and MCP tools run in **every IDE and in CI** (env-vars, dead-exports, api-diff, migration-lint, claim verification), and automatic local lifecycle hooks (freshness inject, validation-on-stop) are wired for **Claude Code and Cursor**. See [Enforcement Across IDEs](#-enforcement-across-ides) and [Safety Gates](#-safety-gates). Local auto-blocking is Claude/Cursor-only today; CI is the universal enforcement layer.
 - It is **not** a replacement for review. It makes the agent more thorough and consistent; you still own the final call.
-- **It does not claim to use fewer tokens than raw prompting.** The tiered loading saves tokens *relative to loading the whole toolkit* — routing + brief + one skill instead of all 42 skill files (measured at the rendered-file level by `test/token-reduction.test.mjs`). For a small one-off change, a raw prompt is cheaper. The real saving is not re-deriving your architecture every session: the agent reuses the persisted knowledge base and graphs instead of re-reading your codebase from scratch.
+- **It does not claim to use fewer tokens than raw prompting.** The tiered loading saves tokens *relative to loading the whole toolkit* — routing + brief + one skill instead of all 46 skill files (measured at the rendered-file level by `test/token-reduction.test.mjs`). For a small one-off change, a raw prompt is cheaper. The real saving is not re-deriving your architecture every session: the agent reuses the persisted knowledge base and graphs instead of re-reading your codebase from scratch.
 
 If you want a low-friction start, install it and use just `/initialize-engineering-intelligence` + `/engineering-intelligence` first; adopt the deeper AI-DLC backlog and safety-gate workflows once you've seen the basics fit your team.
 
@@ -63,12 +63,43 @@ If you want a low-friction start, install it and use just `/initialize-engineeri
 
 Most "AI codebase memory" is just markdown an LLM wrote and hopes to re-read. The heart of this project is different: a **deterministic graph engine** and an **MCP server** — real code that runs on your repo, produces schema-validated output, and needs no LLM to be correct.
 
+### EI-owned knowledge, Graphify structure, CCE retrieval
+
+`initialize` provides the integrated path. EI remains the only canonical knowledge owner; optional providers supply evidence through EI's scope, freshness and reconciliation controls:
+
+```text
+repository truth
+      ↓
+EI ProjectFilePolicy
+      ├── EI native graph ─────────────┐
+      ├── Graphify code-only evidence ├── EI normalized graph
+      └── CCE approved-scope index ───┘          ↓
+verified EI knowledge + claims ─────────── ContextPackV2
+```
+
+```bash
+# Guided default: install compatible pinned providers, or report native fallback.
+npx engineering-intelligence initialize . --providers auto --yes
+
+# Never download providers; use native EI graph/retrieval only.
+npx engineering-intelligence initialize . --providers native --yes
+
+# Treat missing/incompatible providers as an initialization failure.
+npx engineering-intelligence initialize . --providers full --require-providers --yes
+
+engineering-intelligence providers status
+engineering-intelligence providers repair graphify
+engineering-intelligence providers repair cce
+```
+
+Provider executables are shared and versioned per platform. Project indexes live under ignored `.engineering-intelligence/providers/`. Installs are lock-protected, staged, version-probed, fingerprinted and atomically activated; a failed upgrade retains the prior healthy release. Graphify document/media model paths stay disabled, and CCE output is overfetched then filtered and source-hash checked inside the EI-approved graph neighborhood.
+
 ### `engineering-intelligence map` — real dependency & call graph
 
 ```bash
 npx engineering-intelligence map .
 # Graph built: .engineering-intelligence/graph/dependency-graph.json
-#   161 nodes, 409 edges (26 source files scanned)
+# The command prints current node, edge, and approved-source counts.
 ```
 
 - **Package + import edges** across **6 language families**: JS/TS, Python, Go, Rust, Ruby, Java/Kotlin (manifests + source-level imports).
@@ -100,7 +131,7 @@ Both commands **auto-refresh** the graph against your working tree first, so the
 npx ei-mcp .          # stdio MCP server; add it to any MCP-compatible IDE
 ```
 
-Exposes tools any agent can call: **`map_dependencies`** (build the graph), **`get_graph`** (read it), **`analyze_impact`** (what breaks + which tests to run), **`find_symbol`** (locate a definition by name), **`who_calls`** (find every caller of a function), **`read_knowledge`** (pull knowledge-base docs), plus the **`preflight`/`postflight`** accountability pair (below). Query tools auto-refresh the graph first. Your repo's structure becomes a queryable **service** — no markdown has to be installed into the IDE for an agent to use it.
+The default discovery surface is deliberately small: **`get_engineering_context`**, **`analyze_change_impact`**, **`validate_change`**, **`sync_engineering_knowledge`**, and **`provider_status`**. Existing tools remain callable as compatibility wrappers but are hidden from discovery. Raw Graphify and CCE tools are hidden unless `providers expose --expert` is explicitly enabled, and even then EI enforces scope and freshness.
 
 ### 🛫 The Agent Flight Recorder — accountability for AI changes
 
@@ -153,7 +184,7 @@ Most of an agent's token spend is *orientation*: opening 10–15 files to learn 
 
 How: a ~370-token **repo brief** instead of the orientation phase; **budget-capped** tool responses (minified, empty fields pruned, big object arrays packed losslessly as `{cols,rows}`); **reversible drill-down** (`get_graph pattern=<id>` expands just the node you need); and **cache-aligned** deterministic output for provider prompt-cache hits.
 
-**Accuracy is never sacrificed for size.** Answer fields (impact `direct` + `testsToRun`, `who_calls` callers, audit verdicts) are marked `mustKeep` and are *never* truncated — if they'd exceed the budget it soft-expands instead. Only *exploration* fields are trimmed, always ranked most-relevant-first and marked with an explicit `+K more` pointer (never silent), and always one drill-down call from the full data. Unlike a neural summarizer, our trimming is explicit, bounded, and reversible. Proven in `test/accuracy.test.mjs`. Escape hatches: `budget: 0`, per-project `config.json` budgets, or `ask --full`. Complementary to transport compressors like [Headroom](https://github.com/headroomlabs-ai/headroom) — they compress the wire, we make the source of truth cheap *and* complete. Details: [docs/token-frugality.md](docs/token-frugality.md).
+**Accuracy is never sacrificed for size.** Answer fields (impact `direct` + `testsToRun`, `who_calls` callers, audit verdicts) are marked `mustKeep` and are *never* truncated — if they'd exceed the budget it soft-expands instead. Only *exploration* fields are trimmed, always ranked most-relevant-first and marked with an explicit `+K more` pointer (never silent), and always one drill-down call from the full data. Unlike a neural summarizer, our trimming is explicit, bounded, and reversible. Proven in `test/accuracy.test.mjs`. Escape hatches: `budget: 0`, per-project `ei.config.json` budgets, or `ask --full`. Complementary to transport compressors like [Headroom](https://github.com/headroomlabs-ai/headroom) — they compress the wire, we make the source of truth cheap *and* complete. Details: [docs/token-frugality.md](docs/token-frugality.md).
 
 ---
 
@@ -163,8 +194,8 @@ How: a ~370-token **repo brief** instead of the orientation phase; **budget-capp
 
 ```bash
 # 1. Stand it up (or bring it current). Detects your IDE, installs adapters,
-#    builds the graph, seeds git signals + a repo brief. Idempotent.
-npx engineering-intelligence setup
+#    prepares Graphify/CCE or native fallback, builds EI knowledge/graph/claims. Idempotent.
+npx engineering-intelligence initialize . --providers auto --yes
 
 # 2. Question the codebase — routing is automatic.
 engineering-intelligence ask "who calls chargeCard"
@@ -181,7 +212,7 @@ engineering-intelligence health --strict
 
 | You want to… | Command |
 |---|---|
-| Set up / upgrade a project | `setup` |
+| Set up / upgrade a project | `initialize` |
 | Ask "who calls this / what breaks / where is X" | `ask` |
 | Make an AI change accountable | `guard` (before) → `guard` (after) |
 | Check everything is healthy | `health` |
@@ -204,7 +235,7 @@ npx engineering-intelligence claims derive .
 
 # 3. Work. Inside your IDE, as usual:
 #      /engineering-intelligence Add rate limiting to the auth endpoints
-#    The agent queries `get_context` instead of re-reading your codebase.
+#    The agent queries `get_engineering_context` instead of re-reading your codebase.
 
 # 4. Prove it. Runs YOUR check commands and writes a receipt bound to a
 #    sha256 of every changed file. Exit 1 if anything failed.
@@ -285,10 +316,11 @@ npx engineering-intelligence install . --ide claude-code,cursor,github-copilot -
 ### Existing project
 
 ```bash
-# 1. Install (terminal)
-npx engineering-intelligence install . --ide claude-code --yes
+# 1. Install adapters, bootstrap EI knowledge, and prepare providers (terminal)
+npx engineering-intelligence initialize . --ide claude-code --providers auto --yes
 
-# 2. Open your AI IDE, then run:
+# 2. Open your AI IDE. The deterministic baseline is already usable; optionally
+#    enrich product/domain knowledge through the installed workflow:
 /initialize-engineering-intelligence
 
 # 3. Optionally map your architecture:
@@ -300,6 +332,7 @@ npx engineering-intelligence install . --ide claude-code --yes
 ```
 .engineering-intelligence/knowledge-base/    ← architecture and domain knowledge
 .engineering-intelligence/graph/             ← dependency, service, and architecture graphs
+.engineering-intelligence/providers/         ← ignored Graphify/CCE evidence and indexes
 .engineering-intelligence/aidlc/             ← AI-DLC lifecycle state
 .engineering-intelligence/memory/            ← session memory
 ```
@@ -548,7 +581,7 @@ validated changes) reaches every IDE through host-independent layers; automatic
 | Layer | Works in | Strength |
 |-------|----------|----------|
 | **CI** — `gate` commands + the [drift-check Action](templates/canonical/ci/ei-drift-check.yml) | **Any repo, any IDE** | **Strongest — blocks the merge, unskippable** |
-| **MCP tools** — `get_context`, `run_gate`, `verify_claims`, `analyze_impact` | Any MCP-capable IDE (Cursor, Copilot, Windsurf, Gemini…) | Agent can call them everywhere |
+| **MCP tools** — `get_engineering_context`, `analyze_change_impact`, `validate_change`, `sync_engineering_knowledge`, `provider_status` | Any MCP-capable IDE (Cursor, Copilot, Windsurf, Gemini…) | Agent can call the same orchestrated surface everywhere |
 | **CLI** — the same commands by hand or in scripts | Everywhere | Manual |
 | **Local lifecycle hooks** — SessionStart inject / PreToolUse warn-or-deny / Stop validation gate | **Claude Code + Cursor** | Automatic (skippable per-dev) |
 
@@ -644,7 +677,7 @@ called a fact:
 
 ```bash
 # Compute the derived baseline: module imports, package dependencies, HTTP routes
-npx engineering-intelligence claims derive .      # 102 facts on this repo, zero prompting
+npx engineering-intelligence claims derive .      # count is derived from the approved source universe
 
 # Record an unchecked note — requires an author, and can never become a "fact"
 npx engineering-intelligence claims add --statement "auth uses JWT" \
@@ -654,25 +687,25 @@ npx engineering-intelligence claims verify --strict   # exits 1 on refuted/stale
 ```
 
 Because derived facts are re-derived rather than re-hashed, deleting a route is
-caught even though its file still exists and still hashes identically. `get_context`
+caught even though its file still exists and still hashes identically. `get_engineering_context`
 serves derived facts under **Verified facts**, and asserted claims under a separate
 **Unverified assertions** heading that says not to treat them as fact.
 
-**`get_context` — one query instead of ten file reads.** Ask for what a task
-needs and get a token-budgeted pack back: the graph neighborhood of the touched
-files (what they depend on, what depends on them), the **verified** claims about
-that code (stale ones excluded), plus conventions and dangerous areas.
+**`get_engineering_context` — one query instead of ten file reads.** Ask for what a task
+needs and get ContextPackV2: verified EI knowledge, the trusted graph neighborhood,
+current scoped code/tests, claims, conflicts, unknowns, risk, required gates,
+test plan, token allocation and provider/fallback status.
 
 ```bash
 npx engineering-intelligence context "add refunds to charge()" --files src/pay.ts --budget 2000
 ```
 
-Also exposed as the `get_context` and `verify_claims` MCP tools, so the agent
-retrieves trustworthy facts rather than inferring them from raw code.
+The legacy `get_context` and `verify_claims` calls remain compatibility wrappers;
+new integrations should use the consolidated tools above.
 
 **Honest, measured token numbers.** The Stop hook reads the session transcript
 and records *real* billed input/output tokens — including whether the session
-used `get_context` — to a local log. `npx engineering-intelligence telemetry`
+used EI context retrieval — to a local log. `npx engineering-intelligence telemetry`
 reports observed averages and a with-vs-without-context comparison. This replaces
 the old synthetic estimate with data you can actually cite.
 
@@ -680,18 +713,18 @@ the old synthetic estimate with data you can actually cite.
 
 ## 📦 Toolkit Contents
 
-**42 skills** across six domains:
+**46 skills** across six domains:
 
 - **Knowledge & architecture:** codebase discovery, graph engine, knowledge extraction, architecture review, change detection, staleness detection, incremental sync (unified knowledge/memory/context/graph/claims sync), change history
 - **Planning & delivery:** AI-DLC lifecycle, backlog decomposition, issue tracker sync, requirement scoping, impact analysis, refactoring planner, greenfield architect, user intelligence engine
 - **Quality & safety:** testing intelligence, type safety, API compatibility & snapshots, database migration safety, environment variable auditor, ADR compliance, LLM prompt injection guard, MCP security governor, dead code detector, engineering change review, NFR/ADR governor
 - **Operations:** performance analysis, operations readiness, environmental backpressure, context budget optimizer, debugging engine, PR intelligence, convention detector
 - **Security & compliance:** security audit, contract test generator, API backward compatibility
-- **Engineering workflow:** engineering intelligence orchestration, initialize intelligence, ongoing learning
+- **Engineering workflow:** engineering intelligence orchestration, initialize intelligence, ongoing learning, Socratic stress testing, session handoff, vertical TDD, interface design exploration
 
 **15 specialist agents:** engineering orchestrator, change agent, quality agent, knowledge agent, system architect, product analyst, security officer, compliance auditor, test engineer, database administrator, performance analyst, documentation writer, release engineer, site reliability engineer, adversary
 
-**11 workflows:** `engineering-intelligence`, `initialize-engineering-intelligence`, `create-project`, `scope-requirement`, `map-architecture`, `analyze-impact`, `review-engineering-change`, `sync-engineering-intelligence`, `discover-codebase`, `decompose-backlog`, `deliver-backlog`
+**15 workflows:** `engineering-intelligence`, `initialize-engineering-intelligence`, `create-project`, `scope-requirement`, `map-architecture`, `analyze-impact`, `review-engineering-change`, `sync-engineering-intelligence`, `discover-codebase`, `decompose-backlog`, `deliver-backlog`, `grill-me`, `handoff`, `tdd`, `design-an-interface`
 
 ---
 
@@ -728,7 +761,7 @@ After regular use, a healthy project contains:
     CHG-XXX-*.md                                   ← change history
 ```
 
-The installer manages only `.engineering-intelligence/install-manifest.json`. Everything else is written by the agent.
+The installer records managed adapter content in `.engineering-intelligence/install-manifest.json`. Initialization and synchronization also write EI-owned graph, knowledge, claims, context and reports plus ignored provider run manifests/indexes; the selected IDE never becomes the source of truth for these artifacts.
 
 ---
 
@@ -737,6 +770,10 @@ The installer manages only `.engineering-intelligence/install-manifest.json`. Ev
 ```bash
 npm install
 npm test       # build + run all tests
+npm run test:integration
+npm run test:benchmark -- --dry-run
+npm run test:provider-smoke       # pinned providers + live 30-query accuracy corpus
+npm audit --omit=dev --audit-level=high
 npm run build  # TypeScript compile only
 ```
 
@@ -745,8 +782,14 @@ npm run build  # TypeScript compile only
 ```
 src/adapters/      IDE renderers — one per adapter
 src/cli/           CLI entry point
+src/config/        versioned EI configuration and migration
+src/context/       knowledge-first ContextPackV2 orchestration
 src/installer/     install, update, uninstall, conflict handling
 src/manifest/      managed-content tracking (hashes)
+src/orchestrators/ initialization, health, validation, synchronization
+src/process/       argument-safe subprocess execution
+src/project-files/ shared include/exclude and path-containment policy
+src/providers/     Graphify/CCE lifecycle, extraction, indexing, and project health
 src/validation/    doctor and template validation
 src/visualizer/    interactive HTML dashboard
 src/token-optimizer.ts  path aliasing, SmartCrush, tiered skills, KV-cache ordering

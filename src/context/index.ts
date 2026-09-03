@@ -16,6 +16,8 @@ import { estimateTokens } from "../token-optimizer.js";
 import { loadExistingGraph, analyzeImpact } from "../graph/index.js";
 import { verifyClaims, loadClaims } from "../claims/index.js";
 
+export * from "./orchestrator.js";
+
 export interface ContextRequest {
   task: string;
   files?: string[];

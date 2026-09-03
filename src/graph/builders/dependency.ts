@@ -1,54 +1,24 @@
-import { readdir, readFile, stat } from "node:fs/promises";
-import { execSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { runProcessSync } from "../../process/index.js";
 import type { DependencyGraph, GraphEdge, GraphNode } from "../schema.js";
 import { parseManifests } from "../parsers/manifest.js";
 import { extractImports } from "../parsers/imports.js";
 import { extractSymbols, resolvePendingCalls, buildGlobalSymbolTable, type PendingCall } from "../parsers/symbols.js";
+import { collectProjectFiles, ProjectFilePolicy } from "../../project-files/index.js";
 
-// Directories to skip when walking source files
-const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "coverage", "__pycache__", ".venv", "venv", "vendor", "target", ".gradle"]);
 const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".go", ".rs", ".rb", ".java", ".kt"]);
 
 function getGitChurn(root: string): Map<string, number> {
   const churn = new Map<string, number>();
-  try {
-    const output = execSync("git log --name-only --format='' -n 200", {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["pipe", "pipe", "pipe"],
-      timeout: 10_000,
-    });
-    for (const rawLine of output.split("\n")) {
-      const line = rawLine.trim().replace(/\\/g, "/");
-      if (!line) continue;
-      churn.set(line, (churn.get(line) ?? 0) + 1);
-    }
-  } catch {
-    // Non-git repo or git error
+  const result = runProcessSync({ command: "git", args: ["log", "--name-only", "--format=", "-n", "200"], cwd: root, timeoutMs: 10_000 });
+  if (result.exitCode !== 0) return churn;
+  for (const rawLine of result.stdout.split("\n")) {
+    const line = rawLine.trim().replace(/\\/g, "/");
+    if (!line) continue;
+    churn.set(line, (churn.get(line) ?? 0) + 1);
   }
   return churn;
-}
-
-async function walkSourceFiles(dir: string, root: string, files: string[] = []): Promise<string[]> {
-  let entries: string[];
-  try {
-    entries = await readdir(dir);
-  } catch {
-    return files;
-  }
-  for (const entry of entries) {
-    if (SKIP_DIRS.has(entry)) continue;
-    const full = path.join(dir, entry);
-    let s;
-    try { s = await stat(full); } catch { continue; }
-    if (s.isDirectory()) {
-      await walkSourceFiles(full, root, files);
-    } else if (SOURCE_EXTS.has(path.extname(entry).toLowerCase())) {
-      files.push(full);
-    }
-  }
-  return files;
 }
 
 function deduplicateNodes(nodes: GraphNode[]): GraphNode[] {
@@ -90,6 +60,7 @@ function deduplicateEdges(edges: GraphEdge[]): GraphEdge[] {
 export interface BuildOptions {
   scope?: string;
   files?: string[];
+  policy?: ProjectFilePolicy;
 }
 
 export interface BuildResult {
@@ -101,12 +72,19 @@ export interface BuildResult {
 
 export async function buildDependencyGraph(root: string, options: BuildOptions = {}): Promise<BuildResult> {
   const scope = options.scope ?? path.basename(root);
+  const policy = options.policy ?? await ProjectFilePolicy.load(root);
 
   // Parse package manifests first
   const { nodes: manifestNodes, devNodeIds } = await parseManifests(root);
 
   // Walk source files (or use provided file list for incremental)
-  const sourceFiles = options.files ?? await walkSourceFiles(root, root);
+  const sourceFiles = options.files
+    ? (await Promise.all(options.files.map(async (file) => {
+        const absolute = path.resolve(root, file);
+        const decision = await policy.explainExisting(absolute);
+        return decision.included && SOURCE_EXTS.has(path.extname(absolute).toLowerCase()) ? absolute : undefined;
+      }))).filter((file): file is string => typeof file === "string")
+    : await collectProjectFiles(policy, { accept: (rel) => SOURCE_EXTS.has(path.extname(rel).toLowerCase()) });
 
   // Extract imports from all source files in parallel (batched to avoid fd limit)
   const BATCH = 50;
@@ -123,8 +101,36 @@ export async function buildDependencyGraph(root: string, options: BuildOptions =
       Promise.all(batch.map((f) => extractSymbols(f, root))),
     ]);
     for (const { nodes, edges, unknowns } of importResults) {
-      allNodes.push(...nodes);
-      allEdges.push(...edges);
+      const replacements = new Map<string, string>();
+      const normalizedNodes = nodes.map((node) => {
+        if (node.kind !== "module" || !node.path) return node;
+        const decision = policy.explain(node.path);
+        if (decision.included) return node;
+        const id = `external:${node.path}`;
+        replacements.set(node.id, id);
+        return {
+          ...node,
+          id,
+          kind: "external",
+          label: path.basename(node.path),
+          path: undefined,
+          metadata: {
+            ...node.metadata,
+            external: true,
+            excludedPath: node.path,
+            policySource: decision.source,
+            policyPattern: decision.pattern,
+            policyReason: decision.reason,
+          },
+        } satisfies GraphNode;
+      });
+      const normalizedEdges = edges.map((edge) => ({
+        ...edge,
+        from: replacements.get(edge.from) ?? edge.from,
+        to: replacements.get(edge.to) ?? edge.to,
+      }));
+      allNodes.push(...normalizedNodes);
+      allEdges.push(...normalizedEdges);
       if (unknowns) parserUnknowns.push(...unknowns);
     }
     for (const { nodes, edges, pendingCalls } of symbolResults) {
@@ -231,7 +237,11 @@ export async function mergeIncrementalUpdate(existing: DependencyGraph, updated:
   }
 
   const keptNodes = existing.nodes.filter((n) => !affectedNodeIds.has(n.id));
-  const keptEdges = existing.edges.filter((e) => !affectedNodeIds.has(e.from) && !affectedNodeIds.has(e.to));
+  // Recompute outgoing relationships for changed sources, but preserve inbound
+  // relationships from unchanged sources. A target implementation change does
+  // not make its importers stop importing it. If a target was actually removed,
+  // the endpoint filter below removes the now-dangling relationship.
+  const keptEdges = existing.edges.filter((e) => !affectedNodeIds.has(e.from));
 
   const merged: DependencyGraph = {
     ...existing,
@@ -244,5 +254,7 @@ export async function mergeIncrementalUpdate(existing: DependencyGraph, updated:
   // Re-deduplicate
   merged.nodes = deduplicateNodes(merged.nodes);
   merged.edges = deduplicateEdges(merged.edges);
+  const nodeIds = new Set(merged.nodes.map((node) => node.id));
+  merged.edges = merged.edges.filter((edge) => nodeIds.has(edge.from) && nodeIds.has(edge.to));
   return merged;
 }

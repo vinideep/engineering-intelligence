@@ -50,6 +50,8 @@ export interface SetupOptions {
   dryRun?: boolean;
   force?: boolean;
   promptOverwrite?: (filePath: string) => Promise<boolean>;
+  /** Initialization orchestrator installs adapters first, then builds once after providers. */
+  deferIntelligenceBuild?: boolean;
 }
 
 export async function runSetup(root: string, options: SetupOptions): Promise<SetupResult> {
@@ -79,7 +81,7 @@ export async function runSetup(root: string, options: SetupOptions): Promise<Set
   }
 
   const result: SetupResult = { ides, installOp, wasUpdate, gitAnalyzed: false, evidenceRecorded: false, logs };
-  if (options.dryRun) return result;
+  if (options.dryRun || options.deferIntelligenceBuild) return result;
 
   // 3. Build the real dependency + call graph (also regenerates the brief).
   try {
@@ -106,7 +108,8 @@ export async function runSetup(root: string, options: SetupOptions): Promise<Set
   } catch { /* best-effort */ }
 
   // 6. Snapshot evidence hashes if a knowledge base already exists.
-  if (existsSync(path.join(root, ".engineering-intelligence", "knowledge-base"))) {
+  if (existsSync(path.join(root, ".engineering-intelligence", "knowledge-base")) &&
+      !existsSync(path.join(root, ".engineering-intelligence", "knowledge-base", ".evidence-hashes.json"))) {
     try {
       const { recordEvidenceHashes } = await import("../evidence/index.js");
       const snap = await recordEvidenceHashes(root);

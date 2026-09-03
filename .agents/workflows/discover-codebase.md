@@ -1,6 +1,5 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
+name: discover-codebase
 description: Autonomously discover and understand an existing codebase through systematic analysis, interactive clarification, and finalized intelligence artifacts — without modifying product code.
 ---
 
@@ -18,10 +17,10 @@ Finalized codebase understanding captured in intelligence artifacts:
 
 | Category | Path | Content |
 |---|---|---|
-| Knowledge Base | `$EIknowledge-base/` | Evidence-backed project documentation |
-| Graphs | `$EIgraph/` | Architecture graphs and maps |
-| Context | `$EIcontext/` | AI navigation maps |
-| Discovery Report | `$EIreports/DISCOVERY-*.md` | Findings summary with confidence levels |
+| Knowledge Base | `.engineering-intelligence/knowledge-base/` | Evidence-backed project documentation |
+| Graphs | `.engineering-intelligence/graph/` | Architecture graphs and maps |
+| Context | `.engineering-intelligence/context/` | AI navigation maps |
+| Discovery Report | `.engineering-intelligence/reports/DISCOVERY-*.md` | Findings summary with confidence levels |
 
 ## Execution Steps
 

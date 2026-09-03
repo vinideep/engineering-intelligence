@@ -14,6 +14,7 @@
         "environmental-backpressure-engine",
         "type-safety-engine",
         "api-backward-compatibility-engine",
-        "contract-test-generator"
+        "contract-test-generator",
+        "vertical-tdd-engine"
     ]
 }

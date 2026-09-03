@@ -8,7 +8,9 @@ import { buildGraph, analyzeImpact, loadExistingGraph, ensureFreshGraph, findSym
 import { preflight, postflight } from "../flight/index.js";
 import { generateBrief, readBrief } from "../brief/index.js";
 import { shape, terseNode, terseEdge, packRows } from "./shaper.js";
-import { readFile as readFileFn } from "node:fs/promises";
+import { loadEiConfig } from "../config/index.js";
+import { packageVersion } from "../version.js";
+import { createConsolidatedRegistry } from "./consolidated.js";
 
 // Resolve the token budget for a tool call. Precedence:
 //   explicit args.budget (0 = unlimited) → project config → built-in fallback.
@@ -23,13 +25,7 @@ function budgetOf(args: Record<string, unknown>, config: Record<string, number>,
 // Optional per-project budget overrides: .engineering-intelligence/config.json
 // { "tokenBudgets": { "analyze_impact": 3000, ... } }
 async function loadBudgetConfig(root: string): Promise<Record<string, number>> {
-  try {
-    const raw = await readFileFn(path.join(root, ".engineering-intelligence", "config.json"), "utf8");
-    const parsed = JSON.parse(raw) as { tokenBudgets?: Record<string, number> };
-    return parsed.tokenBudgets && typeof parsed.tokenBudgets === "object" ? parsed.tokenBudgets : {};
-  } catch {
-    return {};
-  }
+  try { return (await loadEiConfig(root)).tokenBudgets; } catch { return {}; }
 }
 
 const budgetProp = { budget: { type: "number", description: "Optional token budget for the response. Exploration fields are capped to fit (answer fields are never truncated); pass 0 for unlimited." } };
@@ -173,7 +169,7 @@ const TOOLS = [
   {
     name: "get_context",
     description:
-      "Assemble a compact, token-budgeted context pack for a task instead of reading many files. Returns the graph neighborhood of the touched files (what they depend on and what depends on them), the DERIVED facts about that code (re-computed from source, so refuted or stale ones are excluded), any asserted claims under a separate clearly-unverified heading, plus project conventions and dangerous areas. Read this FIRST to orient before editing; it is cheaper and more trustworthy than re-reading source.",
+      "Compatibility alias for get_engineering_context. Returns the ContextPackV2 Markdown summary built from verified EI knowledge, EI's normalized graph, current scoped source evidence, and explicit provider fallback.",
     inputSchema: {
       type: "object" as const,
       required: ["task"],
@@ -223,14 +219,11 @@ const TOOLS = [
 
 /** Tool names and one-line purposes, for the installed instructions. */
 export const MCP_TOOL_SUMMARY: ReadonlyArray<readonly [string, string]> = [
-  ["map_dependencies", "build/refresh the computed dependency graph from source imports"],
-  ["get_graph", "read an existing graph as JSON"],
-  ["analyze_impact", "given changed files, list the modules that import them (direct + indirect)"],
-  ["run_gate", "run a deterministic safety gate: env-vars, dead-exports, api-diff, migration-lint"],
-  ["get_context", "assemble a token-budgeted context pack for a task"],
-  ["verify_claims", "check claims: derived facts are re-computed; asserted prose is never called verified"],
-  ["derive_claims", "recompute the derived-fact baseline (imports, dependencies, routes) from source"],
-  ["read_knowledge", "list or read knowledge-base documents"],
+  ["get_engineering_context", "build ContextPackV2 from verified EI knowledge, canonical structure, and current scoped code"],
+  ["analyze_change_impact", "compute direct and indirect impact, affected tests, risks, and unknowns"],
+  ["validate_change", "run impact, safety gates, claims, knowledge, and citation validation"],
+  ["sync_engineering_knowledge", "refresh affected graph, provider indexes, claims, and knowledge health after edits"],
+  ["provider_status", "report pinned provider health, versions, fallbacks, and remediation"],
 ];
 
 /**
@@ -264,12 +257,17 @@ function safeRegex(pattern: string | undefined): RegExp | undefined {
 }
 
 export async function startMcpServer(projectRoot: string): Promise<void> {
+  const consolidated = await createConsolidatedRegistry(projectRoot);
   const server = new Server(
-    { name: "engineering-intelligence", version: "2.3.0" },
+    { name: "engineering-intelligence", version: await packageVersion() },
     { capabilities: { tools: {} } },
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
+  // Advertise only the cohesive EI control-plane surface. The legacy tools
+  // remain callable below as compatibility wrappers for existing clients, but
+  // are intentionally absent from discovery so the model does not have to
+  // orchestrate EI, Graphify, and CCE primitives itself.
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: consolidated.list() }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args = {} } = request.params;
@@ -278,6 +276,9 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
     const cfg = await loadBudgetConfig(root);
 
     try {
+      if (consolidated.has(name)) {
+        return text(JSON.stringify(await consolidated.execute(name, { ...args, root }), null, 2));
+      }
       if (name === "get_brief") {
         await ensureFreshGraph(root);
         let brief = await readBrief(root);
@@ -429,10 +430,10 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
         if (!task) {
           return { content: [{ type: "text", text: JSON.stringify({ error: "task is required" }) }], isError: true };
         }
-        const { getContext } = await import("../context/index.js");
+        const { getEngineeringContext } = await import("../context/orchestrator.js");
         const files = Array.isArray(args.files) ? (args.files as string[]) : undefined;
         const budget = typeof args.budget === "number" ? args.budget : undefined;
-        const pack = await getContext(root, { task, files, budget });
+        const pack = await getEngineeringContext(root, { task, files, budget });
         return { content: [{ type: "text", text: pack.markdown }] };
       }
 
@@ -453,7 +454,7 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
         if (typeof args.file === "string" && args.file) {
           const filePath = path.join(kbDir, args.file);
           try {
-            return text(await readFileFn(filePath, "utf8"));
+            return text(await readFile(filePath, "utf8"));
           } catch {
             return text(JSON.stringify({ error: `.engineering-intelligence/knowledge-base/${args.file} not found` }), true);
           }

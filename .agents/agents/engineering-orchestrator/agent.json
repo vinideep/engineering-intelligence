@@ -19,6 +19,9 @@
         "quality-agent",
         "knowledge-agent"
     ],
+    "skills": [
+        "session-handoff-engine"
+    ],
     "execution": {
         "autoRoute": true,
         "parallel": false
