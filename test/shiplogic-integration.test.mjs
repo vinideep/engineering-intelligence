@@ -115,3 +115,30 @@ test("Shiplogic-style onboarding and incremental sync work through the real CLI"
   const finalHealth = cli(["health", root, "--strict", "--json"], root);
   assert.equal(finalHealth.status, 0, `${finalHealth.stdout}\n${finalHealth.stderr}`);
 });
+
+test("Shiplogic-style Antigravity onboarding installs agents and keeps workflow compatibility", async (t) => {
+  const root = await createShiplogicFixture();
+  t.after(async () => rm(root, { recursive: true, force: true }));
+
+  const initialized = cli(["initialize", root, "--ide", "antigravity", "--providers", "native", "--yes", "--json"], root);
+  assert.equal(initialized.status, 0, `${initialized.stdout}\n${initialized.stderr}`);
+  const init = JSON.parse(initialized.stdout);
+  assert.equal(init.ok, true);
+  assert.deepEqual(init.setup.ides, ["antigravity"]);
+
+  const agent = await readFile(path.join(root, ".agents/agents/engineering-orchestrator/agent.md"), "utf8");
+  assert.match(agent, /^---\nname: engineering-orchestrator\n/);
+  assert.match(agent, /mainAgent: true/);
+  assert.match(agent, /skills\/session-handoff-engine/);
+  assert.match(agent, /\.engineering-intelligence\/knowledge-base/);
+  await readFile(path.join(root, ".agents/workflows/engineering-intelligence.md"), "utf8");
+  await readFile(path.join(root, ".agents/skills/engineering-intelligence-skill/SKILL.md"), "utf8");
+
+  const legacyAgentJson = path.join(root, ".agent/agents/engineering-orchestrator/agent.json");
+  await assert.rejects(readFile(legacyAgentJson, "utf8"), "fresh installs must not emit legacy JSON agents");
+
+  const updated = cli(["update", root], root);
+  assert.equal(updated.status, 0, `${updated.stdout}\n${updated.stderr}`);
+  assert.match(updated.stdout, /Update complete/);
+  assert.match(updated.stdout, /0 conflict\(s\)/);
+});

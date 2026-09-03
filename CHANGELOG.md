@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.1.0 — Antigravity custom agents
+
+- Antigravity and Antigravity CLI now install native Markdown custom agents at
+  `.agents/agents/<name>/agent.md`.
+- Existing workflow, skill, rule, and locally edited legacy agent files are
+  preserved during updates; workflows remain available as compatibility entry
+  points.
+
 ## 3.0.0 — Correctness release
 
 This release is mostly about **removing things that were not true**. Several

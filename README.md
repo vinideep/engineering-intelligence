@@ -67,6 +67,18 @@ Use `native` for a repeatable local demonstration. Use `auto` when you want the 
 
 ## Updating an EI-enabled project
 
+If the project already uses EI, including version 4.0.0, run this from its
+root:
+
+```bash
+npx engineering-intelligence@latest update . --yes
+npx engineering-intelligence@latest doctor .
+npx engineering-intelligence@latest health . --strict
+```
+
+The update refreshes EI-managed IDE files and migrates Antigravity agents. It
+does not replace project-owned configuration or locally edited managed files.
+
 ### Normal AI-assisted change
 
 In an installed AI IDE, use the main workflow:
@@ -82,7 +94,7 @@ The workflow is responsible for impact analysis, implementation, tests, validati
 Give EI the files that changed:
 
 ```bash
-npx engineering-intelligence sync . --files src/routes/route-plan.ts,src/providers/carrier.ts
+npx engineering-intelligence@latest sync . --files src/routes/route-plan.ts,src/providers/carrier.ts
 ```
 
 This command updates only deterministic artifacts:
@@ -109,16 +121,16 @@ matters more than provider-backed retrieval.
 Run the combined trust check:
 
 ```bash
-npx engineering-intelligence health . --strict
+npx engineering-intelligence@latest health . --strict
 ```
 
 Useful focused checks are:
 
 ```bash
-npx engineering-intelligence doctor .
-npx engineering-intelligence claims verify . --strict
-npx engineering-intelligence verify .
-npx engineering-intelligence providers status .
+npx engineering-intelligence@latest doctor .
+npx engineering-intelligence@latest claims verify . --strict
+npx engineering-intelligence@latest verify .
+npx engineering-intelligence@latest providers status .
 ```
 
 `verify` runs the project’s own `check`, `ci`, `typecheck`, `lint`, and `test` scripts when they exist and writes a receipt bound to the files it checked. A command that merely looks like a test command is not enough.
@@ -137,6 +149,11 @@ The most useful commands are:
 /sync-engineering-intelligence <diff>  Update intelligence after manual edits
 /review-engineering-change <request>   Review the current change
 ```
+
+For Antigravity, installation and updates also create current custom agents at
+`.agents/agents/<name>/agent.md`. The existing workflow files remain available
+for compatibility, so an existing project can move to agents without losing
+its current commands.
 
 The generated routing table selects only the skills needed for the request. The agent should load the compact context pack before opening broad source files.
 

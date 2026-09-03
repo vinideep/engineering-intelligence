@@ -51,6 +51,7 @@ const sharedInstructions = `# Engineering Intelligence OS
 
 This repository uses installed engineering intelligence workflows.
 
+- When the .agents/agents/ directory is available, start non-trivial work with the engineering-orchestrator custom agent. It routes the request to the right specialist and keeps the workflow evidence-based.
 - For initial understanding and documentation, invoke \`initialize-engineering-intelligence\` or ask the agent to initialize engineering intelligence.
 - For implementation work, invoke \`engineering-intelligence\` with the request or ask the agent to apply the engineering intelligence workflow. This workflow embeds AI-DLC and Agile delivery modes internally.
 - For epic-sized initiatives, invoke \`decompose-backlog\` to autonomously create an Epic → Feature → Ticket backlog under \`.engineering-intelligence/aidlc/agile/backlog/\`, then \`deliver-backlog\` to implement it feature by feature. Each feature requires human approval before implementation; the local backlog is the source of truth and can optionally be mirrored to GitHub Issues.
@@ -332,7 +333,18 @@ const AGENT_METADATA: Record<
   },
 };
 
-async function agentsAsJsonAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
+function quoteYaml(value: string): string {
+  return JSON.stringify(value);
+}
+
+/**
+ * Antigravity's current custom-agent format is Markdown with YAML frontmatter.
+ * Keep the canonical agent body as the source of truth, and project only the
+ * metadata that Antigravity understands into its native frontmatter. Context
+ * and delegation metadata remain visible in the prompt body so no routing
+ * information is lost during the format migration.
+ */
+async function agentsAsMarkdownAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
   const results: RenderedFile[] = [];
   for (const name of AGENT_NAMES) {
     const raw = await readTemplate("agents", name);
@@ -340,21 +352,42 @@ async function agentsAsJsonAt(directory: string, owner: IdeId): Promise<Rendered
     const agentName = meta["name"] ?? name;
     const description = meta["description"] ?? "";
     const extra = AGENT_METADATA[name];
-    const manifest: Record<string, unknown> = {
-      name: agentName,
-      description,
-      version: "1.0.0",
-      instructions: "./prompt.md",
-      memory: true,
-      context: extra.context,
-    };
-    if (extra.agents) manifest["agents"] = extra.agents;
-    if (extra.skills) manifest["skills"] = extra.skills;
-    if (extra.autoRoute !== undefined) {
-      manifest["execution"] = { autoRoute: extra.autoRoute, parallel: extra.parallel ?? false };
-    }
-    results.push(file(`${directory}/${name}/agent.json`, JSON.stringify(manifest, null, 4), owner));
-    results.push(file(`${directory}/${name}/prompt.md`, body.replace(/^\n/, ""), owner));
+    const frontmatter = [
+      "---",
+      `name: ${agentName}`,
+      `description: ${quoteYaml(description)}`,
+      "mainAgent: true",
+      "subagent: true",
+      ...(extra.skills?.length
+        ? ["skills:", ...extra.skills.map((skill) => `  - skills/${skill}`)]
+        : []),
+      "---",
+    ].join("\n");
+    const runtimeContext = [
+      "## EI Runtime Context",
+      "",
+      "Read the following project-owned context before making non-trivial decisions:",
+      ...extra.context.map((location) => "- `" + location + "`"),
+      ...(extra.agents?.length
+        ? [
+            "",
+            `Delegate to these specialist agents when the request matches their responsibility: ${extra.agents.map((agent) => "`" + agent + "`").join(", ")}.`,
+          ]
+        : []),
+      ...(extra.autoRoute !== undefined
+        ? [
+            "",
+            `Routing policy: auto-route is ${extra.autoRoute ? "enabled" : "disabled"}; parallel delegation is ${extra.parallel ? "enabled" : "disabled"}.`,
+          ]
+        : []),
+    ].join("\n");
+    results.push(
+      file(
+        `${directory}/${name}/agent.md`,
+        `${frontmatter}\n\n${body.replace(/^\n/, "").trimEnd()}\n\n${runtimeContext}\n`,
+        owner,
+      ),
+    );
   }
   return results;
 }
@@ -365,19 +398,22 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
       const ruleContent = prepareRendered(await readTemplate("rules", "engineering-intelligence"));
       const [bundle, agents, workflows] = await Promise.all([
         skillBundle(ide, {
-          skillsDir: ".agent/skills",
-          indexPath: `.agent/skills/${SKILLS_INDEX_FILENAME}`,
-          routingPath: `.agent/${WORKFLOW_ROUTING_FILENAME}`,
+          skillsDir: ".agents/skills",
+          indexPath: `.agents/skills/${SKILLS_INDEX_FILENAME}`,
+          routingPath: `.agents/${WORKFLOW_ROUTING_FILENAME}`,
           emitBriefs: false,
         }),
-        agentsAsJsonAt(".agent/agents", ide),
-        workflowsAt(".agent/workflows", ide),
+        // Antigravity's current workspace layout is plural `.agents/*`.
+        // The installer migrates older `.agent/*` files when they are still
+        // managed and untouched, while preserving local edits as conflicts.
+        agentsAsMarkdownAt(".agents/agents", ide),
+        workflowsAt(".agents/workflows", ide),
       ]);
       return [
         ...bundle,
         ...agents,
         ...workflows,
-        file(".agent/rules/engineering-intelligence.md", ruleContent, ide),
+        file(".agents/rules/engineering-intelligence.md", ruleContent, ide),
       ];
     }
     case "antigravity-cli": {
@@ -388,7 +424,7 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
           routingPath: `.agents/${WORKFLOW_ROUTING_FILENAME}`,
           emitBriefs: false,
         }),
-        agentsAsJsonAt(".agents/agents", ide),
+        agentsAsMarkdownAt(".agents/agents", ide),
         workflowsAt(".agents/workflows", ide),
       ]);
       return [
@@ -406,7 +442,7 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
           routingPath: `.agents/${WORKFLOW_ROUTING_FILENAME}`,
           emitBriefs: false,
         }),
-        agentsAsJsonAt(".agents/agents", ide),
+        agentsAsMarkdownAt(".agents/agents", ide),
         workflowsAt(".agents/workflows", ide),
       ]);
       return [

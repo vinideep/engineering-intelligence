@@ -84,9 +84,11 @@ test("detectIdes finds adapters from marker directories", () => {
   try {
     mkdirSync(path.join(dir, ".claude"));
     mkdirSync(path.join(dir, ".cursor"));
+    mkdirSync(path.join(dir, ".agents", "agents"), { recursive: true });
     const ides = detectIdes(dir);
     assert.ok(ides.includes("claude-code"), `expected claude-code, got ${ides}`);
     assert.ok(ides.includes("cursor"), `expected cursor, got ${ides}`);
+    assert.ok(ides.includes("antigravity"), `expected modern Antigravity marker, got ${ides}`);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { access, mkdir, mkdtemp, readFile, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -18,9 +19,13 @@ async function readable(root, relative) {
   return readFile(path.join(root, relative), "utf8");
 }
 
+function hash(content) {
+  return createHash("sha256").update(content.trimEnd()).digest("hex");
+}
+
 test("every adapter renders the complete canonical skill and workflow inventory it supports", async () => {
   const profiles = {
-    antigravity: { skills: ".agent/skills", workflows: ".agent/workflows", workflowKind: "file" },
+    antigravity: { skills: ".agents/skills", workflows: ".agents/workflows", workflowKind: "file" },
     "antigravity-cli": { skills: ".agents/skills", workflows: ".agents/workflows", workflowKind: "file" },
     codex: { skills: ".agents/skills", workflows: ".agents/workflows", workflowKind: "file" },
     generic: { skills: ".agents/skills", workflows: ".agents/skills", workflowKind: "skill" },
@@ -58,9 +63,9 @@ test("installs shared skills once for overlapping adapters", async () => {
   const manifest = JSON.parse(await readable(root, ".engineering-intelligence/install-manifest.json"));
   const shared = manifest.files.filter((entry) => entry.path === ".agents/skills/engineering-intelligence-skill/SKILL.md");
   assert.equal(shared.length, 1);
-  assert.deepEqual(shared[0].owners, ["codex", "gemini-cli"]);
-  assert.match(await readable(root, ".agent/workflows/initialize-engineering-intelligence.md"), /knowledge-base/);
-  assert.match(await readable(root, ".agent/workflows/map-architecture.md"), /dependency-graph\.json/);
+  assert.deepEqual(shared[0].owners, ["antigravity", "codex", "gemini-cli"]);
+  assert.match(await readable(root, ".agents/workflows/initialize-engineering-intelligence.md"), /knowledge-base/);
+  assert.match(await readable(root, ".agents/workflows/map-architecture.md"), /dependency-graph\.json/);
   assert.match(await readable(root, ".gemini/commands/engineering-intelligence.toml"), /User supplied scope or request/);
 });
 
@@ -150,17 +155,53 @@ test("update removes an obsolete unchanged managed file recorded by an older man
   const content = "old managed skill\n";
   await mkdir(path.dirname(path.join(root, obsolete)), { recursive: true });
   await writeFile(path.join(root, obsolete), content);
-  const { createHash } = await import("node:crypto");
   manifest.files.push({
     path: obsolete,
     kind: "file",
-    hash: createHash("sha256").update(content.trimEnd()).digest("hex"),
+    hash: hash(content),
     owners: ["generic"],
   });
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
   const result = await update(root, options);
   assert.ok(result.actions.some((action) => action.path === obsolete && action.status === "removed"));
   await assert.rejects(access(path.join(root, obsolete)));
+});
+
+test("update migrates legacy Antigravity JSON agents and preserves edited legacy files", async () => {
+  const root = await project();
+  const legacyJsonPath = ".agent/agents/engineering-orchestrator/agent.json";
+  const legacyPromptPath = ".agent/agents/engineering-orchestrator/prompt.md";
+  const legacyJson = JSON.stringify({ name: "engineering-orchestrator", version: "1.0.0" }, null, 2);
+  const legacyPrompt = "# Locally customized legacy agent\n";
+  const originalPrompt = "# Legacy prompt\n";
+  await mkdir(path.dirname(path.join(root, legacyJsonPath)), { recursive: true });
+  await mkdir(path.join(root, ".engineering-intelligence"), { recursive: true });
+  await writeFile(path.join(root, legacyJsonPath), legacyJson);
+  await writeFile(path.join(root, legacyPromptPath), legacyPrompt);
+  await writeFile(path.join(root, ".engineering-intelligence/install-manifest.json"), JSON.stringify({
+    schemaVersion: 1,
+    packageVersion: "4.0.0",
+    templateVersion: "4.0.0",
+    adapters: ["antigravity"],
+    files: [
+      { path: legacyJsonPath, kind: "file", hash: hash(legacyJson), owners: ["antigravity"] },
+      { path: legacyPromptPath, kind: "file", hash: hash(originalPrompt), owners: ["antigravity"] },
+    ],
+    installedAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  }, null, 2));
+
+  const result = await update(root, options);
+  assert.equal(result.conflicts, 1, "only the locally edited legacy prompt should conflict");
+  assert.ok(result.actions.some((action) => action.path === ".agents/agents/engineering-orchestrator/agent.md" && action.status === "created"));
+  assert.ok(result.actions.some((action) => action.path === legacyJsonPath && action.status === "removed"));
+  assert.ok(result.actions.some((action) => action.path === legacyPromptPath && action.status === "conflict"));
+  await assert.rejects(access(path.join(root, legacyJsonPath)));
+  assert.equal(await readable(root, legacyPromptPath), legacyPrompt);
+  assert.match(await readable(root, ".agents/agents/engineering-orchestrator/agent.md"), /mainAgent: true/);
+
+  const manifest = JSON.parse(await readable(root, ".engineering-intelligence/install-manifest.json"));
+  assert.ok(manifest.files.some((entry) => entry.path === legacyPromptPath), "edited legacy file must remain tracked for future review");
 });
 
 test("update upgrades a V1-shaped installation with V2 graph and impact assets", async () => {
@@ -189,9 +230,9 @@ test("update upgrades a V1-shaped installation with V2 graph and impact assets",
   const result = await update(root, options);
   assert.equal(result.conflicts, 0);
   assert.ok(result.actions.some((action) => action.path === ".agents/skills/graph-engine/SKILL.md" && action.status === "created"));
-  assert.ok(result.actions.some((action) => action.path === ".agent/workflows/analyze-impact.md" && action.status === "created"));
+  assert.ok(result.actions.some((action) => action.path === ".agents/workflows/analyze-impact.md" && action.status === "created"));
   const updatedManifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  assert.equal(updatedManifest.templateVersion, "4.0.0");
+  assert.equal(updatedManifest.templateVersion, "4.1.0");
 });
 
 test("upgrade installs new V2 files while preserving edited managed instructions", async () => {

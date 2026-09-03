@@ -8,24 +8,24 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   const ides = ["antigravity", "antigravity-cli", "codex", "claude-code", "cursor", "github-copilot", "gemini-cli", "commandcode", "generic"];
   const files = await renderAdapters(ides);
   const paths = new Set(files.map((item) => item.path));
-  assert.ok(paths.has(".agent/workflows/initialize-engineering-intelligence.md"));
-  assert.ok(paths.has(".agent/workflows/map-architecture.md"));
-  assert.ok(paths.has(".agent/workflows/analyze-impact.md"));
-  assert.ok(paths.has(".agent/workflows/sync-engineering-intelligence.md"));
-  assert.ok(paths.has(".agent/workflows/scope-requirement.md"));
-  assert.ok(paths.has(".agent/workflows/discover-codebase.md"));
-  assert.ok(paths.has(".agent/workflows/create-project.md"));
-  assert.ok(paths.has(".agent/workflows/grill-me.md"));
-  assert.ok(paths.has(".agent/workflows/handoff.md"));
-  assert.ok(paths.has(".agent/workflows/tdd.md"));
-  assert.ok(paths.has(".agent/workflows/design-an-interface.md"));
-  assert.ok(!paths.has(".agent/workflows/aidlc-default.md"));
-  assert.ok(paths.has(".agent/agents/engineering-orchestrator/agent.json"));
-  assert.ok(paths.has(".agent/agents/change-agent/agent.json"));
-  assert.ok(paths.has(".agent/agents/product-analyst/agent.json"));
-  assert.ok(paths.has(".agent/agents/system-architect/agent.json"));
-  assert.ok(paths.has(".agent/agents/security-officer/agent.json"));
-  assert.ok(paths.has(".agent/agents/site-reliability-engineer/agent.json"));
+  assert.ok(paths.has(".agents/workflows/initialize-engineering-intelligence.md"));
+  assert.ok(paths.has(".agents/workflows/map-architecture.md"));
+  assert.ok(paths.has(".agents/workflows/analyze-impact.md"));
+  assert.ok(paths.has(".agents/workflows/sync-engineering-intelligence.md"));
+  assert.ok(paths.has(".agents/workflows/scope-requirement.md"));
+  assert.ok(paths.has(".agents/workflows/discover-codebase.md"));
+  assert.ok(paths.has(".agents/workflows/create-project.md"));
+  assert.ok(paths.has(".agents/workflows/grill-me.md"));
+  assert.ok(paths.has(".agents/workflows/handoff.md"));
+  assert.ok(paths.has(".agents/workflows/tdd.md"));
+  assert.ok(paths.has(".agents/workflows/design-an-interface.md"));
+  assert.ok(!paths.has(".agents/workflows/aidlc-default.md"));
+  assert.ok(paths.has(".agents/agents/engineering-orchestrator/agent.md"));
+  assert.ok(paths.has(".agents/agents/change-agent/agent.md"));
+  assert.ok(paths.has(".agents/agents/product-analyst/agent.md"));
+  assert.ok(paths.has(".agents/agents/system-architect/agent.md"));
+  assert.ok(paths.has(".agents/agents/security-officer/agent.md"));
+  assert.ok(paths.has(".agents/agents/site-reliability-engineer/agent.md"));
   assert.ok(paths.has("AGENTS.md"));
   assert.ok(paths.has(".claude/commands/engineering-intelligence.md"));
   assert.ok(paths.has(".claude/commands/map-architecture.md"));
@@ -58,28 +58,28 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.ok(paths.has(".commandcode/commands/engineering-intelligence.md"));
   assert.ok(paths.has(".commandcode/commands/scope-requirement.md"));
   assert.match(files.find((item) => item.path === "AGENTS.md").content, /map-architecture/);
-  // antigravity IDE uses .agent/ (singular)
-  assert.ok(paths.has(".agent/agents/engineering-orchestrator/agent.json"));
-  assert.ok(paths.has(".agent/agents/engineering-orchestrator/prompt.md"));
-  // antigravity-cli uses .agents/ (plural)
-  assert.ok(paths.has(".agents/agents/engineering-orchestrator/agent.json"));
-  assert.ok(paths.has(".agents/agents/engineering-orchestrator/prompt.md"));
-  assert.ok(paths.has(".agents/agents/product-analyst/agent.json"));
-  // Verify agent.json content is valid JSON with required fields
-  const orchJson = JSON.parse(files.find((item) => item.path === ".agent/agents/engineering-orchestrator/agent.json").content);
-  assert.equal(orchJson.name, "engineering-orchestrator");
-  assert.ok(orchJson.description.length > 0);
-  assert.deepEqual(orchJson.agents, ["product-analyst", "system-architect", "change-agent", "test-engineer", "quality-agent", "knowledge-agent"]);
-  const analystJson = JSON.parse(files.find((item) => item.path === ".agent/agents/product-analyst/agent.json").content);
-  assert.ok(analystJson.skills.includes("requirement-scoper"));
-  assert.ok(analystJson.skills.includes("context-budget-optimizer"));
-  assert.ok(analystJson.skills.includes("aidlc-lifecycle-engine"));
-  const architectJson = JSON.parse(files.find((item) => item.path === ".agent/agents/system-architect/agent.json").content);
-  assert.ok(architectJson.skills.includes("nfr-adr-governor"));
-  const changeJson = JSON.parse(files.find((item) => item.path === ".agent/agents/change-agent/agent.json").content);
-  assert.ok(changeJson.skills.includes("type-safety-engine"));
-  assert.ok(changeJson.skills.includes("api-backward-compatibility-engine"));
-  assert.ok(changeJson.skills.includes("context-budget-optimizer"));
+  // Modern Antigravity agents are Markdown files with frontmatter. The old
+  // JSON + prompt pair is intentionally absent from fresh output.
+  assert.ok(!paths.has(".agent/agents/engineering-orchestrator/agent.json"));
+  assert.ok(!paths.has(".agents/agents/engineering-orchestrator/agent.json"));
+  assert.ok(!paths.has(".agents/agents/engineering-orchestrator/prompt.md"));
+  const orchestrator = files.find((item) => item.path === ".agents/agents/engineering-orchestrator/agent.md").content;
+  assert.match(orchestrator, /^---\n/);
+  assert.match(orchestrator, /name: engineering-orchestrator/);
+  assert.match(orchestrator, /mainAgent: true/);
+  assert.match(orchestrator, /subagent: true/);
+  assert.match(orchestrator, /skills:\n  - skills\/session-handoff-engine/);
+  assert.match(orchestrator, /\.engineering-intelligence\/knowledge-base/);
+  assert.match(orchestrator, /product-analyst/);
+  const analyst = files.find((item) => item.path === ".agents/agents/product-analyst/agent.md").content;
+  assert.match(analyst, /skills\/requirement-scoper/);
+  assert.match(analyst, /skills\/context-budget-optimizer/);
+  const architect = files.find((item) => item.path === ".agents/agents/system-architect/agent.md").content;
+  assert.match(architect, /skills\/nfr-adr-governor/);
+  const changeAgent = files.find((item) => item.path === ".agents/agents/change-agent/agent.md").content;
+  assert.match(changeAgent, /skills\/type-safety-engine/);
+  assert.match(changeAgent, /skills\/api-backward-compatibility-engine/);
+  assert.match(changeAgent, /skills\/context-budget-optimizer/);
   assert.deepEqual(await validateRender(ides), []);
 });
 
@@ -393,16 +393,17 @@ test("question-file-engine skill ships for Claude Code with correct content and 
   assert.deepEqual(await validateRender(["claude-code"]), []);
 });
 
-test("antigravity-cli adapter writes agents to .agents/ (plural) matching CLI workspace path", async () => {
+test("antigravity-cli adapter writes modern Markdown agents to .agents/ (plural)", async () => {
   const files = await renderAdapters(["antigravity-cli"]);
   const paths = new Set(files.map((item) => item.path));
-  assert.ok(paths.has(".agents/agents/engineering-orchestrator/agent.json"));
-  assert.ok(paths.has(".agents/agents/engineering-orchestrator/prompt.md"));
-  assert.ok(paths.has(".agents/agents/change-agent/agent.json"));
-  assert.ok(paths.has(".agents/agents/product-analyst/agent.json"));
+  assert.ok(paths.has(".agents/agents/engineering-orchestrator/agent.md"));
+  assert.ok(paths.has(".agents/agents/change-agent/agent.md"));
+  assert.ok(paths.has(".agents/agents/product-analyst/agent.md"));
   assert.ok(paths.has(".agents/skills/engineering-intelligence-skill/SKILL.md"));
   assert.ok(paths.has(".agents/workflows/engineering-intelligence.md"));
-  assert.ok(!paths.has(".agent/agents/engineering-orchestrator/agent.json"), "CLI must not write to .agent/ (singular)");
+  assert.ok(!paths.has(".agents/agents/engineering-orchestrator/agent.json"));
+  assert.ok(!paths.has(".agents/agents/engineering-orchestrator/prompt.md"));
+  assert.ok(!paths.has(".agent/agents/engineering-orchestrator/agent.md"), "CLI must not write agents to .agent/ (singular)");
 });
 
 

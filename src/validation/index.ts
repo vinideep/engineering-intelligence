@@ -12,8 +12,9 @@ export async function validateRender(ides: IdeId[]): Promise<string[]> {
   const errors = await validateCanonicalTemplates();
   const rendered = await renderAdapters(ides);
   for (const item of rendered) {
-    // Flag only the genuinely obsolete runtime output paths; `.agent/skills`, `.agent/workflows`,
-    // `.agent/rules`, `.agent/agents` are legitimate Antigravity IDE paths.
+    // Flag only the genuinely obsolete runtime output paths; both the legacy
+    // `.agent/*` compatibility paths and current `.agents/agents/*.md` files
+    // are legitimate adapter output.
     if (
       !item.path.endsWith(".json") &&
       (item.content.includes(".agent/memory") ||

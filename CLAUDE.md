@@ -3,6 +3,7 @@
 
 This repository uses installed engineering intelligence workflows.
 
+- When the .agents/agents/ directory is available, start non-trivial work with the engineering-orchestrator custom agent. It routes the request to the right specialist and keeps the workflow evidence-based.
 - For initial understanding and documentation, invoke `initialize-engineering-intelligence` or ask the agent to initialize engineering intelligence.
 - For implementation work, invoke `engineering-intelligence` with the request or ask the agent to apply the engineering intelligence workflow. This workflow embeds AI-DLC and Agile delivery modes internally.
 - For epic-sized initiatives, invoke `decompose-backlog` to autonomously create an Epic → Feature → Ticket backlog under `.engineering-intelligence/aidlc/agile/backlog/`, then `deliver-backlog` to implement it feature by feature. Each feature requires human approval before implementation; the local backlog is the source of truth and can optionally be mirrored to GitHub Issues.

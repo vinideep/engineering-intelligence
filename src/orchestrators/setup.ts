@@ -23,6 +23,10 @@ const IDE_MARKERS: Array<{ marker: string; ide: IdeId }> = [
   { marker: ".gemini", ide: "gemini-cli" },
   { marker: ".commandcode", ide: "commandcode" },
   { marker: ".agent", ide: "antigravity" },
+  // Current Antigravity Desktop and CLI customizations both use this
+  // workspace path; explicit --ide antigravity-cli remains available when
+  // the CLI-specific adapter is required.
+  { marker: ".agents/agents", ide: "antigravity" },
 ];
 
 export function detectIdes(root: string): IdeId[] {

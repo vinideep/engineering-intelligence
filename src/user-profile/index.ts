@@ -82,8 +82,9 @@ function detectIdesInUse(root: string): string[] {
     ["commandcode", ".commandcode"],
     ["codex", ".codex"],
     ["antigravity", ".agent"],
+    ["antigravity", ".agents/agents"],
   ];
-  return candidates
+  return [...new Set(candidates
     .filter(([, p]) => {
       try {
         require("node:fs").accessSync(path.join(root, p));
@@ -92,7 +93,7 @@ function detectIdesInUse(root: string): string[] {
         return false;
       }
     })
-    .map(([ide]) => ide);
+    .map(([ide]) => ide))];
 }
 
 export function resolveIdentity(root: string): UserIdentity {
