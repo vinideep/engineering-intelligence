@@ -71,6 +71,11 @@ export async function runSetup(root: string, options: SetupOptions): Promise<Set
   // 2. Install or update the adapters.
   let installOp: OperationResult;
   let wasUpdate = false;
+  if (!options.dryRun) {
+    const { migrateEiConfig } = await import("../config/index.js");
+    const migration = await migrateEiConfig(root);
+    if (migration.changed) log(`Migrated configuration to schema ${migration.config.schemaVersion}.`);
+  }
   if (alreadyInstalled) {
     installOp = await update(root, { dryRun: options.dryRun, force: options.force, packageVersion: options.packageVersion, promptOverwrite: options.promptOverwrite });
     wasUpdate = true;
@@ -83,9 +88,29 @@ export async function runSetup(root: string, options: SetupOptions): Promise<Set
   const result: SetupResult = { ides, installOp, wasUpdate, gitAnalyzed: false, evidenceRecorded: false, logs };
   if (options.dryRun || options.deferIntelligenceBuild) return result;
 
-  // 3. Build the real dependency + call graph (also regenerates the brief).
+  // 3. Prepare providers and refresh structural extraction (Graphify/CCE) if enabled.
+  let graphifyOk = false;
   try {
-    const g = await buildGraph(root, {});
+    const { prepareProviders, runGraphifyExtraction, runCceIndex } = await import("../providers/index.js");
+    const providers = await prepareProviders(root, { installMissing: false });
+    const graphifyStatus = providers.statuses.find((s) => s.name === "graphify");
+    if (graphifyStatus?.health === "healthy") {
+      const graphify = await runGraphifyExtraction(root, {});
+      graphifyOk = graphify.ok;
+      if (graphify.ok) log("Graphify structural extraction refreshed.");
+    }
+    const cceStatus = providers.statuses.find((s) => s.name === "cce");
+    if (cceStatus?.health === "healthy") {
+      const cce = await runCceIndex(root, {});
+      if (cce.ok) log("CCE retrieval index refreshed.");
+    }
+  } catch {
+    // Provider preparation is best-effort during setup
+  }
+
+  // 4. Build the real dependency + call graph (also regenerates the brief).
+  try {
+    const g = await buildGraph(root, { providerEvidence: graphifyOk });
     result.graph = { nodeCount: g.nodeCount, edgeCount: g.edgeCount, fileCount: g.fileCount };
     log(`Graph built: ${g.nodeCount} nodes, ${g.edgeCount} edges (${g.fileCount} files).`);
   } catch (e) {

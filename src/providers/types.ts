@@ -51,6 +51,7 @@ export interface PrepareProvidersOptions {
   dryRun?: boolean;
   expertMode?: boolean;
   providerHome?: string;
+  onProgress?: (message: string) => void;
 }
 
 export interface PrepareProvidersResult {

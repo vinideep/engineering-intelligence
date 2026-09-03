@@ -13,6 +13,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { packageVersion } from "../dist/version.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLI = path.resolve(__dirname, "../dist/cli/index.js");
@@ -76,7 +77,7 @@ test("MCP server: initialize, list tools, call get_graph and analyze_impact", as
     const initResponse = await readResponse(proc, 1);
     assert.ok(!initResponse.error, `initialize failed: ${JSON.stringify(initResponse.error)}`);
     assert.equal(initResponse.result?.serverInfo?.name, "engineering-intelligence");
-    assert.equal(initResponse.result?.serverInfo?.version, "3.5.0");
+    assert.equal(initResponse.result?.serverInfo?.version, await packageVersion());
 
     // Notify initialized
     proc.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized", params: {} }) + "\n");

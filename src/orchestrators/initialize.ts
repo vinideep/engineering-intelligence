@@ -28,6 +28,7 @@ export interface InitializeOptions {
   providerHome?: string;
   runner?: ProcessRunner;
   promptOverwrite?: (filePath: string) => Promise<boolean>;
+  onProgress?: (message: string) => void;
 }
 
 export interface InitializationEvidence {
@@ -181,67 +182,72 @@ async function buildInitializationEvidence(root: string, providers: PrepareProvi
 
 export async function runInitialization(root: string, options: InitializeOptions): Promise<InitializeResult> {
   const logs: string[] = [];
+  const log = (msg: string) => {
+    logs.push(msg);
+    options.onProgress?.(msg);
+  };
   const setup = await runSetup(root, { ides: options.ides, packageVersion: options.packageVersion, dryRun: options.dryRun, force: options.force, promptOverwrite: options.promptOverwrite, deferIntelligenceBuild: true });
-  logs.push(...setup.logs);
+  for (const line of setup.logs) log(line);
   if (!options.dryRun) {
     const migration = await migrateEiConfig(root);
-    logs.push(migration.changed ? `Configuration migrated to schema ${migration.config.schemaVersion}.` : `Configuration schema ${migration.config.schemaVersion} is current.`);
+    log(migration.changed ? `Configuration migrated to schema ${migration.config.schemaVersion}.` : `Configuration schema ${migration.config.schemaVersion} is current.`);
     const providerPatch = {
       ...(options.policy ? { policy: options.policy } : {}),
       ...(options.offline ? { offline: true } : {}),
-      ...(options.requireProviders ? { requireProviders: true } : {}),
+      ...(options.requireProviders !== undefined ? { requireProviders: options.requireProviders } : {}),
       ...(options.expertMode ? { exposeRawMcp: true } : {}),
     };
     if (Object.keys(providerPatch).length > 0) {
       await updateProviderConfig(root, providerPatch);
-      logs.push("Initialization provider policy persisted in the versioned EI configuration.");
+      log("Initialization provider policy persisted in the versioned EI configuration.");
     }
   }
   const providers = await prepareProviders(root, {
-    policy: options.policy,
+    policy: options.policy ?? "full",
     offline: options.offline,
-    requireProviders: options.requireProviders,
+    requireProviders: options.requireProviders ?? (options.policy !== "native"),
     installMissing: true,
     dryRun: options.dryRun,
     expertMode: options.expertMode,
     providerHome: options.providerHome,
     runner: options.runner,
+    onProgress: options.onProgress,
   });
-  logs.push(...providers.statuses.map((status) => `${status.displayName}: ${status.health} — ${status.message}`));
+  for (const status of providers.statuses) log(`${status.displayName}: ${status.health} — ${status.message}`);
   if (options.dryRun) {
     return { ok: providers.ok && setup.installOp.conflicts === 0, degraded: providers.degraded, setup, providers, graphify: { ok: false, degraded: false, message: "Dry run: Graphify extraction not executed." }, cce: { ok: false, degraded: false, message: "Dry run: CCE indexing not executed." }, logs };
   }
 
   const graphifyStatus = providers.statuses.find((status) => status.name === "graphify");
   const graphify = graphifyStatus?.health === "healthy"
-    ? await runGraphifyExtraction(root, { runner: options.runner, providerHome: options.providerHome })
+    ? await runGraphifyExtraction(root, { runner: options.runner, providerHome: options.providerHome, onProgress: options.onProgress })
     : { ok: false as const, degraded: providers.policy !== "native", message: "Graphify unavailable or disabled; native EI graph extraction used." };
-  logs.push(graphify.message);
+  log(graphify.message);
   const graph = await buildGraph(root, { providerEvidence: graphify.ok });
   setup.graph = { nodeCount: graph.nodeCount, edgeCount: graph.edgeCount, fileCount: graph.fileCount };
-  logs.push(`Canonical EI graph built: ${graph.nodeCount} nodes, ${graph.edgeCount} edges (${graph.fileCount} files).`);
+  log(`Canonical EI graph built: ${graph.nodeCount} nodes, ${graph.edgeCount} edges (${graph.fileCount} files).`);
 
   const cceStatus = providers.statuses.find((status) => status.name === "cce");
   const cce = cceStatus?.health === "healthy"
-    ? await runCceIndex(root, { runner: options.runner, providerHome: options.providerHome })
+    ? await runCceIndex(root, { runner: options.runner, providerHome: options.providerHome, onProgress: options.onProgress })
     : { ok: false as const, degraded: providers.policy !== "native", message: "CCE unavailable or disabled; native EI scoped retrieval used." };
-  logs.push(cce.message);
+  log(cce.message);
   const derived = await deriveClaims(root);
-  logs.push(`Derived claim baseline: ${derived.total} claim(s), ${derived.added} added, ${derived.removed} removed.`);
+  log(`Derived claim baseline: ${derived.total} claim(s), ${derived.added} added, ${derived.removed} removed.`);
 
   let evidence = await buildInitializationEvidence(root, providers, graph, options.runner);
   const bootstrapDocuments = await ensureBootstrapKnowledge(root, evidence);
-  if (bootstrapDocuments.length > 0) logs.push(`Published ${bootstrapDocuments.length} deterministic EI knowledge document(s).`);
+  if (bootstrapDocuments.length > 0) log(`Published ${bootstrapDocuments.length} deterministic EI knowledge document(s).`);
   const snapshot = await recordEvidenceHashes(root);
-  logs.push(`Recorded ${snapshot.hashes.length} hash-pinned knowledge citation(s).`);
+  log(`Recorded ${snapshot.hashes.length} hash-pinned knowledge citation(s).`);
   evidence = await buildInitializationEvidence(root, providers, graph, options.runner);
   const evidencePath = ".engineering-intelligence/context/initialization-evidence.json";
   const generationBriefPath = ".engineering-intelligence/context/KNOWLEDGE-GENERATION-BRIEF.md";
   await writeAtomic(path.join(root, evidencePath), `${JSON.stringify(evidence, null, 2)}\n`);
   await writeAtomic(path.join(root, generationBriefPath), renderGenerationBrief(evidence));
-  logs.push(`Initialization evidence: ${evidencePath}`);
-  logs.push(`Knowledge generation brief: ${generationBriefPath}`);
+  log(`Initialization evidence: ${evidencePath}`);
+  log(`Knowledge generation brief: ${generationBriefPath}`);
   const degraded = providers.degraded || graphify.degraded || cce.degraded || evidence.knowledge.status === "degraded";
-  const requiredProviderRunFailed = options.requireProviders === true && providers.policy !== "native" && (!graphify.ok || !cce.ok);
+  const requiredProviderRunFailed = (options.requireProviders ?? (providers.policy !== "native")) === true && providers.policy !== "native" && (!graphify.ok || !cce.ok);
   return { ok: providers.ok && setup.installOp.conflicts === 0 && !requiredProviderRunFailed, degraded, setup, providers, graphify, cce, evidencePath, generationBriefPath, evidence, logs };
 }

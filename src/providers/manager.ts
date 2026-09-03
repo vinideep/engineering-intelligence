@@ -126,23 +126,62 @@ export async function providerStatus(name: ProviderName, options: { providerHome
   };
 }
 
-async function withLock<T>(providerHome: string, work: () => Promise<T>): Promise<T> {
+async function withLock<T>(providerHome: string, work: () => Promise<T>, timeoutMs = 15_000): Promise<T> {
   await mkdir(providerHome, { recursive: true });
   const lockPath = path.join(providerHome, ".install.lock");
-  try {
-    const info = await stat(lockPath);
-    if (Date.now() - info.mtimeMs > LOCK_STALE_MS) await unlink(lockPath);
-  } catch { /* no lock */ }
+  const checkDeadAndUnlink = async () => {
+    try {
+      const info = await stat(lockPath);
+      let isDead = false;
+      try {
+        const text = await readFile(lockPath, "utf8");
+        const content = JSON.parse(text) as { pid?: number };
+        if (typeof content.pid === "number") {
+          if (content.pid === process.pid) {
+            isDead = true;
+          } else {
+            try {
+              process.kill(content.pid, 0);
+            } catch (error) {
+              const err = error as NodeJS.ErrnoException;
+              if (err.code === "ESRCH") isDead = true;
+            }
+          }
+        } else {
+          isDead = true;
+        }
+      } catch {
+        isDead = true;
+      }
+      if (isDead || Date.now() - info.mtimeMs > LOCK_STALE_MS) {
+        await unlink(lockPath).catch(() => undefined);
+      }
+    } catch { /* no lock */ }
+  };
+
+  const startTime = Date.now();
   let handle;
-  try {
-    handle = await open(lockPath, "wx");
-    await handle.writeFile(JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() }));
-  } catch {
-    throw new Error(`Another EI provider operation holds ${lockPath}. Retry after it finishes.`);
+  while (!handle) {
+    await checkDeadAndUnlink();
+    try {
+      handle = await open(lockPath, "wx");
+      await handle.writeFile(JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() }));
+      break;
+    } catch {
+      if (Date.now() - startTime > timeoutMs) {
+        throw new Error(`Another EI provider operation holds ${lockPath}. Retry after it finishes.`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
   }
-  try { return await work(); } finally {
-    await handle.close().catch(() => undefined);
-    await unlink(lockPath).catch(() => undefined);
+
+  try {
+    return await work();
+  } finally {
+    if (handle) {
+      await handle.close().catch(() => undefined);
+      await unlink(lockPath).catch(() => undefined);
+    }
   }
 }
 
@@ -156,7 +195,14 @@ function managedEnv(paths: ReturnType<typeof managedProviderPaths>): NodeJS.Proc
   };
 }
 
-export async function installProvider(name: ProviderName, options: { providerHome?: string; runner?: ProcessRunner; dryRun?: boolean } = {}): Promise<ProviderStatus> {
+export interface InstallProviderOptions {
+  providerHome?: string;
+  runner?: ProcessRunner;
+  dryRun?: boolean;
+  onProgress?: (message: string) => void;
+}
+
+export async function installProvider(name: ProviderName, options: InstallProviderOptions = {}): Promise<ProviderStatus> {
   const runner = options.runner ?? runProcess;
   const providerHome = options.providerHome ?? defaultProviderHome();
   const provider = PROVIDER_COMPATIBILITY[name];
@@ -165,9 +211,22 @@ export async function installProvider(name: ProviderName, options: { providerHom
     return { name, displayName: provider.displayName, purpose: provider.purpose, health: "missing", requiredVersion: provider.version, message: `Would install ${provider.package}==${provider.version} into ${paths.versionRoot}.`, checkedAt: new Date().toISOString() };
   }
   return withLock(providerHome, async () => {
+    options.onProgress?.(`Checking uv package manager for ${provider.displayName}...`);
     const uv = await runner({ command: "uv", args: ["--version"], timeoutMs: 15_000 });
     if (uv.exitCode !== 0) {
-      return { name, displayName: provider.displayName, purpose: provider.purpose, health: "unsupported", requiredVersion: provider.version, message: "uv is required and was not found; EI will not install system prerequisites automatically.", remediation: ["Install uv from https://docs.astral.sh/uv/ and rerun this command."], checkedAt: new Date().toISOString() };
+      return {
+        name,
+        displayName: provider.displayName,
+        purpose: provider.purpose,
+        health: "unsupported",
+        requiredVersion: provider.version,
+        message: "uv is required and was not found; EI requires uv to manage Graphify and CCE tools.",
+        remediation: [
+          "Install uv with: curl -LsSf https://astral.sh/uv/install.sh | sh (macOS/Linux) or brew install uv",
+          `Then run: engineering-intelligence providers install ${name}`,
+        ],
+        checkedAt: new Date().toISOString(),
+      };
     }
     const transactionId = randomUUID();
     // Python tool environments are not relocatable: console-script shebangs and
@@ -176,6 +235,7 @@ export async function installProvider(name: ProviderName, options: { providerHom
     const staging = providerPathsAt(name, path.join(paths.versionRoot, "releases", transactionId));
     await mkdir(staging.versionRoot, { recursive: true });
     const spec = `${provider.package}==${provider.version}`;
+    options.onProgress?.(`Installing ${provider.displayName} (${spec}) via uv...`);
     const installed = await runner({ command: "uv", args: ["tool", "install", "--force", spec], env: managedEnv(staging), timeoutMs: 10 * 60_000, maxBuffer: 20 * 1024 * 1024 });
     if (installed.exitCode !== 0) {
       await rm(staging.versionRoot, { recursive: true, force: true });
@@ -215,6 +275,7 @@ export async function installProvider(name: ProviderName, options: { providerHom
       await rm(staging.versionRoot, { recursive: true, force: true });
       return status ?? { name, displayName: provider.displayName, purpose: provider.purpose, health: "error", requiredVersion: provider.version, message: "Activated provider failed its health check; the previous version was restored.", checkedAt: new Date().toISOString() };
     }
+    options.onProgress?.(`${provider.displayName} is installed and healthy.`);
     return status;
   });
 }
@@ -236,7 +297,7 @@ export async function prepareProviders(root: string, options: PrepareProvidersOp
   const config = await loadEiConfig(root);
   const policy: ProviderPolicy = options.policy ?? config.providers.policy ?? "auto";
   const offline = options.offline ?? config.providers.offline ?? false;
-  const requireProviders = options.requireProviders ?? config.providers.requireProviders ?? false;
+  const requireProviders = options.requireProviders ?? config.providers.requireProviders ?? (policy === "full");
   const expertMode = options.expertMode ?? config.providers.exposeRawMcp ?? false;
   const actions: string[] = [];
   const statuses: ProviderStatus[] = [];
@@ -244,7 +305,7 @@ export async function prepareProviders(root: string, options: PrepareProvidersOp
     let status = await providerStatus(name, { providerHome: options.providerHome, runner: options.runner, disabled: policy === "native" });
     if (status.health === "missing" || status.health === "degraded") {
       if (policy !== "native" && options.installMissing && !offline) {
-        status = await installProvider(name, { providerHome: options.providerHome, runner: options.runner, dryRun: options.dryRun });
+        status = await installProvider(name, { providerHome: options.providerHome, runner: options.runner, dryRun: options.dryRun, onProgress: options.onProgress });
         actions.push(`${name}: ${status.message}`);
       } else if (offline) {
         status = { ...status, health: "degraded", message: `${status.message} Offline mode prevented installation; native fallback is active.` };

@@ -114,7 +114,7 @@ test("doctor reports legacy folders and locally edited managed content", async (
 test("doctor recognizes an untouched installation as healthy", async () => {
   const root = await project();
   await install(root, ["antigravity", "claude-code", "github-copilot"], options);
-  const actions = await doctor(root);
+  const actions = await doctor(root, options.packageVersion);
   assert.equal(actions.filter((action) => action.status !== "unchanged").length, 0);
 });
 

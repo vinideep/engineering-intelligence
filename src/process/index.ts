@@ -1,7 +1,4 @@
-import { execFile, spawnSync } from "node:child_process";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
+import { spawn, spawnSync } from "node:child_process";
 
 export interface ProcessRequest {
   command: string;
@@ -10,6 +7,7 @@ export interface ProcessRequest {
   env?: NodeJS.ProcessEnv;
   timeoutMs?: number;
   maxBuffer?: number;
+  onChunk?: (chunk: string, source: "stdout" | "stderr") => void;
 }
 
 export interface ProcessResult {
@@ -24,31 +22,86 @@ export interface ProcessResult {
 
 export type ProcessRunner = (request: ProcessRequest) => Promise<ProcessResult>;
 
-export const runProcess: ProcessRunner = async (request) => {
-  const args = request.args ?? [];
-  try {
-    const { stdout, stderr } = await execFileAsync(request.command, args, {
-      cwd: request.cwd,
-      env: request.env,
-      timeout: request.timeoutMs ?? 30_000,
-      maxBuffer: request.maxBuffer ?? 10 * 1024 * 1024,
-      windowsHide: true,
-      encoding: "utf8",
+export const runProcess: ProcessRunner = (request) => {
+  return new Promise((resolve) => {
+    const args = request.args ?? [];
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+    let timer: NodeJS.Timeout | undefined;
+    const maxBuffer = request.maxBuffer ?? 10 * 1024 * 1024;
+
+    let child;
+    try {
+      child = spawn(request.command, args, {
+        cwd: request.cwd,
+        env: request.env,
+        windowsHide: true,
+      });
+    } catch (error) {
+      resolve({
+        command: request.command,
+        args,
+        exitCode: 1,
+        stdout: "",
+        stderr: "",
+        timedOut: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return;
+    }
+
+    if (request.timeoutMs) {
+      timer = setTimeout(() => {
+        timedOut = true;
+        child.kill("SIGTERM");
+        setTimeout(() => {
+          if (!child.killed) child.kill("SIGKILL");
+        }, 3000);
+      }, request.timeoutMs);
+    }
+
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      if (stdout.length + chunk.length <= maxBuffer) {
+        stdout += chunk;
+      }
+      request.onChunk?.(chunk, "stdout");
     });
-    return { command: request.command, args, exitCode: 0, stdout, stderr, timedOut: false };
-  } catch (error) {
-    const failure = error as NodeJS.ErrnoException & { stdout?: string; stderr?: string; code?: string | number; killed?: boolean };
-    const timedOut = failure.killed === true || failure.code === "ETIMEDOUT";
-    return {
-      command: request.command,
-      args,
-      exitCode: typeof failure.code === "number" ? failure.code : timedOut ? 124 : 1,
-      stdout: typeof failure.stdout === "string" ? failure.stdout : "",
-      stderr: typeof failure.stderr === "string" ? failure.stderr : "",
-      timedOut,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
+
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk: string) => {
+      if (stderr.length + chunk.length <= maxBuffer) {
+        stderr += chunk;
+      }
+      request.onChunk?.(chunk, "stderr");
+    });
+
+    child.on("error", (error) => {
+      if (timer) clearTimeout(timer);
+      resolve({
+        command: request.command,
+        args,
+        exitCode: 1,
+        stdout,
+        stderr,
+        timedOut,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+
+    child.on("close", (code) => {
+      if (timer) clearTimeout(timer);
+      resolve({
+        command: request.command,
+        args,
+        exitCode: timedOut ? 124 : (code ?? 0),
+        stdout,
+        stderr,
+        timedOut,
+      });
+    });
+  });
 };
 
 /** Argument-array synchronous runner for legacy synchronous analysis paths. */

@@ -59,7 +59,7 @@ async function writeAtomic(location: string, value: unknown): Promise<void> {
 /** Run Graphify only against EI's policy-filtered mirror in deterministic code-only mode. */
 export async function runGraphifyExtraction(
   root: string,
-  options: { runner?: ProcessRunner; providerHome?: string } = {},
+  options: { runner?: ProcessRunner; providerHome?: string; onProgress?: (message: string) => void } = {},
 ): Promise<GraphifyExtractionResult> {
   const runner = options.runner ?? runProcess;
   const status = await providerStatus("graphify", { runner, providerHome: options.providerHome });
@@ -67,10 +67,12 @@ export async function runGraphifyExtraction(
     return { ok: false, degraded: true, status, message: `${status.message} Native EI graph extraction remains active.` };
   }
 
+  options.onProgress?.("Syncing provider workspace for Graphify...");
   const workspace = await syncProviderWorkspace(root);
   const outputDir = path.join(root, GRAPHIFY_DIR);
   await mkdir(outputDir, { recursive: true });
   const args = ["extract", workspace.path, "--code-only", "--out", outputDir];
+  options.onProgress?.("Extracting structural graph with Graphify...");
   const execution = await runner({
     command: status.executable,
     args,

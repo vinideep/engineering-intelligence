@@ -89,13 +89,14 @@ async function sourceHashes(manifestPath: string): Promise<Record<string, string
  */
 export async function runCceIndex(
   root: string,
-  options: { runner?: ProcessRunner; providerHome?: string } = {},
+  options: { runner?: ProcessRunner; providerHome?: string; onProgress?: (message: string) => void } = {},
 ): Promise<CceIndexResult> {
   const runner = options.runner ?? runProcess;
   const status = await providerStatus("cce", { runner, providerHome: options.providerHome });
   if (status.health !== "healthy" || !status.executable) {
     return { ok: false, degraded: true, status, message: `${status.message} EI native scoped retrieval remains active.` };
   }
+  options.onProgress?.("Syncing provider workspace for CCE...");
   const project = path.join(root, CCE_PROJECT);
   const workspace = await syncProviderWorkspace(root, `${CCE_PROJECT}/workspace`);
   await mkdir(project, { recursive: true });
@@ -114,11 +115,55 @@ export async function runCceIndex(
     "  redact_pii: true",
     "",
   ].join("\n"));
-  const cceEnv = { ...process.env, CI: "1", NO_COLOR: "1", CCE_EMBED_BACKEND: "fastembed", CCE_FASTEMBED_CACHE_PATH: modelCache };
+  const cceEnv = {
+    ...process.env,
+    NO_COLOR: "1",
+    PYTHONUNBUFFERED: "1",
+    CCE_EMBED_BACKEND: "fastembed",
+    CCE_FASTEMBED_CACHE_PATH: modelCache,
+  };
   // Do not call `cce init`: upstream initialization installs its own hooks,
   // instructions, and MCP registration. EI needs only the local index, so it
   // invokes the indexer directly against a nested EI-owned mirror.
-  const index = await runner({ command: status.executable, args: ["index", "--full", "--path", workspace.path], cwd: project, env: cceEnv, timeoutMs: 15 * 60_000, maxBuffer: 20 * 1024 * 1024 });
+  options.onProgress?.("Building Code Context Engine local vector index (this may take a moment)...");
+  const startTime = Date.now();
+  let lastProgress = Date.now();
+  const ticker = setInterval(() => {
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    if (Date.now() - lastProgress >= 15_000) {
+      options.onProgress?.(`CCE indexing in progress (${elapsed}s elapsed)...`);
+      lastProgress = Date.now();
+    }
+  }, 10_000);
+
+  let lineBuffer = "";
+  const onChunk = (chunk: string) => {
+    lastProgress = Date.now();
+    lineBuffer += chunk;
+    const parts = lineBuffer.split(/[\r\n]+/);
+    lineBuffer = parts.pop() ?? "";
+    for (const line of parts) {
+      const trimmed = line.trim();
+      if (trimmed) {
+        options.onProgress?.(`  [cce] ${trimmed}`);
+      }
+    }
+  };
+
+  let index;
+  try {
+    index = await runner({
+      command: status.executable,
+      args: ["index", "--full", "--path", workspace.path],
+      cwd: project,
+      env: cceEnv,
+      timeoutMs: 15 * 60_000,
+      maxBuffer: 20 * 1024 * 1024,
+      onChunk,
+    });
+  } finally {
+    clearInterval(ticker);
+  }
   if (index.exitCode !== 0) {
     return { ok: false, degraded: true, status: { ...status, health: "error", message: `CCE indexing failed: ${(index.stderr || index.error || "unknown error").trim().slice(-1000)}` }, workspaceHash: workspace.workspaceHash, message: "CCE index was not refreshed; EI native scoped retrieval remains active." };
   }

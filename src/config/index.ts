@@ -76,6 +76,7 @@ function normalizeConfig(raw: Record<string, unknown>, legacy: Record<string, un
     : {};
   const rawPolicy = providers.policy;
   const policy: ProviderPolicy = rawPolicy === "full" || rawPolicy === "native" ? rawPolicy : "auto";
+  const requireProviders = providers.requireProviders === undefined ? (policy === "full") : providers.requireProviders === true;
   return {
     ...raw,
     schemaVersion: EI_CONFIG_SCHEMA_VERSION,
@@ -94,7 +95,7 @@ function normalizeConfig(raw: Record<string, unknown>, legacy: Record<string, un
     providers: {
       policy,
       offline: providers.offline === true,
-      requireProviders: providers.requireProviders === true,
+      requireProviders,
       exposeRawMcp: providers.exposeRawMcp === true,
     },
   };

@@ -327,19 +327,22 @@ function parseArgs(args: string[]): Options {
 }
 
 async function selectIdes(options: Options, readline: any): Promise<IdeId[]> {
-  if ((options.command !== "install" && options.command !== "create" && options.command !== "initialize") || options.ides.length > 0) {
+  if (options.ides.length > 0) {
     return options.ides;
   }
+  const { detectIdes } = await import("../orchestrators/setup.js");
+  const detected = detectIdes(options.root);
   if (options.yes || !readline) {
-    return ["generic"];
+    return detected.length > 0 ? detected : ["generic"];
   }
-  output.write(`Select one or more IDE adapters:\n${IDE_IDS.map((ide, i) => `  ${i + 1}. ${ide}`).join("\n")}\n`);
-  const answer = (await readline.question("Adapter numbers or ids, comma separated [generic]: ")) as string;
-  const choices = answer.trim().length === 0 ? ["generic"] : answer.split(",").map((part: string) => part.trim());
-  const mapped = choices.map((choice: string) => {
+  const defaultChoices = detected.length > 0 ? detected.join(", ") : "generic";
+  output.write(`\nSelect target AI IDE adapter(s):\n${IDE_IDS.map((ide, i) => `  ${i + 1}. ${ide}${detected.includes(ide) ? " (auto-detected)" : ""}`).join("\n")}\n`);
+  const answer = (await readline.question(`Adapter numbers or names, comma-separated [${defaultChoices}]: `)) as string;
+  const rawChoices = answer.trim().length === 0 ? (detected.length > 0 ? detected : ["generic"]) : answer.split(",").map((part: string) => part.trim());
+  const mapped = rawChoices.map((choice: string) => {
     const numbered = Number.parseInt(choice, 10);
     const candidate = Number.isNaN(numbered) ? choice : IDE_IDS[numbered - 1];
-    if (!candidate || !isIdeId(candidate)) throw new Error(`Unknown IDE selection "${choice}".`);
+    if (!candidate || !isIdeId(candidate)) throw new Error(`Unknown IDE selection "${choice}". Supported: ${IDE_IDS.join(", ")}.`);
     return candidate;
   });
   return [...new Set(mapped)] as IdeId[];
@@ -454,23 +457,22 @@ async function main(): Promise<void> {
   if (options.command === "initialize") {
     const ides = await selectIdes(options, readline);
     const { runInitialization } = await import("../orchestrators/initialize.js");
+    const onProgress = options.json ? undefined : (msg: string) => output.write(`  ${msg}\n`);
     const result = await runInitialization(options.root, {
       ides,
       packageVersion: version,
-      policy: options.providerPolicy,
+      policy: options.providerPolicy ?? "full",
       offline: options.offline,
-      requireProviders: options.requireProviders,
+      requireProviders: options.requireProviders ?? (options.providerPolicy !== "native"),
       dryRun: options.dryRun,
       force: options.force,
       expertMode: options.expertMode,
       promptOverwrite,
+      onProgress,
     });
     if (options.json) output.write(`${JSON.stringify(result, null, 2)}\n`);
-    else {
-      for (const line of result.logs) output.write(`  ${line}\n`);
-      if (!options.dryRun && result.generationBriefPath) {
-        output.write(`Initialization evidence is ready. Run the installed initialize-engineering-intelligence workflow to synthesize and validate EI-owned knowledge from ${result.generationBriefPath}.\n`);
-      }
+    else if (!options.dryRun && result.generationBriefPath) {
+      output.write(`Initialization evidence is ready. Run the installed initialize-engineering-intelligence workflow to synthesize and validate EI-owned knowledge from ${result.generationBriefPath}.\n`);
     }
     process.exitCode = result.ok ? 0 : 1;
     if (readline) readline.close();
@@ -478,8 +480,8 @@ async function main(): Promise<void> {
   }
 
   if (options.command === "setup") {
+    const ides = await selectIdes(options, readline);
     const { runSetup, mcpRegistrationHint } = await import("../orchestrators/setup.js");
-    const ides = options.ides.length > 0 ? options.ides : undefined;
     const result = await runSetup(options.root, {
       ides,
       packageVersion: version,
@@ -922,7 +924,18 @@ async function main(): Promise<void> {
     return;
   }
   if (options.command === "update") {
-    const result = await update(options.root, { dryRun: options.dryRun, force: options.force, packageVersion: version, promptOverwrite });
+    const { migrateEiConfig } = await import("../config/index.js");
+    let ides: IdeId[] | undefined = options.ides.length > 0 ? options.ides : undefined;
+    if (!ides && readline && !options.yes) {
+      ides = await selectIdes(options, readline);
+    }
+    if (!options.dryRun) {
+      const migration = await migrateEiConfig(options.root);
+      if (migration.changed) output.write(`Configuration migrated to schema ${migration.config.schemaVersion}.\n`);
+    }
+    const result = ides && ides.length > 0
+      ? await install(options.root, ides, { dryRun: options.dryRun, force: options.force, packageVersion: version, promptOverwrite })
+      : await update(options.root, { dryRun: options.dryRun, force: options.force, packageVersion: version, promptOverwrite });
     printResult("Update complete", result, options.dryRun);
     process.exitCode = result.conflicts > 0 ? 1 : 0;
     if (readline) readline.close();
