@@ -57,10 +57,34 @@ function deduplicateEdges(edges: GraphEdge[]): GraphEdge[] {
   return [...seen.values()];
 }
 
+function isGraphifyOnlyMetadata(metadata: Record<string, unknown>): boolean {
+  if (metadata.provider !== "graphify") return false;
+  const providers = Array.isArray(metadata.providers)
+    ? metadata.providers.filter((value): value is string => typeof value === "string")
+    : [];
+  return !providers.includes("native");
+}
+
+function isGraphifyOnlyNode(node: GraphNode): boolean {
+  return isGraphifyOnlyMetadata(node.metadata);
+}
+
+function isGraphifyOnlyEdge(edge: GraphEdge): boolean {
+  return isGraphifyOnlyMetadata(edge.metadata);
+}
+
+const SOURCE_PATH_RE = /\.(tsx?|jsx?|mjs|cjs|mts|cts|py|go|rs|rb|java|kt)$/i;
+
+function sourceKey(value: string): string {
+  return value.replace(/\\/g, "/").replace(SOURCE_PATH_RE, "");
+}
+
 export interface BuildOptions {
   scope?: string;
   files?: string[];
   policy?: ProjectFilePolicy;
+  /** Existing graph used to resolve changed-file calls against unchanged symbols. */
+  baseGraph?: DependencyGraph;
 }
 
 export interface BuildResult {
@@ -141,8 +165,17 @@ export async function buildDependencyGraph(root: string, options: BuildOptions =
     }
   }
 
-  // Build module import index for scoped call resolution
+  const changedModuleIds = new Set((options.files ?? []).map((file) => `module:${sourceKey(file)}`));
+
+  // Build module import index for scoped call resolution. On an incremental
+  // build retain imports from unchanged modules, but replace the changed
+  // modules' import lists with the freshly parsed edges.
   const importsByModule = new Map<string, Set<string>>();
+  for (const edge of options.baseGraph?.edges ?? []) {
+    if (edge.relation !== "imports" || changedModuleIds.has(edge.from)) continue;
+    if (!importsByModule.has(edge.from)) importsByModule.set(edge.from, new Set());
+    importsByModule.get(edge.from)!.add(edge.to);
+  }
   for (const edge of allEdges) {
     if (edge.relation === "imports") {
       if (!importsByModule.has(edge.from)) importsByModule.set(edge.from, new Set());
@@ -150,7 +183,14 @@ export async function buildDependencyGraph(root: string, options: BuildOptions =
     }
   }
 
-  const globalSymbols = buildGlobalSymbolTable(symbolNodes);
+  const unchangedSymbols = (options.baseGraph?.nodes ?? []).filter((node) => {
+    if (node.kind !== "symbol") return false;
+    const moduleId = node.id.startsWith("symbol:")
+      ? `module:${node.id.slice("symbol:".length).split("#")[0]}`
+      : node.id;
+    return !changedModuleIds.has(moduleId);
+  });
+  const globalSymbols = buildGlobalSymbolTable([...unchangedSymbols, ...symbolNodes]);
   const callEdges = resolvePendingCalls(allPendingCalls, globalSymbols, importsByModule);
   allEdges.push(...callEdges);
 
@@ -228,10 +268,24 @@ export async function loadExistingGraph(graphPath: string): Promise<DependencyGr
 
 export async function mergeIncrementalUpdate(existing: DependencyGraph, updated: DependencyGraph, changedFiles: string[]): Promise<DependencyGraph> {
   // Remove all nodes and edges whose evidence overlaps with changed files
-  const changedSet = new Set(changedFiles.map((f) => f.replace(/\\/g, "/")));
+  const changedSet = new Set(changedFiles.map(sourceKey));
   const affectedNodeIds = new Set<string>();
+  // Provider reconciliation runs after this merge and sees the complete native
+  // graph. Remove the previous provider-only projection first; otherwise every
+  // incremental sync appends a second `graphify:*` node set because the
+  // changed-file build cannot match provider nodes belonging to unchanged
+  // manifests/files. Native nodes merely corroborated by Graphify stay intact.
+  const graphifyOnlyNodeIds = new Set(
+    existing.nodes.filter(isGraphifyOnlyNode).map((node) => node.id),
+  );
+  for (const id of graphifyOnlyNodeIds) affectedNodeIds.add(id);
   for (const node of existing.nodes) {
-    if (node.evidence.some((e) => changedSet.has(e.split(":")[0]))) {
+    // Module/symbol `path` identifies the node's own source. Evidence also
+    // contains importer locations for target nodes, so using evidence alone
+    // incorrectly evicts unchanged targets whenever a changed file imports
+    // them. Keep inbound relationships and only replace nodes owned by a
+    // changed source file.
+    if (node.path && changedSet.has(sourceKey(node.path))) {
       affectedNodeIds.add(node.id);
     }
   }
@@ -241,7 +295,11 @@ export async function mergeIncrementalUpdate(existing: DependencyGraph, updated:
   // relationships from unchanged sources. A target implementation change does
   // not make its importers stop importing it. If a target was actually removed,
   // the endpoint filter below removes the now-dangling relationship.
-  const keptEdges = existing.edges.filter((e) => !affectedNodeIds.has(e.from));
+  const keptEdges = existing.edges.filter((edge) =>
+    !affectedNodeIds.has(edge.from)
+    && !graphifyOnlyNodeIds.has(edge.to)
+    && !isGraphifyOnlyEdge(edge),
+  );
 
   const merged: DependencyGraph = {
     ...existing,

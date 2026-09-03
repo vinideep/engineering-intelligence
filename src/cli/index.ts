@@ -13,9 +13,9 @@ import { packageVersion } from "../version.js";
 import type { ProviderName } from "../providers/types.js";
 import type { ProviderPolicy } from "../config/index.js";
 
-type Command = "initialize" | "providers" | "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "verify" | "claims" | "context" | "telemetry" | "setup" | "ask" | "guard" | "health" | "impact" | "who-calls" | "preflight" | "postflight" | "evidence-record" | "evidence-check";
+type Command = "initialize" | "providers" | "install" | "update" | "sync" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "verify" | "claims" | "context" | "telemetry" | "setup" | "ask" | "guard" | "health" | "impact" | "who-calls" | "preflight" | "postflight" | "evidence-record" | "evidence-check";
 
-const COMMANDS: Command[] = ["initialize", "providers", "install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "verify", "claims", "context", "telemetry", "setup", "ask", "guard", "health", "impact", "who-calls", "preflight", "postflight", "evidence-record", "evidence-check"];
+const COMMANDS: Command[] = ["initialize", "providers", "install", "create", "update", "sync", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "verify", "claims", "context", "telemetry", "setup", "ask", "guard", "health", "impact", "who-calls", "preflight", "postflight", "evidence-record", "evidence-check"];
 
 interface Options {
   command: Command;
@@ -50,7 +50,7 @@ interface Options {
   failOn?: string;
   providerPolicy?: ProviderPolicy;
   offline: boolean;
-  requireProviders: boolean;
+  requireProviders?: boolean;
   expertMode: boolean;
   providerAction?: "status" | "install" | "repair" | "upgrade" | "expose" | "hide" | "purge";
   providerName?: ProviderName;
@@ -59,7 +59,7 @@ interface Options {
 function usage(all = false): string {
   const core = `engineering-intelligence — codebase intelligence that lives in your repo.
 
-Four commands do everything:
+Core commands:
 
 Usage:
   engineering-intelligence install [path] [--ide <id>...] [--yes] [--dry-run] [--force]
@@ -67,6 +67,8 @@ Usage:
   engineering-intelligence providers status|install|repair|upgrade|expose|hide|purge [graphify|cce] [path]
   engineering-intelligence create [path] [--ide <id>...] [--yes]
   engineering-intelligence update [path] [--dry-run] [--force]
+  engineering-intelligence sync [path] [--files a,b] [--json]
+  engineering-intelligence health [path] [--strict] [--json]
   engineering-intelligence doctor [path] [--json]
   engineering-intelligence uninstall [path] [--dry-run] [--force]
   engineering-intelligence visualize [path] [--open]
@@ -139,7 +141,7 @@ function parseArgs(args: string[]): Options {
   let failOn: string | undefined;
   let providerPolicy: ProviderPolicy | undefined;
   let offline = false;
-  let requireProviders = false;
+  let requireProviders: boolean | undefined;
   let expertMode = false;
   let providerAction: Options["providerAction"];
   let providerName: ProviderName | undefined;
@@ -461,9 +463,9 @@ async function main(): Promise<void> {
     const result = await runInitialization(options.root, {
       ides,
       packageVersion: version,
-      policy: options.providerPolicy ?? "full",
+      policy: options.providerPolicy,
       offline: options.offline,
-      requireProviders: options.requireProviders ?? (options.providerPolicy !== "native"),
+      requireProviders: options.requireProviders,
       dryRun: options.dryRun,
       force: options.force,
       expertMode: options.expertMode,
@@ -938,6 +940,29 @@ async function main(): Promise<void> {
       : await update(options.root, { dryRun: options.dryRun, force: options.force, packageVersion: version, promptOverwrite });
     printResult("Update complete", result, options.dryRun);
     process.exitCode = result.conflicts > 0 ? 1 : 0;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "sync") {
+    const { syncEngineeringKnowledge } = await import("../orchestrators/change.js");
+    const result = await syncEngineeringKnowledge(options.root, options.files.length > 0 ? options.files : undefined);
+    if (options.json) {
+      output.write(`${JSON.stringify(result, null, 2)}\n`);
+    } else {
+      const scope = result.changedFiles.length > 0 ? result.changedFiles.join(", ") : "the working tree";
+      output.write(`Synchronized EI evidence for ${scope}.\n`);
+      output.write(`  Graph: ${result.graph.nodeCount} nodes, ${result.graph.edgeCount} edges (${result.graph.fileCount} files)\n`);
+      output.write(`  Claims: ${result.claims.verified}/${result.claims.total} verified\n`);
+      output.write(`  Providers: ${result.providers.policy}${result.providers.degraded ? " with native fallback" : ""}\n`);
+      if (result.requiresModelKnowledgeSync) {
+        output.write("  Canonical prose needs evidence-aware model synchronization; no prose was rewritten by this command.\n");
+      } else {
+        output.write("  Canonical prose is still current; no model synchronization is required.\n");
+      }
+    }
+    const badClaims = result.claims.refuted + result.claims.stale + result.claims.missing;
+    process.exitCode = !result.providers.ok || badClaims > 0 || result.knowledge.drift > 0 || result.evidence.stale > 0 ? 1 : 0;
     if (readline) readline.close();
     return;
   }

@@ -204,6 +204,44 @@ test("incremental merge preserves inbound imports when only the target changes",
   assert.ok(merged.edges.some((edge) => edge.from === "module:src/a" && edge.to === "module:src/b"));
 });
 
+test("incremental merge does not evict an unchanged target because its import evidence cites the changed importer", async () => {
+  const existing = {
+    schemaVersion: 1,
+    graphType: "dependency",
+    generatedAt: new Date(0).toISOString(),
+    scope: "fixture",
+    nodes: [
+      { id: "module:src/a", kind: "module", label: "a", path: "src/a.ts", confidence: "verified", metadata: {}, evidence: ["src/a.ts"] },
+      { id: "module:src/b", kind: "module", label: "b", path: "src/b.ts", confidence: "verified", metadata: {}, evidence: ["src/a.ts:1"] },
+    ],
+    edges: [
+      { from: "module:src/a", to: "module:src/b", relation: "imports", confidence: "verified", metadata: {}, evidence: ["src/a.ts:1"] },
+    ],
+    unknowns: [],
+  };
+  const updated = { ...existing, nodes: [existing.nodes[0]], edges: [] };
+  const merged = await mergeIncrementalUpdate(existing, updated, ["src/a.ts"]);
+  assert.ok(merged.nodes.some((node) => node.id === "module:src/b"), "the unchanged target node must remain available");
+});
+
+test("incremental dependency parsing resolves changed-file calls against unchanged symbols", async () => {
+  const full = await buildDependencyGraph(REPO_ROOT);
+  const incremental = await buildDependencyGraph(REPO_ROOT, {
+    files: ["src/cli/index.ts"],
+    baseGraph: full.graph,
+  });
+  const expectedCalls = full.graph.edges.filter(
+    (edge) => edge.relation === "calls" && edge.from.startsWith("symbol:src/cli/index#"),
+  );
+  assert.ok(expectedCalls.length > 0, "the full graph should contain CLI cross-file calls");
+  for (const expected of expectedCalls) {
+    assert.ok(
+      incremental.graph.edges.some((edge) => edge.from === expected.from && edge.to === expected.to && edge.relation === expected.relation),
+      `incremental graph missed ${expected.from} -> ${expected.to}`,
+    );
+  }
+});
+
 // --- v2.2: freshness stamp, test tagging, churn, richer impact --------------
 
 test("graph is stamped with the current git commit", async () => {

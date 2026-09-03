@@ -56,7 +56,7 @@ export async function buildGraph(root: string, options: BuildGraphOptions = {}):
   if (options.update && options.files && options.files.length > 0) {
     // Incremental: build only for changed files, then merge into existing graph
     const existing = await loadExistingGraph(graphPath);
-    result = await buildDependencyGraph(root, { files: options.files });
+    result = await buildDependencyGraph(root, { files: options.files, baseGraph: existing ?? undefined });
     if (existing) {
       const merged = await mergeIncrementalUpdate(existing, result.graph, options.files);
       result = { ...result, graph: merged, nodeCount: merged.nodes.length, edgeCount: merged.edges.length };

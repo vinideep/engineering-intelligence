@@ -76,7 +76,10 @@ function normalizeConfig(raw: Record<string, unknown>, legacy: Record<string, un
     : {};
   const rawPolicy = providers.policy;
   const policy: ProviderPolicy = rawPolicy === "full" || rawPolicy === "native" ? rawPolicy : "auto";
-  const requireProviders = providers.requireProviders === undefined ? (policy === "full") : providers.requireProviders === true;
+  // Provider installation is optional by default for every policy. `full`
+  // selects the provider-backed path; `--require-providers` is the explicit
+  // opt-in that turns a missing/unhealthy provider into a hard failure.
+  const requireProviders = providers.requireProviders === true;
   return {
     ...raw,
     schemaVersion: EI_CONFIG_SCHEMA_VERSION,

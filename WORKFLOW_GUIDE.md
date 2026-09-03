@@ -150,6 +150,20 @@ For each feature or bugfix:
    /sync-engineering-intelligence Review the current working-tree diff
    ```
 
+   For a fast deterministic refresh when an IDE agent is not available, pass the
+   changed source files directly. This updates the graph, provider indexes, and
+   derived claims without rewriting canonical knowledge prose:
+
+   ```bash
+   npx engineering-intelligence sync . --files src/routes/route-plan.ts,src/providers/carrier.ts
+   ```
+
+   A source change reports that model-assisted knowledge synchronization is
+   required. Let the IDE workflow update only the affected knowledge sections.
+   The native graph merge is incremental; provider-backed runs may still refresh
+   their approved workspace index. Use native mode for the fastest deterministic
+   local refresh.
+
 ## 5. Safety Gates Run By The Main Workflow
 
 The main `/engineering-intelligence` workflow applies these gates when relevant:

@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
+import { buildGraph, loadExistingGraph } from "../dist/graph/index.js";
 import { buildDependencyGraph } from "../dist/graph/builders/dependency.js";
 import { reconcileGraphifyEvidence } from "../dist/graph/provider-evidence.js";
 
@@ -20,11 +21,13 @@ async function fixture() {
   await mkdir(path.join(root, "src"), { recursive: true });
   await mkdir(path.join(workspace, "src"), { recursive: true });
   await mkdir(graphify, { recursive: true });
+  const mcp = '{"mcpServers":{"engineering-intelligence":{"command":"npx"}}}\n';
   await writeFile(path.join(root, "src", "a.ts"), a);
   await writeFile(path.join(root, "src", "b.ts"), b);
+  await writeFile(path.join(root, ".mcp.json"), mcp);
   await writeFile(path.join(workspace, "src", "a.ts"), a);
   await writeFile(path.join(workspace, "src", "b.ts"), b);
-  const sourceHashes = { "src/a.ts": digest(a), "src/b.ts": digest(b) };
+  const sourceHashes = { ".mcp.json": digest(mcp), "src/a.ts": digest(a), "src/b.ts": digest(b) };
   const run = {
     schemaVersion: 1,
     provider: "graphify",
@@ -110,4 +113,24 @@ test("duplicate Graphify rows cannot self-corroborate a contested relationship",
   const edge = result.graph.edges.find((candidate) => candidate.from === "module:src/a" && candidate.to === "module:src/b" && candidate.relation === "references");
   assert.equal(edge.metadata.trustState, "contested");
   assert.equal(edge.metadata.corroborated, false);
+});
+
+test("incremental builds replace provider-only evidence instead of duplicating it", async (t) => {
+  const fx = await fixture();
+  t.after(async () => rm(fx.root, { recursive: true, force: true }));
+  await writeFile(path.join(fx.graphify, "graph.json"), JSON.stringify({
+    nodes: [{ id: "mcp", label: "engineering-intelligence", source_file: ".mcp.json", confidence: "EXTRACTED" }],
+    edges: [],
+  }));
+
+  await buildGraph(fx.root);
+  const full = await loadExistingGraph(path.join(fx.root, ".engineering-intelligence", "graph", "dependency-graph.json"));
+  const providerOnly = (graph) => graph.nodes.filter((node) => node.metadata?.provider === "graphify" && !node.metadata?.providers?.includes("native"));
+  assert.equal(providerOnly(full).length, 1);
+
+  const incremental = await buildGraph(fx.root, { update: true, files: ["src/a.ts"] });
+  assert.equal(incremental.wasIncremental, true);
+  const incrementalGraph = await loadExistingGraph(path.join(fx.root, ".engineering-intelligence", "graph", "dependency-graph.json"));
+  assert.equal(providerOnly(incrementalGraph).length, 1, "provider-only nodes must be replaced, not appended");
+  assert.equal(incrementalGraph.nodes.filter((node) => node.id.startsWith("graphify:mcp:")).length, 0, "provider-only node IDs must not accumulate suffixes");
 });

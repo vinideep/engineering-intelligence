@@ -8,6 +8,8 @@ import { deriveClaims, verifyClaims } from "../claims/index.js";
 import { changedFiles } from "../verify/index.js";
 import { verifyKnowledge } from "../verify/index.js";
 
+const SOURCE_FILE_RE = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|sql)$/i;
+
 export async function validateChange(root: string, files?: string[], base = "HEAD") {
   const changed = files && files.length > 0 ? files : await changedFiles(root);
   const freshness = await ensureFreshGraph(root);
@@ -52,7 +54,11 @@ export async function syncEngineeringKnowledge(root: string, files?: string[]) {
     claims,
     knowledge,
     evidence,
-    requiresModelKnowledgeSync: knowledge.drift > 0 || evidence.stale > 0,
+    // A deterministic sync can refresh structure and derived facts, but it
+    // cannot decide whether changed application code requires prose updates.
+    // Signal that follow-up explicitly for source changes, even when the old
+    // prose did not cite the newly added file.
+    requiresModelKnowledgeSync: changed.some((file) => SOURCE_FILE_RE.test(file)) || knowledge.drift > 0 || evidence.stale > 0,
     note: "Code, graph, provider index, and derived claims are synchronized. Canonical prose is never rewritten without evidence-aware model synthesis.",
   };
 }

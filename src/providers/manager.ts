@@ -297,7 +297,7 @@ export async function prepareProviders(root: string, options: PrepareProvidersOp
   const config = await loadEiConfig(root);
   const policy: ProviderPolicy = options.policy ?? config.providers.policy ?? "auto";
   const offline = options.offline ?? config.providers.offline ?? false;
-  const requireProviders = options.requireProviders ?? config.providers.requireProviders ?? (policy === "full");
+  const requireProviders = options.requireProviders ?? config.providers.requireProviders ?? false;
   const expertMode = options.expertMode ?? config.providers.exposeRawMcp ?? false;
   const actions: string[] = [];
   const statuses: ProviderStatus[] = [];

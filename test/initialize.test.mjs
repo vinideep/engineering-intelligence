@@ -84,6 +84,25 @@ test("native-only initialization is explicit and does not pretend provider evide
   assert.equal(config.providers.policy, "native");
 });
 
+test("omitting provider policy keeps providers optional and preserves native fallback", async () => {
+  const root = await fixture();
+  const unavailable = async (request) => ({ command: request.command, args: request.args ?? [], exitCode: 1, stdout: "", stderr: "provider unavailable", timedOut: false });
+  const result = await runInitialization(root, {
+    ides: ["generic"],
+    packageVersion: "4.2.0",
+    runner: unavailable,
+    providerHome: path.join(root, "shared-provider-home"),
+  });
+
+  assert.equal(result.ok, true, "optional providers must not block initialization");
+  assert.equal(result.degraded, true, "the provider fallback must remain visible");
+  assert.equal(result.providers.policy, "auto");
+  assert.equal(result.providers.statuses.every((status) => status.health === "unsupported"), true);
+  const config = JSON.parse(await readFile(path.join(root, ".engineering-intelligence", "ei.config.json"), "utf8"));
+  assert.equal(config.providers.policy, "auto");
+  assert.equal(config.providers.requireProviders, false);
+});
+
 test("required-provider initialization fails when a healthy binary cannot extract or index", async () => {
   const root = await fixture();
   const runner = async (request) => {

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { deriveClaims, verifyClaims } from "../claims/index.js";
-import { migrateEiConfig, updateProviderConfig, type ProviderPolicy } from "../config/index.js";
+import { loadEiConfig, migrateEiConfig, updateProviderConfig, type ProviderPolicy } from "../config/index.js";
 import { checkEvidenceHashes, recordEvidenceHashes } from "../evidence/index.js";
 import { buildGraph, loadExistingGraph } from "../graph/index.js";
 import { collectProjectFiles, ProjectFilePolicy } from "../project-files/index.js";
@@ -203,9 +203,9 @@ export async function runInitialization(root: string, options: InitializeOptions
     }
   }
   const providers = await prepareProviders(root, {
-    policy: options.policy ?? "full",
+    policy: options.policy,
     offline: options.offline,
-    requireProviders: options.requireProviders ?? (options.policy !== "native"),
+    requireProviders: options.requireProviders,
     installMissing: true,
     dryRun: options.dryRun,
     expertMode: options.expertMode,
@@ -248,6 +248,10 @@ export async function runInitialization(root: string, options: InitializeOptions
   log(`Initialization evidence: ${evidencePath}`);
   log(`Knowledge generation brief: ${generationBriefPath}`);
   const degraded = providers.degraded || graphify.degraded || cce.degraded || evidence.knowledge.status === "degraded";
-  const requiredProviderRunFailed = (options.requireProviders ?? (providers.policy !== "native")) === true && providers.policy !== "native" && (!graphify.ok || !cce.ok);
+  const config = await loadEiConfig(root);
+  const requiredProviderRunFailed = providers.policy !== "native"
+    && providers.ok
+    && config.providers.requireProviders === true
+    && (!graphify.ok || !cce.ok);
   return { ok: providers.ok && setup.installOp.conflicts === 0 && !requiredProviderRunFailed, degraded, setup, providers, graphify, cce, evidencePath, generationBriefPath, evidence, logs };
 }
