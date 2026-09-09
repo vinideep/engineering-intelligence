@@ -11,6 +11,17 @@ import { inspectProjectProviderRuns } from "../providers/project-status.js";
 import type { ProcessRunner } from "../process/index.js";
 import { estimateTokens } from "../token-optimizer.js";
 import { verifyKnowledge } from "../verify/index.js";
+import { loadExperiments } from "../experiment/ledger.js";
+
+export interface NegativeConstraint {
+  experimentId: string;
+  targetFile: string;
+  targetSymbol?: string;
+  hypothesis: string;
+  revertReason: string;
+  failedAt: string;
+  deltaPercent?: number;
+}
 
 export type TaskKind = "simple" | "bug" | "feature" | "api-change" | "database-change" | "architecture-change" | "security-change";
 export type RiskLevel = "low" | "medium" | "high" | "critical";
@@ -82,6 +93,7 @@ export interface ContextPackV2 {
   evidence: Array<{ path: string; lines: [number, number]; hash: string; provider: string; current: true }>;
   claims: Array<{ id: string; statement: string; evidence: string[] }>;
   conflicts: string[];
+  negativeConstraints?: NegativeConstraint[];
   unknowns: string[];
   risk: { level: RiskLevel; requiredGates: string[]; testsToRun: string[] };
   tokenAllocation: { budget: number; knowledge: number; architecture: number; code: number; reserve: number; used: number };
@@ -344,6 +356,13 @@ function renderMarkdown(pack: Omit<ContextPackV2, "markdown">): string {
     lines.push("");
   }
   if (pack.conflicts.length > 0) lines.push("## Conflicts", ...pack.conflicts.map((item) => `- ${item}`), "");
+  if (pack.negativeConstraints && pack.negativeConstraints.length > 0) {
+    lines.push("## Negative constraints (past failed experiments)");
+    for (const nc of pack.negativeConstraints) {
+      lines.push(`- ✗ REVERT [${nc.experimentId}] on ${nc.targetFile}: "${nc.hypothesis}" failed (${nc.revertReason})${nc.deltaPercent !== undefined ? ` [delta: ${nc.deltaPercent}%]` : ""}`);
+    }
+    lines.push("");
+  }
   if (pack.unknowns.length > 0) lines.push("## Unknowns", ...pack.unknowns.map((item) => `- ${item}`), "");
   lines.push("## Required validation", `- Gates: ${pack.risk.requiredGates.join(", ") || "project defaults"}`, `- Tests: ${pack.risk.testsToRun.join(", ") || "targeted tests must be identified"}`, "", `Stop: ${pack.stopReason}`);
   return lines.join("\n");
@@ -442,17 +461,50 @@ export async function getEngineeringContext(
   const knowledgeTokens = knowledge.documents.reduce((total, item) => total + estimateTokens(item.excerpt), 0);
   const architectureTokens = estimateTokens(JSON.stringify({ nodes: architecture.nodes, edges: architecture.edges }));
   const codeTokens = chunkTokens(trimmed);
+
+  let negativeConstraints: NegativeConstraint[] = [];
+  try {
+    const experiments = await loadExperiments(root);
+    const reverts = experiments.filter((e) => e.verdict === "REVERT");
+    const taskWords = words(request.task);
+    const relevantReverts = reverts.filter((e) => {
+      if (requestedSet.has(e.targetFile)) return true;
+      const targetBase = path.basename(e.targetFile);
+      if (taskWords.some((w) => e.targetFile.toLowerCase().includes(w) || targetBase.toLowerCase().includes(w))) return true;
+      const hypoWords = words(`${e.hypothesis} ${e.goal}`);
+      return taskWords.some((w) => hypoWords.includes(w));
+    });
+    negativeConstraints = relevantReverts.slice(0, 5).map((e) => ({
+      experimentId: e.id,
+      targetFile: e.targetFile,
+      targetSymbol: e.targetSymbol,
+      hypothesis: e.hypothesis,
+      revertReason: e.revertReason || "unspecified",
+      failedAt: e.closedAt,
+      deltaPercent: e.deltaPercent,
+    }));
+  } catch {
+    // Non-fatal if no experiment ledger exists
+  }
+
   const base: Omit<ContextPackV2, "markdown"> = {
     schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     task: request.task,
     classification,
-    knowledge: { ...knowledge, constraints: knowledge.decisions.map((decision) => decision.title) },
+    knowledge: {
+      ...knowledge,
+      constraints: [
+        ...knowledge.decisions.map((decision) => decision.title),
+        ...negativeConstraints.map((nc) => `AVOID: '${nc.hypothesis}' on ${nc.targetFile} regressed/failed (${nc.revertReason})`),
+      ],
+    },
     architecture: { seeds: architecture.seeds, nodes: architecture.nodes, edges: architecture.edges, approvedScope },
     code: { primary, secondary, tests },
     evidence: trimmed.map((chunk) => ({ path: chunk.path, lines: [chunk.startLine, chunk.endLine], hash: chunk.contentHash, provider: chunk.provider, current: true })),
     claims,
     conflicts,
+    negativeConstraints,
     unknowns: [...new Set(unknowns)],
     risk: { level: classification.risk, requiredGates, testsToRun },
     tokenAllocation: { budget, knowledge: knowledgeTokens, architecture: architectureTokens, code: codeTokens, reserve: Math.max(0, budget - knowledgeTokens - architectureTokens - codeTokens), used: knowledgeTokens + architectureTokens + codeTokens },

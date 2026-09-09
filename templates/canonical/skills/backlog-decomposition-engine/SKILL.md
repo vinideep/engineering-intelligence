@@ -146,6 +146,10 @@ Implementation of this feature's tickets must not begin until a human records
 - Estimate: S | M | L
 - Risk: low | medium | high
 - Depends On: TKT-XXX (or none)
+- Target Graph Nodes:
+  - module:<repo-relative-path>
+  - symbol:<repo-relative-path>#<symbolName>
+  - (prefix with proposed: for greenfield entities)
 - Files Likely Affected: <paths from graph intelligence>
 
 ## Acceptance Criteria
@@ -154,6 +158,7 @@ Implementation of this feature's tickets must not begin until a human records
 ## Definition of Ready
 - [ ] Dependencies are done
 - [ ] Acceptance criteria are testable
+- [ ] Target graph nodes verified against dependency-graph.json
 - [ ] Affected files identified from graph intelligence
 
 ## Definition of Done

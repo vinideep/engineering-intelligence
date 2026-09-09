@@ -13,9 +13,9 @@ import { packageVersion } from "../version.js";
 import type { ProviderName } from "../providers/types.js";
 import type { ProviderPolicy } from "../config/index.js";
 
-type Command = "initialize" | "providers" | "install" | "update" | "sync" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "verify" | "claims" | "context" | "telemetry" | "setup" | "ask" | "guard" | "health" | "impact" | "who-calls" | "preflight" | "postflight" | "evidence-record" | "evidence-check";
+type Command = "initialize" | "providers" | "install" | "update" | "sync" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "verify" | "claims" | "context" | "telemetry" | "setup" | "ask" | "guard" | "health" | "impact" | "who-calls" | "preflight" | "postflight" | "evidence-record" | "evidence-check" | "experiment" | "aidlc";
 
-const COMMANDS: Command[] = ["initialize", "providers", "install", "create", "update", "sync", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "verify", "claims", "context", "telemetry", "setup", "ask", "guard", "health", "impact", "who-calls", "preflight", "postflight", "evidence-record", "evidence-check"];
+const COMMANDS: Command[] = ["initialize", "providers", "install", "create", "update", "sync", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "verify", "claims", "context", "telemetry", "setup", "ask", "guard", "health", "impact", "who-calls", "preflight", "postflight", "evidence-record", "evidence-check", "experiment", "aidlc"];
 
 interface Options {
   command: Command;
@@ -101,6 +101,8 @@ Advanced commands (the 4 verbs above orchestrate these; use directly if you want
   preflight --intent "<s>" [file...]   postflight [--id <flight>] [--strict]
   evidence-record [path]               evidence-check [path] [--strict] [--json]
   freshness [path] [--threshold 60]    git-analysis [path] [--window 90]
+  experiment candidates|history [path] [--json]
+  aidlc gate|clarify|state [phase|prompt] [path] [--json]
   user-profile [path] [--json]
 `;
 }
@@ -272,7 +274,7 @@ function parseArgs(args: string[]): Options {
       hookEvent = arg;
     } else if (command === "gate" && gateName === undefined) {
       gateName = arg;
-    } else if ((command === "claims" || command === "context") && positional === undefined) {
+    } else if ((command === "claims" || command === "context" || command === "experiment" || command === "aidlc") && positional === undefined) {
       positional = arg;
     } else if (command === "providers" && providerAction === undefined) {
       if (!["status", "install", "repair", "upgrade", "expose", "hide", "purge"].includes(arg)) throw new Error(`Unknown providers action "${arg}".`);
@@ -281,13 +283,16 @@ function parseArgs(args: string[]): Options {
       providerName = arg;
     } else if (!target) {
       target = arg;
+      if (command === "aidlc" || command === "experiment" || command === "ask" || command === "guard" || command === "impact" || command === "who-calls") {
+        positionals.push(arg);
+      }
     } else {
       positionals.push(arg);
       if (!target) target = arg;
     }
   }
   // For commands whose positionals are a payload (not a path), the root is cwd.
-  const positionalIsPayload = command === "impact" || command === "who-calls" || command === "preflight" || command === "ask" || command === "guard";
+  const positionalIsPayload = command === "impact" || command === "who-calls" || command === "preflight" || command === "ask" || command === "guard" || command === "aidlc";
   return {
     command,
     root: path.resolve(positionalIsPayload ? process.cwd() : (target ?? process.cwd())),
@@ -860,6 +865,110 @@ async function main(): Promise<void> {
       output.write(renderFlightReport(result.record, result.report));
     }
     if (options.strict && result.report.verdict === "flagged") process.exitCode = 1;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "experiment") {
+    const { generateExperimentCandidates, loadExperiments, renderExperimentHistory } = await import("../experiment/index.js");
+    const subAction = options.positional || options.positionals[0] || "candidates";
+    if (subAction === "candidates") {
+      const candidates = await generateExperimentCandidates(options.root, { focusFile: options.files[0] });
+      if (options.json) {
+        output.write(`${JSON.stringify(candidates, null, 2)}\n`);
+      } else {
+        output.write(`Graph-Guided Autoresearch Candidates (${candidates.length}):\n\n`);
+        for (const c of candidates) {
+          output.write(`• [Score: ${c.score}] ${c.targetFile}${c.symbol ? `:${c.symbol}` : ""}\n`);
+          output.write(`  Category: ${c.category} | Direct dependents: ${c.directDependents}\n`);
+          output.write(`  Rationale: ${c.rationale}\n`);
+          output.write(`  Hypothesis: ${c.suggestedHypothesis}\n\n`);
+        }
+      }
+    } else if (subAction === "history") {
+      const history = await loadExperiments(options.root, { targetFile: options.files[0] });
+      if (options.json) {
+        output.write(`${JSON.stringify(history, null, 2)}\n`);
+      } else {
+        output.write(`${renderExperimentHistory(history)}\n`);
+      }
+    } else {
+      output.write(`Unknown experiment action "${subAction}". Expected "candidates" or "history".\n`);
+      process.exitCode = 1;
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "aidlc") {
+    const { checkPhaseGate, assessPromptClarity, loadAidlcState, saveAidlcState } = await import("../aidlc/index.js");
+    const subAction = options.positional || options.positionals[0] || "gate";
+    if (subAction === "gate") {
+      const validPhases = ["discovery", "inception", "construction", "operations"];
+      const targetPhase = (options.positionals.find((p) => validPhases.includes(p)) || "inception") as any;
+      const result = await checkPhaseGate(options.root, targetPhase);
+      if (options.json) {
+        output.write(`${JSON.stringify(result, null, 2)}\n`);
+      } else {
+        output.write(`AI-DLC Gate: ${result.phase.toUpperCase()} [${result.status.toUpperCase()}] (Score: ${result.score}/100)\n\n`);
+        if (result.missingPrerequisites.length > 0) {
+          output.write("Missing Prerequisites:\n");
+          for (const m of result.missingPrerequisites) output.write(`  ✗ ${m}\n`);
+        }
+        if (result.blockingQuestions.length > 0) {
+          output.write("Blocking Questions:\n");
+          for (const q of result.blockingQuestions) output.write(`  ⚠ ${q}\n`);
+        }
+        if (result.recommendations.length > 0) {
+          output.write("\nRecommendations:\n");
+          for (const r of result.recommendations) output.write(`  • ${r}\n`);
+        }
+      }
+      if (options.strict && result.status === "blocked") process.exitCode = 1;
+    } else if (subAction === "clarify") {
+      const promptText = options.positionals.join(" ").trim();
+      const result = assessPromptClarity(promptText);
+      if (options.json) {
+        output.write(`${JSON.stringify(result, null, 2)}\n`);
+      } else {
+        output.write(`Prompt Clarity: ${result.clarityScore}/100 [${result.isClear ? "CLEAR" : "NEEDS CLARIFICATION"}]\n\n`);
+        if (result.ambiguities.length > 0) {
+          output.write("Detected Ambiguities:\n");
+          for (const a of result.ambiguities) {
+            output.write(`  • [${a.category}] ${a.description}\n`);
+            output.write(`    Why it matters: ${a.whyItMatters}\n`);
+          }
+        }
+        if (result.questions.length > 0) {
+          output.write("\nClarification Questions (Socratic Gauntlet):\n");
+          for (const q of result.questions) {
+            output.write(`  ${q.id}: ${q.question}\n`);
+            for (const o of q.options) {
+              output.write(`     [${o.id}] ${o.text}${o.tradeoff ? ` (Tradeoff: ${o.tradeoff})` : ""}\n`);
+            }
+            output.write("\n");
+          }
+        }
+      }
+    } else if (subAction === "state") {
+      const state = await loadAidlcState(options.root);
+      if (options.json) {
+        output.write(`${JSON.stringify(state, null, 2)}\n`);
+      } else {
+        output.write(`AI-DLC Position:\n`);
+        output.write(`  Phase:             ${state.position.phase}\n`);
+        output.write(`  Stage:             ${state.position.stage}\n`);
+        if (state.position.activeWorkflow) output.write(`  Active Workflow:   ${state.position.activeWorkflow}\n`);
+        if (state.position.activeHat) output.write(`  Active Hat:        ${state.position.activeHat}\n`);
+        if (state.position.activeUnit) output.write(`  Active Unit:       ${state.position.activeUnit}\n`);
+        output.write(`  Breadcrumb:        ${state.breadcrumb}\n`);
+        output.write(`  Source of truth:   .engineering-intelligence/aidlc/aidlc-state.json\n`);
+        output.write(`  Markdown mirror:   .engineering-intelligence/aidlc/aidlc-state.md\n`);
+      }
+    } else {
+      output.write(`Unknown aidlc action "${subAction}". Expected "gate", "clarify", or "state".\n`);
+      process.exitCode = 1;
+    }
     if (readline) readline.close();
     return;
   }

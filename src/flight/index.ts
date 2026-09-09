@@ -1,4 +1,5 @@
-import { mkdir, writeFile, readFile, readdir } from "node:fs/promises";
+import { mkdir, writeFile, readFile, readdir, unlink } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { analyzeImpact } from "../graph/index.js";
 import { runProcessSync } from "../process/index.js";
@@ -28,6 +29,12 @@ export interface FlightReport {
   verdict: "clean" | "flagged";
 }
 
+export interface FlightFileSnapshot {
+  path: string;
+  exists: boolean;
+  content?: string;
+}
+
 export interface FlightRecord {
   schemaVersion: 1;
   id: string;
@@ -40,6 +47,7 @@ export interface FlightRecord {
   predictedRadius: PredictedRadius;
   status: "open" | "closed";
   report?: FlightReport;
+  snapshots?: Record<string, FlightFileSnapshot>;
 }
 
 const SOURCE_EXT_RE = /\.(ts|tsx|js|mjs|cjs|py|go|rs|rb|java|kt)$/;
@@ -66,7 +74,7 @@ function head(root: string): string | null {
 
 // Files with uncommitted (working tree + staged) modifications, source only.
 function dirtyFiles(root: string): string[] {
-  const porcelain = gitRaw(root, ["status", "--porcelain"]);
+  const porcelain = gitRaw(root, ["status", "--porcelain", "-uall"]);
   if (porcelain === null) return [];
   const out: string[] = [];
   for (const line of porcelain.split("\n")) {
@@ -110,6 +118,23 @@ export async function preflight(root: string, options: PreflightOptions): Promis
     predicted.files = [...files];
   }
 
+  const baselineDirtyList = dirtyFiles(root);
+  const snapshots: Record<string, FlightFileSnapshot> = {};
+  const filesToCapture = new Set<string>([...declaredFiles, ...baselineDirtyList]);
+  for (const rel of filesToCapture) {
+    const full = path.resolve(root, rel);
+    if (existsSync(full)) {
+      try {
+        const content = await readFile(full, "utf8");
+        snapshots[rel] = { path: rel, exists: true, content };
+      } catch {
+        // ignore unreadable/binary
+      }
+    } else {
+      snapshots[rel] = { path: rel, exists: false };
+    }
+  }
+
   const id = `flt-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
   const record: FlightRecord = {
     schemaVersion: 1,
@@ -118,15 +143,67 @@ export async function preflight(root: string, options: PreflightOptions): Promis
     intent: options.intent,
     declaredFiles,
     baselineCommit: head(root),
-    baselineDirty: dirtyFiles(root),
+    baselineDirty: baselineDirtyList,
     predictedRadius: predicted,
     status: "open",
+    snapshots,
   };
 
   const dir = flightDir(root);
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, `${id}.json`), `${JSON.stringify(record, null, 2)}\n`, "utf8");
   return record;
+}
+
+export async function restoreFlightSnapshots(
+  root: string,
+  record: FlightRecord,
+  targetFiles?: string[],
+): Promise<void> {
+  const files = targetFiles ?? Object.keys(record.snapshots ?? {});
+  for (const rel of files) {
+    const normRel = norm(rel);
+    const snap = record.snapshots?.[normRel] ?? record.snapshots?.[rel];
+    const full = path.resolve(root, rel);
+    if (snap) {
+      if (snap.exists && snap.content !== undefined) {
+        await mkdir(path.dirname(full), { recursive: true });
+        await writeFile(full, snap.content, "utf8");
+      } else if (!snap.exists) {
+        if (existsSync(full)) {
+          try {
+            await unlink(full);
+          } catch {
+            // best effort
+          }
+        }
+      }
+    } else {
+      const isDirtyAtBaseline = record.baselineDirty.some((b) => norm(b) === normRel);
+      if (!isDirtyAtBaseline) {
+        const check = runProcessSync({
+          command: "git",
+          args: ["ls-files", "--error-unmatch", rel],
+          cwd: root,
+          timeoutMs: 10_000,
+        });
+        if (check.exitCode === 0) {
+          runProcessSync({
+            command: "git",
+            args: ["checkout", "HEAD", "--", rel],
+            cwd: root,
+            timeoutMs: 10_000,
+          });
+        } else if (existsSync(full)) {
+          try {
+            await unlink(full);
+          } catch {
+            // best effort
+          }
+        }
+      }
+    }
+  }
 }
 
 export async function loadFlight(root: string, id: string): Promise<FlightRecord | null> {

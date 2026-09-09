@@ -1,6 +1,16 @@
+export type PropertySchema = {
+  type: "string" | "number" | "boolean" | "array" | "object";
+  description?: string;
+  enum?: string[];
+  items?: { type: "string" };
+  properties?: Record<string, unknown>;
+  required?: string[];
+  minimum?: number;
+};
+
 export type JsonSchema = {
   type: "object";
-  properties?: Record<string, { type: "string" | "number" | "boolean" | "array"; enum?: string[]; items?: { type: "string" }; minimum?: number }>;
+  properties?: Record<string, PropertySchema>;
   required?: string[];
   additionalProperties?: boolean;
 };
@@ -12,7 +22,11 @@ export interface RegisteredTool<TArgs extends Record<string, unknown> = Record<s
   handler: (args: TArgs) => Promise<unknown>;
 }
 
-function validateValue(name: string, value: unknown, schema: NonNullable<JsonSchema["properties"]>[string]): void {
+function validateValue(name: string, value: unknown, schema: PropertySchema): void {
+  if (schema.type === "object") {
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${name} must be an object.`);
+    return;
+  }
   if (schema.type === "array") {
     if (!Array.isArray(value)) throw new Error(`${name} must be an array.`);
     if (schema.items?.type === "string" && !value.every((item) => typeof item === "string")) throw new Error(`${name} must contain only strings.`);

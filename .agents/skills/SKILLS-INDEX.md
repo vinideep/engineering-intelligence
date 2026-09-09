@@ -53,3 +53,5 @@
 | `session-handoff-engine` | Serializes in-flight tasks, verified facts, unverified assumptions, and next steps into a durable handoff a… |
 | `vertical-tdd-engine` | Enforces a strict vertical-slice Red-Green-Refactor loop targeting public API surfaces. Tests first, minima… |
 | `interface-design-explorer` | Explores and compares alternative interface contracts and TypeScript type definitions across multiple desig… |
+| `graph-guided-autoresearch` | Autonomous metric-driven code optimization and regression prevention loop guided by dependency and call graph intelligence. |
+| `socratic-clarification-gate` | Mandatory pre-flight alignment gate that assesses prompt clarity, poses concrete multiple-choice trade-offs, and freezes requirements before coding. |
