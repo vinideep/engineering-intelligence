@@ -1,4 +1,5 @@
 ---
+name: decompose-backlog
 description: Autonomously decompose a high-level initiative into a durable Epic to Feature to Ticket backlog with dependencies, execution order, and a per-feature approval gate, without modifying product code.
 ---
 

@@ -13,6 +13,7 @@ import type {
   RenderedFile,
 } from "../types.js";
 import { readManagedBlock, removeManagedBlock, upsertManagedBlock } from "./blocks.js";
+import { mergeHookConfig, removeOurEntries } from "./json-merge.js";
 
 export interface MutationOptions {
   dryRun?: boolean;
@@ -62,6 +63,29 @@ async function applyRendered(
   const absolute = path.join(root, rendered.path);
   const current = await readMaybe(absolute);
   const desiredEntry = entryFor(rendered);
+
+  if (rendered.kind === "seed") {
+    // Written once, then the user owns it. Editing it is the documented way to
+    // turn enforcement on, so it must never conflict or warn afterwards.
+    if (current !== undefined) {
+      return { action: { path: rendered.path, status: "unchanged" }, entry: desiredEntry };
+    }
+    if (!options.dryRun) await writeTarget(root, rendered.path, rendered.content);
+    return { action: { path: rendered.path, status: "created" }, entry: desiredEntry };
+  }
+
+  if (rendered.kind === "json-merge") {
+    const merged = mergeHookConfig(current, rendered.content);
+    const status = current === undefined
+      ? "created"
+      : merged.trim() === current.trim()
+        ? "unchanged"
+        : "updated";
+    if (!options.dryRun && status !== "unchanged") {
+      await writeTarget(root, rendered.path, merged);
+    }
+    return { action: { path: rendered.path, status }, entry: desiredEntry };
+  }
 
   if (rendered.kind === "file") {
     const currentHash = current === undefined ? undefined : hashContent(current.trimEnd());
@@ -133,6 +157,24 @@ async function removeEntry(
   if (current === undefined) {
     return { action: { path: entry.path, status: "preserved", message: "Already missing." }, retained: false };
   }
+  if (entry.kind === "seed") {
+    // The user owns it and is expected to have edited it; leave their config behind.
+    return {
+      action: { path: entry.path, status: "preserved", message: "User-owned configuration left in place." },
+      retained: false,
+    };
+  }
+
+  if (entry.kind === "json-merge") {
+    // Strip only the entries we own; whatever else the user keeps in this file stays.
+    const remaining = removeOurEntries(current);
+    if (!options.dryRun) {
+      if (remaining === null) await unlink(absolute);
+      else await writeFile(absolute, remaining, "utf8");
+    }
+    return { action: { path: entry.path, status: "removed" }, retained: false };
+  }
+
   const managed = entry.kind === "block" && entry.blockId ? readManagedBlock(current, entry.blockId) : current;
   const unchanged = managed !== undefined && hashContent(managed.trimEnd()) === entry.hash;
   if (!unchanged && !options.force) {

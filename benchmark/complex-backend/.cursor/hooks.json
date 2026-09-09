@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "npx engineering-intelligence hook session-start --host cursor"
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "npx engineering-intelligence hook pre-tool-use --host cursor"
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "npx engineering-intelligence hook post-tool-use --host cursor"
+      }
+    ],
+    "afterShellExecution": [
+      {
+        "command": "npx engineering-intelligence hook post-tool-use --host cursor"
+      }
+    ],
+    "stop": [
+      {
+        "command": "npx engineering-intelligence hook stop --host cursor"
+      }
+    ]
+  }
+}

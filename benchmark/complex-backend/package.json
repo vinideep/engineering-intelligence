@@ -1,0 +1,14 @@
+{
+  "name": "complex-distributed-backend",
+  "version": "1.0.0",
+  "description": "Multi-tenant event-driven order and payment orchestration engine",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "build": "tsc"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

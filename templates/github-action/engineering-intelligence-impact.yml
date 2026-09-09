@@ -1,0 +1,83 @@
+# Engineering Intelligence — PR impact comment
+#
+# Computes the blast radius of a pull request from a real dependency + call
+# graph and posts (or updates) a sticky comment: which modules/functions the
+# change affects, which tests to run, and any high-churn risk notes.
+#
+# Copy this file to .github/workflows/ in your repository. No secrets beyond the
+# default GITHUB_TOKEN are required.
+
+name: Engineering Intelligence Impact
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  impact:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history for diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build dependency graph
+        run: npx --yes engineering-intelligence map .
+
+      - name: Compute changed files and impact
+        id: impact
+        run: |
+          BASE="origin/${{ github.base_ref }}"
+          git fetch origin "${{ github.base_ref }}" --depth=1 || true
+          CHANGED=$(git diff --name-only "$BASE"...HEAD | tr '\n' ' ')
+          echo "Changed files: $CHANGED"
+          if [ -z "$CHANGED" ]; then
+            echo '{"direct":[],"indirect":[],"testsToRun":[],"riskNotes":[]}' > impact.json
+          else
+            npx --yes engineering-intelligence impact $CHANGED --json > impact.json || echo '{"direct":[],"indirect":[],"testsToRun":[],"riskNotes":[]}' > impact.json
+          fi
+          cat impact.json
+
+      - name: Post or update PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const impact = JSON.parse(fs.readFileSync('impact.json', 'utf8'));
+            const marker = '<!-- engineering-intelligence-impact -->';
+            const direct = impact.direct || [];
+            const indirect = impact.indirect || [];
+            const tests = impact.testsToRun || [];
+            const risks = impact.riskNotes || [];
+            const list = (arr, n) => arr.length ? arr.slice(0, n).map(x => `\`${x}\``).join(', ') + (arr.length > n ? ` … (+${arr.length - n})` : '') : '_none_';
+            const body = [
+              marker,
+              '### 🧮 Engineering Intelligence — Impact',
+              '',
+              `**Direct dependents (${direct.length}):** ${list(direct, 15)}`,
+              `**Indirect dependents (${indirect.length}):** ${list(indirect, 15)}`,
+              `**Tests to run (${tests.length}):** ${list(tests, 20)}`,
+              risks.length ? '\n**⚠ Risk notes:**\n' + risks.map(r => `- ${r}`).join('\n') : '',
+              '',
+              '<sub>Computed from a deterministic dependency + call graph — not an LLM guess.</sub>',
+            ].join('\n');
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const existing = comments.data.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }

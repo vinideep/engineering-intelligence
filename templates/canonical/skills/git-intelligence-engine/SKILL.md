@@ -8,6 +8,8 @@ version: 3.0.0
 
 Extract actionable intelligence from git history to reveal hidden dependencies, ownership patterns, and codebase evolution trends.
 
+**Run the deterministic analyzer first:** `npx engineering-intelligence git-analysis . [--window 90] [--json]` computes hotspots, ownership, change coupling and velocity from git history and writes the report. If it ran within the last hour, read the report instead of re-running. Use the steps below to interpret it.
+
 ## Inputs
 
 - Repository root path

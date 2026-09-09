@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "description": "Deterministic native retrieval baseline. Real CCE smoke runs use the same corpus after provider installation.",
+  "thresholds": {
+    "recallAt10": 0.9,
+    "validCurrentSpans": 1,
+    "scopeLeakage": 0
+  },
+  "queries": [
+    { "category": "architecture", "query": "ProjectFilePolicy explain symlink path escapes repository root", "scope": ["src/project-files"], "expected": ["src/project-files/index.ts"] },
+    { "category": "configuration", "query": "migrate EI config schema provider policy token budgets", "scope": ["src/config"], "expected": ["src/config/index.ts"] },
+    { "category": "providers", "query": "transactional staged provider installation rollback previous healthy executable", "scope": ["src/providers"], "expected": ["src/providers/manager.ts"] },
+    { "category": "providers", "query": "Graphify code only extraction graph report raw evidence", "scope": ["src/providers"], "expected": ["src/providers/graphify.ts"] },
+    { "category": "architecture", "query": "reconcile Graphify native edges corroborated contested trust state", "scope": ["src/graph"], "expected": ["src/graph/provider-evidence.ts"] },
+    { "category": "retrieval", "query": "CCE overfetch approved scope stale rejected native scoped search", "scope": ["src/providers"], "expected": ["src/providers/cce.ts"] },
+    { "category": "retrieval", "query": "ContextPackV2 knowledge trust token allocation overall confidence", "scope": ["src/context"], "expected": ["src/context/orchestrator.ts"] },
+    { "category": "api", "query": "typed MCP registry required arguments unknown arguments validation", "scope": ["src/mcp"], "expected": ["src/mcp/registry.ts"] },
+    { "category": "api", "query": "consolidated get engineering context provider status expert provider tools", "scope": ["src/mcp"], "expected": ["src/mcp/consolidated.ts"] },
+    { "category": "behavior", "query": "initialization evidence knowledge generation brief document skeletons", "scope": ["src/orchestrators"], "expected": ["src/orchestrators/initialize.ts"] },
+    { "category": "validation", "query": "doctor canonical templates install manifest package version drift", "scope": ["src/validation"], "expected": ["src/validation/index.ts"] },
+    { "category": "behavior", "query": "setup defer intelligence build adapter installation graph", "scope": ["src/orchestrators"], "expected": ["src/orchestrators/setup.ts"] },
+    { "category": "validation", "query": "health graph scope evidence hashes claims providers native fallback", "scope": ["src/orchestrators"], "expected": ["src/orchestrators/health.ts"] },
+    { "category": "claims", "query": "derive source file fact import dependency route facts", "scope": ["src/claims"], "expected": ["src/claims/derive.ts"] },
+    { "category": "claims", "query": "verify derived claims refuted unverified stale missing evidence", "scope": ["src/claims"], "expected": ["src/claims/index.ts"] },
+    { "category": "claims", "query": "record evidence hashes citation line content stale missing file", "scope": ["src/evidence"], "expected": ["src/evidence/index.ts"] },
+    { "category": "architecture", "query": "dependency graph excluded generated output external references ProjectFilePolicy", "scope": ["src/graph/builders"], "expected": ["src/graph/builders/dependency.ts"] },
+    { "category": "architecture", "query": "build graph analyze impact who calls graphify reconciliation", "scope": ["src/graph"], "expected": ["src/graph/index.ts"] },
+    { "category": "symbols", "query": "extract imports dynamic require unresolved packages module nodes", "scope": ["src/graph/parsers"], "expected": ["src/graph/parsers/imports.ts"] },
+    { "category": "symbols", "query": "extract symbols pending calls global symbol table", "scope": ["src/graph/parsers"], "expected": ["src/graph/parsers/symbols.ts"] },
+    { "category": "gates", "query": "environment variables dead exports API diff migration lint gates", "scope": ["src/gates"], "expected": ["src/gates/index.ts"] },
+    { "category": "behavior", "query": "lifecycle hooks session start pre tool post tool stop validation", "scope": ["src/hooks"], "expected": ["src/hooks/index.ts"] },
+    { "category": "tests", "query": "ContextPackV2 knowledge first graph scoped hash pinned fallback safe", "scope": ["test"], "expected": ["test/context-v2.test.mjs"] },
+    { "category": "tests", "query": "failed staged upgrade preserves existing executable provider install", "scope": ["test"], "expected": ["test/providers.test.mjs"] },
+    { "category": "tests", "query": "Graphify evidence reconciliation rejects stale out of scope", "scope": ["test"], "expected": ["test/graphify-evidence.test.mjs"] },
+    { "category": "tests", "query": "CCE stale spans scope filtering native fallback search", "scope": ["test"], "expected": ["test/cce.test.mjs"] },
+    { "category": "api", "query": "CLI providers install repair upgrade expose hide purge initialize", "scope": ["src/cli"], "expected": ["src/cli/index.ts"] },
+    { "category": "configuration", "query": "canonical skill workflow agent names read template", "scope": ["src"], "expected": ["src/templates.ts"] },
+    { "category": "configuration", "query": "render adapters skill bundle workflow routing Claude commands", "scope": ["src/adapters"], "expected": ["src/adapters/index.ts"] },
+    { "category": "behavior", "query": "argument safe child process timeout max buffer executable runner", "scope": ["src/process"], "expected": ["src/process/index.ts"] }
+  ]
+}

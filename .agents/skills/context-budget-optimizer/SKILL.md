@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: context-budget-optimizer
 description: Minimizes AI IDE token usage by ranking, slicing, summarizing, and lazy-loading project intelligence while preserving required gates and output quality.
@@ -9,7 +7,9 @@ description: Minimizes AI IDE token usage by ranking, slicing, summarizing, and 
 
 Use this skill before broad intelligence reads in implementation, analysis, review, and synchronization workflows. The goal is to produce the same engineering output with fewer tokens by loading only the most relevant evidence.
 
-**Prefer the deterministic context pack.** Instead of reading knowledge, memory, and context files yourself, run `npx engineering-intelligence context "<task>" --files <touched files> --budget <N>` (or call the `get_context` MCP tool). It assembles — within your token budget — the graph neighborhood of the touched files, the **verified** claims about that code (hash-checked against current source, so stale facts are excluded), and the relevant conventions and dangerous areas. This is cheaper and more trustworthy than loading prose files, and it is what makes small models viable. Fall back to the manual budget policy below only for evidence the pack does not cover.
+**Prefer ContextPackV2.** Call `get_engineering_context` before broad intelligence reads or direct file exploration. It verifies EI knowledge first, uses EI's normalized graph to choose the architectural neighborhood, retrieves current CCE spans only inside that scope, filters every result through the project file policy, and falls back to native scoped retrieval when needed. The pack carries classification, route, trust, claims, conflicts, risks, required gates, provider health, token allocation, confidence, and a stop reason. `get_context` remains a compatibility surface.
+
+Retrieval is progressive: begin with five compressed/current spans, expand to ten only when confidence and stop conditions require it, then expand individual chunks or full files only for an unresolved material question. Stop when components, dependency paths, tests, and supporting evidence are resolved. Never spend additional budget merely because it is available.
 
 ## Token Budget Policy
 
@@ -29,7 +29,7 @@ If the AI IDE exposes a context-window size, estimate against that. If not, use 
 Before loading full documents, create or update:
 
 ```text
-$EIcontext/context-manifest.md
+.engineering-intelligence/context/context-manifest.md
 ```
 
 Format:
@@ -45,8 +45,8 @@ Format:
 ## Ranked Context
 | Rank | Artifact | Sections / Keys | Reason | Estimated Tokens | Load Mode |
 |---:|---|---|---|---:|---|
-| 1 | `$EIcontext/module-map.md` | auth row | direct scope | 120 | slice |
-| 2 | `$EIknowledge-base/04-api-documentation.md` | H2: Auth API | API contract | 500 | section |
+| 1 | `.engineering-intelligence/context/module-map.md` | auth row | direct scope | 120 | slice |
+| 2 | `.engineering-intelligence/knowledge-base/04-api-documentation.md` | H2: Auth API | API contract | 500 | section |
 ```
 
 ## Procedure
@@ -54,7 +54,7 @@ Format:
 0. **Load User Intelligence Profile (pinned, ~50t, always first)**
 
    Before ranking any other artifact:
-   - Run `npx engineering-intelligence user-profile .` if `$EImemory/users/` doesn't exist yet.
+   - Run `npx engineering-intelligence user-profile .` if `.engineering-intelligence/memory/users/` doesn't exist yet.
    - Resolve identity: `git config user.email` → slug → `memory/users/<slug>/user-intelligence.md`.
    - If CI environment detected (`$CI`, `$GITHUB_ACTIONS`, etc.) → skip personal profile; load `team-preferences.md` only.
    - Load the **Active Predictions block only** (~50t) from the personal profile.
@@ -85,7 +85,7 @@ Format:
      - Load snapshots only when API replay applies.
 
 5. **Summarize And Cache**
-   - Write compact summaries to `$EIcontext/context-manifest.md`.
+   - Write compact summaries to `.engineering-intelligence/context/context-manifest.md`.
    - Store pointers to source evidence instead of copying long excerpts.
    - Reuse manifest rankings during resume/checkpoint flows.
 
@@ -100,6 +100,8 @@ Format:
 - Prefer section-level confidence metadata over full-document reads.
 - Keep initial intelligence loading under 40% of context budget whenever possible.
 - Lazy Loading is mandatory for large projects.
+- Stale or out-of-scope CCE hits are discarded, never summarized as current context.
+- Raw Graphify/CCE tools are used only when expert mode is explicitly enabled.
 
 ## Quality Gates
 
@@ -108,3 +110,5 @@ Format:
 - [ ] Initial context stayed within 40% budget or escalation was recorded
 - [ ] Full documents were avoided when slices were enough
 - [ ] Required gates still had enough evidence to run
+- [ ] Pack records provider health/fallback, current hashes, confidence, conflicts, and unknowns
+- [ ] Retrieval stopped once the explicit stop conditions were satisfied

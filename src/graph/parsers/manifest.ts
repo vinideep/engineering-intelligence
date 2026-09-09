@@ -13,7 +13,7 @@ function pkgNode(name: string, manifestPath: string, dev: boolean): GraphNode {
     kind: "package",
     label: name,
     confidence: "verified",
-    metadata: { dev },
+    metadata: { dev, declared: true },
     evidence: [manifestPath],
   };
 }

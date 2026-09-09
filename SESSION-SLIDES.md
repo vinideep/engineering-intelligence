@@ -225,7 +225,7 @@ Speaker note: Doctor reports missing files and hash mismatches — good for CI.
 
 - **46 skills** — knowledge/architecture, planning/delivery, quality/safety, operations, security/compliance
 - **15 specialist agents** — orchestrator, change agent, quality agent, security officer, test engineer, and more
-- **11 workflows** — engineering-intelligence, initialize, create-project, decompose-backlog, deliver-backlog, and more
+- **15 workflows** — engineering-intelligence, initialize, create-project, decompose-backlog, deliver-backlog, and more
 
 Speaker note: Don't read all 46 skills — point at the categories.
 

@@ -1,6 +1,6 @@
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { execSync } from "node:child_process";
+import { runProcessSync } from "../process/index.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,17 +49,9 @@ export interface GitAnalysis {
 // Git helpers
 // ---------------------------------------------------------------------------
 
-function tryGit(args: string, cwd: string): string {
-  try {
-    return execSync(`git ${args}`, {
-      encoding: "utf8",
-      cwd,
-      stdio: ["pipe", "pipe", "pipe"],
-      timeout: 20_000,
-    }).trim();
-  } catch {
-    return "";
-  }
+function tryGit(args: string[], cwd: string): string {
+  const result = runProcessSync({ command: "git", args, cwd, timeoutMs: 20_000 });
+  return result.exitCode === 0 ? result.stdout.trim() : "";
 }
 
 function parseSince(windowDays: number): string {
@@ -311,12 +303,24 @@ ${velocityRows || "| — | — | — |"}
 // Public API
 // ---------------------------------------------------------------------------
 
+// Lightweight churn map for graph overlay: file path (repo-relative, forward
+// slashes) -> number of commits touching it in the window. Returns an empty map
+// for non-git directories. Reuses the same commit log + hotspot machinery.
+export function computeChurn(root: string, windowDays = 90): Map<string, number> {
+  const since = parseSince(windowDays);
+  const raw = tryGit(["log", `--since=${since}`, "--name-only", "--format=COMMIT:%H|%ae|%cI|%s"], root);
+  if (!raw) return new Map();
+  const commits = parseCommitLog(raw);
+  const freq = new Map<string, number>();
+  for (const c of commits) {
+    for (const f of c.files) freq.set(f, (freq.get(f) ?? 0) + 1);
+  }
+  return freq;
+}
+
 export async function runGitAnalysis(root: string, windowDays = 90): Promise<{ reportPath: string; analysis: GitAnalysis }> {
   const since = parseSince(windowDays);
-  const raw = tryGit(
-    `log --since=${JSON.stringify(since)} --name-only --format="COMMIT:%H|%ae|%cI|%s"`,
-    root,
-  );
+  const raw = tryGit(["log", `--since=${since}`, "--name-only", "--format=COMMIT:%H|%ae|%cI|%s"], root);
 
   const commits = parseCommitLog(raw);
   const analysis: GitAnalysis = {

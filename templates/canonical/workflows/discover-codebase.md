@@ -1,4 +1,5 @@
 ---
+name: discover-codebase
 description: Autonomously discover and understand an existing codebase through systematic analysis, interactive clarification, and finalized intelligence artifacts — without modifying product code.
 ---
 

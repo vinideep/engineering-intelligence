@@ -2,16 +2,19 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { renderAdapters } from "../adapters/index.js";
 import { readManagedBlock } from "../installer/blocks.js";
-import { MANIFEST_PATH, hashContent, readManifest } from "../manifest/index.js";
+import { hasOurEntries } from "../installer/json-merge.js";
+import { MANIFEST_PATH, TEMPLATE_VERSION, hashContent, readManifest } from "../manifest/index.js";
 import { exists, validateCanonicalTemplates } from "../templates.js";
 import type { FileAction, IdeId } from "../types.js";
+import { packageVersion } from "../version.js";
 
 export async function validateRender(ides: IdeId[]): Promise<string[]> {
   const errors = await validateCanonicalTemplates();
   const rendered = await renderAdapters(ides);
   for (const item of rendered) {
-    // Flag only the genuinely obsolete runtime output paths; `.agent/skills`, `.agent/workflows`,
-    // `.agent/rules`, `.agent/agents` are legitimate Antigravity IDE paths.
+    // Flag only the genuinely obsolete runtime output paths; both the legacy
+    // `.agent/*` compatibility paths and current `.agents/agents/*.md` files
+    // are legitimate adapter output.
     if (
       !item.path.endsWith(".json") &&
       (item.content.includes(".agent/memory") ||
@@ -38,14 +41,36 @@ export async function validateRender(ides: IdeId[]): Promise<string[]> {
   return errors;
 }
 
-export async function doctor(root: string): Promise<FileAction[]> {
+export async function doctor(root: string, expectedPackageVersion?: string): Promise<FileAction[]> {
   const actions: FileAction[] = [];
   const manifest = await readManifest(root);
   if (!manifest) {
     actions.push({ path: MANIFEST_PATH, status: "error", message: "No installation manifest found." });
     return actions;
   }
+  const expectedVersion = expectedPackageVersion ?? await packageVersion();
+  if (manifest.packageVersion !== expectedVersion) {
+    actions.push({ path: MANIFEST_PATH, status: "error", message: `Installed package version ${manifest.packageVersion} differs from canonical ${expectedVersion}; run engineering-intelligence update.` });
+  }
+  if (manifest.templateVersion !== TEMPLATE_VERSION) {
+    actions.push({ path: MANIFEST_PATH, status: "error", message: `Installed template version ${manifest.templateVersion} differs from canonical ${TEMPLATE_VERSION}; run engineering-intelligence update.` });
+  }
   const renderingErrors = await validateRender(manifest.adapters);
+  // Needed to verify json-merge entries: we must know what we would write in
+  // order to check that it is still present inside the user's own file.
+  const desired = await renderAdapters(manifest.adapters);
+  const desiredByPath = new Map(desired.map((f) => [f.path, f]));
+  const manifestByPath = new Map(manifest.files.map((entry) => [entry.path, entry]));
+  for (const rendered of desired) {
+    if (!manifestByPath.has(rendered.path)) {
+      actions.push({ path: rendered.path, status: "error", message: "Canonical managed artifact is missing from the install manifest; run engineering-intelligence update." });
+    }
+  }
+  for (const entry of manifest.files) {
+    if (!desiredByPath.has(entry.path)) {
+      actions.push({ path: entry.path, status: "warning", message: "Install manifest tracks an artifact that is no longer canonical; run engineering-intelligence update." });
+    }
+  }
   for (const message of renderingErrors) {
     actions.push({ path: "templates", status: "error", message });
   }
@@ -63,6 +88,30 @@ export async function doctor(root: string): Promise<FileAction[]> {
       continue;
     }
     const current = await readFile(absolute, "utf8");
+
+    if (entry.kind === "seed") {
+      // Seeded config is the user's to edit — that is how enforcement is turned
+      // on — so a local change is expected, never a warning.
+      actions.push({ path: entry.path, status: "unchanged" });
+      continue;
+    }
+
+    if (entry.kind === "json-merge") {
+      // We only own our own entries; the user's surrounding config is theirs.
+      const rendered = desiredByPath.get(entry.path);
+      const wired = rendered ? hasOurEntries(current, rendered.content) : true;
+      actions.push(
+        wired
+          ? { path: entry.path, status: "unchanged" }
+          : {
+              path: entry.path,
+              status: "warning",
+              message: "Enforcement hook entries are missing. Run `engineering-intelligence update` to re-merge them.",
+            },
+      );
+      continue;
+    }
+
     const tracked =
       entry.kind === "block" && entry.blockId
         ? readManagedBlock(current, entry.blockId)
@@ -73,48 +122,6 @@ export async function doctor(root: string): Promise<FileAction[]> {
       actions.push({ path: entry.path, status: "warning", message: "Managed content was edited locally." });
     } else {
       actions.push({ path: entry.path, status: "unchanged" });
-    }
-  }
-
-  // Claude Code enforcement hooks: if the user owns a pre-existing settings.json,
-  // the installer preserves it (never in the manifest), so verify the hook wiring
-  // is actually present and guide a manual merge when it is not.
-  if (manifest.adapters.includes("claude-code")) {
-    const settingsPath = path.join(root, ".claude", "settings.json");
-    const managedBySettings = manifest.files.some((entry) => entry.path === ".claude/settings.json");
-    if (!managedBySettings) {
-      let hasHooks = false;
-      try {
-        hasHooks = (await readFile(settingsPath, "utf8")).includes("engineering-intelligence hook");
-      } catch { /* missing */ }
-      if (!hasHooks) {
-        actions.push({
-          path: ".claude/settings.json",
-          status: "warning",
-          message:
-            "Enforcement hooks are not wired. Merge the `hooks` block (SessionStart/PreToolUse/PostToolUse/Stop → `npx engineering-intelligence hook <event>`) into your existing .claude/settings.json.",
-        });
-      }
-    }
-  }
-
-  // Cursor enforcement hooks: same pre-existing-file edge case for .cursor/hooks.json.
-  if (manifest.adapters.includes("cursor")) {
-    const hooksPath = path.join(root, ".cursor", "hooks.json");
-    const managed = manifest.files.some((entry) => entry.path === ".cursor/hooks.json");
-    if (!managed) {
-      let hasHooks = false;
-      try {
-        hasHooks = (await readFile(hooksPath, "utf8")).includes("engineering-intelligence hook");
-      } catch { /* missing */ }
-      if (!hasHooks) {
-        actions.push({
-          path: ".cursor/hooks.json",
-          status: "warning",
-          message:
-            "Enforcement hooks are not wired. Merge the `hooks` block (sessionStart/preToolUse/afterFileEdit/afterShellExecution/stop → `npx engineering-intelligence hook <event> --host cursor`) into your existing .cursor/hooks.json.",
-        });
-      }
     }
   }
 

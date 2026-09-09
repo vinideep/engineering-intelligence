@@ -1,14 +1,16 @@
 ---
 name: context-budget-optimizer
 description: Minimizes AI IDE token usage by ranking, slicing, summarizing, and lazy-loading project intelligence while preserving required gates and output quality.
-version: 1.0.0
+version: 2.0.0
 ---
 
 # Context Budget Optimizer
 
 Use this skill before broad intelligence reads in implementation, analysis, review, and synchronization workflows. The goal is to produce the same engineering output with fewer tokens by loading only the most relevant evidence.
 
-**Prefer the deterministic context pack.** Instead of reading knowledge, memory, and context files yourself, run `npx engineering-intelligence context "<task>" --files <touched files> --budget <N>` (or call the `get_context` MCP tool). It assembles — within your token budget — the graph neighborhood of the touched files, the **verified** claims about that code (hash-checked against current source, so stale facts are excluded), and the relevant conventions and dangerous areas. This is cheaper and more trustworthy than loading prose files, and it is what makes small models viable. Fall back to the manual budget policy below only for evidence the pack does not cover.
+**Prefer ContextPackV2.** Call `get_engineering_context` before broad intelligence reads or direct file exploration. It verifies EI knowledge first, uses EI's normalized graph to choose the architectural neighborhood, retrieves current CCE spans only inside that scope, filters every result through the project file policy, and falls back to native scoped retrieval when needed. The pack carries classification, route, trust, claims, conflicts, risks, required gates, provider health, token allocation, confidence, and a stop reason. `get_context` remains a compatibility surface.
+
+Retrieval is progressive: begin with five compressed/current spans, expand to ten only when confidence and stop conditions require it, then expand individual chunks or full files only for an unresolved material question. Stop when components, dependency paths, tests, and supporting evidence are resolved. Never spend additional budget merely because it is available.
 
 ## Token Budget Policy
 
@@ -99,6 +101,8 @@ Format:
 - Prefer section-level confidence metadata over full-document reads.
 - Keep initial intelligence loading under 40% of context budget whenever possible.
 - Lazy Loading is mandatory for large projects.
+- Stale or out-of-scope CCE hits are discarded, never summarized as current context.
+- Raw Graphify/CCE tools are used only when expert mode is explicitly enabled.
 
 ## Quality Gates
 
@@ -107,3 +111,5 @@ Format:
 - [ ] Initial context stayed within 40% budget or escalation was recorded
 - [ ] Full documents were avoided when slices were enough
 - [ ] Required gates still had enough evidence to run
+- [ ] Pack records provider health/fallback, current hashes, confidence, conflicts, and unknowns
+- [ ] Retrieval stopped once the explicit stop conditions were satisfied

@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: aidlc-lifecycle-engine
 description: Runs the adaptive AI-DLC lifecycle with Discovery, Inception, Construction, Operations, durable artifacts, hatted agents, and objective completion gates.
@@ -11,31 +9,51 @@ Use this skill inside the existing Engineering Intelligence workflows. It is not
 
 ## Runtime Artifacts
 
-Use `$AIDLC` as the canonical AI-DLC root:
+Use `.engineering-intelligence/aidlc/` as the canonical AI-DLC root:
 
 | Path | Purpose |
 |---|---|
-| `$AIDLCaidlc-state.md` | Active phase, stage, workflow, hat, unit, and completion status |
-| `$AIDLCaudit.md` | Append-only chronological log of decisions, user answers, tool checks, and transitions |
-| `$AIDLCopen-questions.md` | Unresolved ambiguities and owner/status |
-| `$AIDLCexecution-plan.md` | Adaptive stage plan with mandatory/conditional/skipped stages |
-| `$AIDLCcheckpoints.md` | Resume checkpoints after major workflow steps |
-| `$AIDLCdiscovery/vision.md` | Business objectives, personas, value, success metrics |
-| `$AIDLCdiscovery/technical-environment.md` | Runtime, deployment, integrations, data stores, auth, constraints |
-| `$AIDLCagile/product-backlog.md` | High-level epics, priorities, dependencies, and status |
-| `$AIDLCagile/backlog/` | Hierarchical Epic → Feature → Ticket backlog with stable IDs, dependency graph, and per-feature approval gates, owned by `backlog-decomposition-engine` |
-| `$AIDLCagile/sprint-plan.md` | Active sprint goal, selected stories, capacity, risks, and commitments |
-| `$AIDLCagile/acceptance-criteria.md` | Story-level acceptance criteria expressed as executable validation targets |
-| `$AIDLCagile/definition-of-ready.md` | Readiness checklist before construction |
-| `$AIDLCagile/definition-of-done.md` | Completion checklist after validation and sync |
-| `$AIDLCagile/retrospective.md` | Lessons, process improvements, recurring risks, and follow-ups |
-| `$AIDLCinception/requirements.md` | Validated functional requirements and edge cases |
-| `$AIDLCinception/reverse-engineering/` | Brownfield architecture, API, code structure, component inventory, technology stack |
-| `$AIDLCconstruction/cross-unit-discoveries.md` | Shared discoveries from parallel or sequential units |
-| `$AIDLCconstruction/<unit>/` | Unit functional design, NFR design, ADRs, code plan, build/test evidence |
-| `$AIDLCoperations/` | Deployment readiness, observability, runbooks, rollback notes |
+| `.engineering-intelligence/aidlc/aidlc-state.md` | Active phase, stage, workflow, hat, unit, and completion status |
+| `.engineering-intelligence/aidlc/audit.md` | Append-only chronological log of decisions, user answers, tool checks, and transitions |
+| `.engineering-intelligence/aidlc/open-questions.md` | Unresolved ambiguities and owner/status |
+| `.engineering-intelligence/aidlc/execution-plan.md` | Adaptive stage plan with mandatory/conditional/skipped stages |
+| `.engineering-intelligence/aidlc/checkpoints.md` | Resume checkpoints after major workflow steps |
+| `.engineering-intelligence/aidlc/discovery/vision.md` | Business objectives, personas, value, success metrics |
+| `.engineering-intelligence/aidlc/discovery/technical-environment.md` | Runtime, deployment, integrations, data stores, auth, constraints |
+| `.engineering-intelligence/aidlc/agile/product-backlog.md` | High-level epics, priorities, dependencies, and status |
+| `.engineering-intelligence/aidlc/agile/backlog/` | Hierarchical Epic → Feature → Ticket backlog with stable IDs, dependency graph, and per-feature approval gates, owned by `backlog-decomposition-engine` |
+| `.engineering-intelligence/aidlc/agile/sprint-plan.md` | Active sprint goal, selected stories, capacity, risks, and commitments |
+| `.engineering-intelligence/aidlc/agile/acceptance-criteria.md` | Story-level acceptance criteria expressed as executable validation targets |
+| `.engineering-intelligence/aidlc/agile/definition-of-ready.md` | Readiness checklist before construction |
+| `.engineering-intelligence/aidlc/agile/definition-of-done.md` | Completion checklist after validation and sync |
+| `.engineering-intelligence/aidlc/agile/retrospective.md` | Lessons, process improvements, recurring risks, and follow-ups |
+| `.engineering-intelligence/aidlc/inception/requirements.md` | Validated functional requirements and edge cases |
+| `.engineering-intelligence/aidlc/inception/reverse-engineering/` | Brownfield architecture, API, code structure, component inventory, technology stack |
+| `.engineering-intelligence/aidlc/construction/cross-unit-discoveries.md` | Shared discoveries from parallel or sequential units |
+| `.engineering-intelligence/aidlc/construction/<unit>/` | Unit functional design, NFR design, ADRs, code plan, build/test evidence |
+| `.engineering-intelligence/aidlc/operations/` | Deployment readiness, observability, runbooks, rollback notes |
 
-These AI-DLC files complement `$EIknowledge-base/`, `$EImemory/`, `$EIcontext/`, `$EIgraph/`, `$EIreports/`, and `$EIchanges/`.
+These AI-DLC files complement `.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/memory/`, `.engineering-intelligence/context/`, `.engineering-intelligence/graph/`, `.engineering-intelligence/reports/`, and `.engineering-intelligence/changes/`.
+
+## MCP Tools
+
+Use these tools instead of manually editing AI-DLC markdown files. Manual markdown edits desynchronize `aidlc-state.json`.
+
+| Tool | Purpose | When to Call |
+|---|---|---|
+| `get_aidlc_state` | Read current lifecycle position, phase, stage, active unit, and breadcrumb | Before any phase transition or checkpoint resume |
+| `update_aidlc_state` | Transition phase, stage, hat, unit, and breadcrumb (writes JSON + projects to markdown) | After every major step, checkpoint, or phase transition |
+| `check_aidlc_gate` | Programmatically validate whether the repository satisfies exit criteria for a phase (`discovery`, `inception`, `construction`, `operations`) | Before transitioning to the next phase |
+| `assess_prompt_clarity` | Assess prompt ambiguity and missing NFRs | During Discovery or Inception when user intent is unclear |
+| `freeze_clarified_requirements` | Lock user-selected decisions into `inception/requirements.md` | After user answers clarification questions |
+
+### Gate Failure Handling
+
+When `check_aidlc_gate` returns `status: "blocked"`:
+1. Read the `blockers` array from the response.
+2. For each blocker, determine if it requires user input or can be resolved programmatically.
+3. Do NOT proceed to the next phase. Record blockers in `audit.md` and either resolve them or present them to the user.
+4. Re-run `check_aidlc_gate` after resolution to confirm the gate passes.
 
 ## Embedded Agile + AI-DLC Model
 
@@ -71,6 +89,13 @@ Ask role-aware questions. For multiple-choice questions in Markdown, put a blank
 ### 1. Inception
 
 Always run workspace detection. Classify the repository as `greenfield` or `brownfield`.
+
+Workspace detection procedure:
+1. Check for source directories (`src/`, `lib/`, `app/`, `packages/`).
+2. Check for package manifests (`package.json`, `go.mod`, `Cargo.toml`, `pyproject.toml`, `pom.xml`).
+3. If source directories AND manifests exist with meaningful code: `brownfield`.
+4. If repo is empty or has only scaffolding: `greenfield`.
+5. Call `update_aidlc_state` with `stage: "workspace-classified"` and record the classification in `discovery/technical-environment.md`.
 
 For brownfield systems, run reverse engineering and write:
 - `business-overview.md`
@@ -128,12 +153,12 @@ Each stage must end with binary evidence:
 - Unknowns are recorded or resolved
 - Required tests, type checks, linters, scans, or build commands ran, failed, or were explicitly unavailable
 - Human approval is recorded before irreversible actions
-- Breadcrumb is updated in `aidlc-state.md`
+- Breadcrumb is updated via `update_aidlc_state` with `breadcrumb: "AI-DLC: <phase> -> <stage> -> <status>"`
 - Checkpoint is written after impact analysis, implementation, type/API/migration safety gates, validation, synchronization, and change record
 
 ## Checkpoint And Resume
 
-Write `$AIDLCcheckpoints.md` and update `aidlc-state.md` after each major step:
+Write `.engineering-intelligence/aidlc/checkpoints.md` and call `update_aidlc_state` after each major step:
 
 | Checkpoint | Meaning | Resume Action |
 |---|---|---|
@@ -154,7 +179,7 @@ If the user asks for dry run, preview, or plan-only execution:
 - Show files likely to change and why
 - Run safe current-state checks such as type/lint/test discovery
 - Do not edit product code
-- Write a pre-flight report under `$EIreports/`
+- Write a pre-flight report under `.engineering-intelligence/reports/`
 
 ## Environmental Backpressure
 
@@ -181,3 +206,12 @@ AI-DLC: <phase> -> <stage> -> <status>
 - [ ] Checkpoints are written and resume is supported
 - [ ] Validation uses environmental backpressure
 - [ ] Operations readiness is addressed when deployment or production behavior changes
+
+## Cross-References
+
+- Pre-flight: `socratic-clarification-gate` (clarity assessment), `question-file-engine` (3+ ambiguities)
+- Inception: `backlog-decomposition-engine` (Epic → Feature → Ticket), `requirement-scoper` (detailed scoping)
+- Construction: `engineering-intelligence-skill` (implementation), `vertical-tdd-engine` (TDD mode)
+- Operations: `operations-readiness-engine` (deployment, observability, rollback)
+- Used by: `engineering-intelligence` (main workflow), `engineering-orchestrator` (routing)
+

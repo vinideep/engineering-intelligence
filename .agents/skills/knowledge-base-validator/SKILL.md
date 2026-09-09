@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: knowledge-base-validator
 description: Validates project knowledge documentation against source and configuration evidence, identifying stale, unsupported, or uncertain claims. Use after initialization or documentation synchronization.
@@ -7,18 +5,20 @@ description: Validates project knowledge documentation against source and config
 
 # Knowledge Base Validator
 
-Systematically audit every significant claim in `$EIknowledge-base/*.md` against actual repository evidence. Produce a structured validation report that identifies exactly what is supported, what is stale, and what needs human review.
+Systematically audit every significant claim in `.engineering-intelligence/knowledge-base/*.md` against actual repository evidence. Produce a structured validation report that identifies exactly what is supported, what is stale, and what needs human review.
 
-**Run the deterministic claim check first:** `npx engineering-intelligence claims verify --json` re-hashes every recorded claim's evidence spans against the current source and reports each as verified, stale (cited code changed), or missing (cited code gone) — no LLM, no guessing. Treat stale/missing claims as the priority worklist, refresh or correct them, and reserve the manual audit below for prose that is not yet backed by recorded claims.
+**Run the deterministic claim check first:** `npx engineering-intelligence claims verify --json`. Derived claims are re-computed from source, so `verified` means the statement itself still holds and `refuted` means it no longer does. Asserted claims are free text: their evidence is hash-checked (`stale` / `missing`), but the sentence is never machine-checked, so they report `unverified` and must not be treated as confirmed. Work the refuted/stale/missing list first, then audit the `unverified` assertions by hand — those are exactly the statements nothing else can vouch for.
+
+Apply the authority hierarchy during every audit: current source is ground truth; EI artifacts are canonical knowledge; Graphify and CCE are supporting evidence only. Provider agreement can corroborate a source-backed relationship, but provider-only/unverifiable or contested output cannot promote prose to Supported. Record provider version, health, freshness, fallback, and any scope rejection in the validation report.
 
 ## Inputs
 
-- Repository root path with `$EIknowledge-base/` present
+- Repository root path with `.engineering-intelligence/knowledge-base/` present
 - Optional: specific documents to validate (defaults to all)
 
 ## Procedure
 
-1. **Enumerate Claims** — Read each `$EIknowledge-base/*.md` document. Extract every material claim about architecture, APIs, schemas, dependencies, configurations, flows, and behavior.
+1. **Enumerate Claims** — Read each `.engineering-intelligence/knowledge-base/*.md` document. Extract every material claim about architecture, APIs, schemas, dependencies, configurations, flows, and behavior.
 
 2. **Verify Against Evidence** — For each claim, check:
    - Does the referenced file/path still exist?
@@ -45,7 +45,7 @@ Systematically audit every significant claim in `$EIknowledge-base/*.md` against
 
 6. **Auto-Heal Unsupported Claims** — During explicit synchronization workflows only, re-extract the smallest affected section for unsupported or stale claims, update that section with fresh evidence citations, and record the heal. Escalate claims requiring product judgment instead of guessing.
 
-7. **Write Report** — Generate `$EIknowledge-base/15-validation-report.md`
+7. **Write Report** — Generate `.engineering-intelligence/knowledge-base/15-validation-report.md`
 
 ## Output Format
 
@@ -114,6 +114,8 @@ Scope: <documents validated>
 - [ ] Cross-document contradictions are listed or explicitly absent
 - [ ] Auto-heal actions are recorded when synchronization mode is active
 - [ ] Recommended actions are actionable
+- [ ] No provider-only, stale, contested, or out-of-scope evidence is categorized as Supported
+- [ ] Strict claims, citation freshness, and cross-document consistency gates pass before publication
 
 ## Cross-References
 

@@ -1,7 +1,6 @@
 ---
 name: backlog-decomposition-engine
 description: Autonomously decomposes a high-level initiative into a durable Epic to Feature to Ticket backlog with stable IDs, acceptance criteria, dependencies, execution order, and a per-feature human approval gate. Use to plan large product work before implementation.
-version: 1.0.0
 ---
 
 # Backlog Decomposition Engine
@@ -146,6 +145,12 @@ Implementation of this feature's tickets must not begin until a human records
 - Estimate: S | M | L
 - Risk: low | medium | high
 - Depends On: TKT-XXX (or none)
+<!-- Use proposed: prefix for entities not yet in the graph; use pkg: for external packages -->
+- Target Graph Nodes:
+  - module:<repo-relative-path>
+  - symbol:<repo-relative-path>#<symbolName>
+  - pkg:<package-name>
+  - proposed:<repo-relative-path>
 - Files Likely Affected: <paths from graph intelligence>
 
 ## Acceptance Criteria
@@ -154,6 +159,7 @@ Implementation of this feature's tickets must not begin until a human records
 ## Definition of Ready
 - [ ] Dependencies are done
 - [ ] Acceptance criteria are testable
+- [ ] Target graph nodes verified against dependency-graph.json
 - [ ] Affected files identified from graph intelligence
 
 ## Definition of Done
@@ -185,3 +191,17 @@ Implementation of this feature's tickets must not begin until a human records
 - [ ] `backlog-index.md` counters and status rollup match the child files
 - [ ] No product code was modified
 - [ ] Decomposition decisions appended to `aidlc/audit.md`
+
+## Tools
+
+- `get_engineering_context`: Load scoped graph and knowledge data for affected-file predictions.
+- `check_aidlc_gate`: Call with `phase: "inception"` after decomposition to verify readiness for Construction.
+- `update_aidlc_state`: Transition lifecycle state after decomposition (e.g. `phase: "inception"`, `stage: "backlog-decomposed"`).
+
+## Cross-References
+
+- Depends on: `get_engineering_context` (graph inputs), `aidlc-lifecycle-engine` (phase model)
+- Triggers: `deliver-backlog` (per-feature approval + implementation), `issue-tracker-sync-engine` (optional tracker sync)
+- Pre-flight: `socratic-clarification-gate` (when initiative has 3+ ambiguities before decomposition)
+- Used by: `engineering-intelligence-skill` (when epic-sized work is detected)
+

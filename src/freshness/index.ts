@@ -1,12 +1,13 @@
-import { readFile, writeFile, mkdir, access } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
+import { runProcessSync } from "../process/index.js";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type FreshnessStatus = "fresh" | "aging" | "stale" | "very-stale" | "obsolete";
+export type FreshnessStatus = "fresh" | "aging" | "stale" | "very-stale" | "obsolete" | "unverifiable";
 export type FreshnessAction = "none" | "incremental-sync" | "full-regeneration" | "manual-review";
 
 export interface StaleSource {
@@ -37,33 +38,20 @@ export interface FreshnessReport {
 // Git helpers
 // ---------------------------------------------------------------------------
 
-function tryGit(args: string, cwd: string): string {
-  try {
-    return execSync(`git ${args}`, {
-      encoding: "utf8",
-      cwd,
-      stdio: ["pipe", "pipe", "pipe"],
-      timeout: 10_000,
-    }).trim();
-  } catch {
-    return "";
-  }
+function tryGit(args: string[], cwd: string): string {
+  const result = runProcessSync({ command: "git", args, cwd, timeoutMs: 10_000 });
+  return result.exitCode === 0 ? result.stdout.trim() : "";
 }
 
 function gitLastModified(filePath: string, root: string): Date | null {
-  const iso = tryGit(`log -1 --format=%cI -- ${JSON.stringify(filePath)}`, root);
+  const iso = tryGit(["log", "-1", "--format=%cI", "--", filePath], root);
   if (!iso) return null;
   const d = new Date(iso);
   return isNaN(d.getTime()) ? null : d;
 }
 
 function fileExists(filePath: string): boolean {
-  try {
-    execSync(`test -e ${JSON.stringify(filePath)}`, { stdio: "pipe" });
-    return true;
-  } catch {
-    return false;
-  }
+  return existsSync(filePath);
 }
 
 // ---------------------------------------------------------------------------
@@ -120,6 +108,7 @@ function statusFromScore(score: number): FreshnessStatus {
 }
 
 function actionFromStatus(status: FreshnessStatus): FreshnessAction {
+  if (status === "unverifiable") return "manual-review";
   if (status === "fresh" || status === "aging") return "none";
   if (status === "stale") return "incremental-sync";
   if (status === "very-stale") return "full-regeneration";
@@ -135,6 +124,22 @@ async function scoreDocument(docPath: string, root: string): Promise<DocumentSco
 
   const docLastUpdated = extractDocTimestamp(content);
   const evidencePaths = extractEvidencePaths(content);
+
+  // A document with no evidence citations cannot be checked against anything.
+  // Previously it kept the full 100 and reported "fresh", so a placeholder
+  // outscored a conscientious doc — inverting the incentive the whole product
+  // depends on. Say "unverifiable" instead of pretending to know.
+  if (evidencePaths.length === 0) {
+    return {
+      docPath,
+      score: 0,
+      status: "unverifiable",
+      docLastUpdated: docLastUpdated?.toISOString() ?? null,
+      staleSources: [],
+      deletedSources: [],
+      action: "manual-review",
+    };
+  }
 
   let score = 100;
   const staleSources: StaleSource[] = [];
@@ -157,13 +162,14 @@ async function scoreDocument(docPath: string, root: string): Promise<DocumentSco
     }
   }
 
-  // Age penalty
+  // Age penalty. Clamped at 0 so a document claiming a FUTURE "Last updated"
+  // date cannot earn a negative penalty — i.e. a bonus — and score above 100.
   if (docLastUpdated) {
     const ageDays = daysBetween(docLastUpdated, now);
-    score -= Math.min(20, ageDays * 0.5);
+    score -= Math.max(0, Math.min(20, ageDays * 0.5));
   }
 
-  score = Math.max(0, Math.round(score));
+  score = Math.max(0, Math.min(100, Math.round(score)));
   const status = statusFromScore(score);
 
   return {
@@ -221,7 +227,12 @@ function computeDriftDecision(
   scores: DocumentScore[],
   threshold: number,
 ): FreshnessReport["driftDecision"] {
-  const minScore = scores.reduce((min, s) => Math.min(min, s.score), 100);
+  // "unverifiable" means we have no evidence to check against — that is missing
+  // information, not proof of drift. Counting it as score 0 would block every
+  // edit in any repo containing one uncited document. It is surfaced in the
+  // report and as a manual-review action instead.
+  const checkable = scores.filter((s) => s.status !== "unverifiable");
+  const minScore = checkable.reduce((min, s) => Math.min(min, s.score), 100);
   if (minScore < 50) return "Block implementation";
   if (minScore < threshold) return "Sync before implementation";
   return "Proceed";
@@ -232,13 +243,13 @@ function computeDriftDecision(
 // ---------------------------------------------------------------------------
 
 const STATUS_ICON: Record<FreshnessStatus, string> = {
-  fresh: "🟢", aging: "🟡", stale: "🟠", "very-stale": "🔴", obsolete: "⛔",
+  fresh: "🟢", aging: "🟡", stale: "🟠", "very-stale": "🔴", obsolete: "⛔", unverifiable: "⚪",
 };
 
 function renderReport(report: FreshnessReport): string {
   const { generatedAt, threshold, scores, driftDecision } = report;
 
-  const counts = { fresh: 0, aging: 0, stale: 0, "very-stale": 0, obsolete: 0 };
+  const counts = { fresh: 0, aging: 0, stale: 0, "very-stale": 0, obsolete: 0, unverifiable: 0 };
   for (const s of scores) counts[s.status]++;
 
   const summaryRows = Object.entries(counts)

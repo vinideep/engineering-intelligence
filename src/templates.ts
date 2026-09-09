@@ -54,6 +54,12 @@ export const SKILL_NAMES = [
   "backlog-decomposition-engine",
   "issue-tracker-sync-engine",
   "user-intelligence-engine",
+  "socratic-stress-tester",
+  "session-handoff-engine",
+  "vertical-tdd-engine",
+  "interface-design-explorer",
+  "socratic-clarification-gate",
+  "graph-guided-autoresearch",
 ] as const;
 
 export const AGENT_NAMES = [
@@ -86,6 +92,10 @@ export const WORKFLOW_NAMES = [
   "create-project",
   "decompose-backlog",
   "deliver-backlog",
+  "grill-me",
+  "handoff",
+  "tdd",
+  "design-an-interface",
 ] as const;
 
 function templateRoot(): string {

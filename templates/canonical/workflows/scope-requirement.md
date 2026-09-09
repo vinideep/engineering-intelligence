@@ -1,4 +1,5 @@
 ---
+name: scope-requirement
 description: Scope requirements and generate the final implementation prompt with the Product Analyst agent without modifying product code.
 ---
 

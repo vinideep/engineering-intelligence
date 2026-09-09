@@ -1,18 +1,21 @@
 #!/usr/bin/env node
 import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { fileURLToPath } from "node:url";
 import { isIdeId } from "../adapters/index.js";
 import { install, uninstall, update } from "../installer/index.js";
 import { doctor } from "../validation/index.js";
 import { generateDashboardHTML } from "../visualizer/index.js";
 import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../types.js";
+import { packageVersion } from "../version.js";
+import type { ProviderName } from "../providers/types.js";
+import type { ProviderPolicy } from "../config/index.js";
 
-type Command = "install" | "update" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "claims" | "context" | "telemetry";
+type Command = "initialize" | "providers" | "install" | "update" | "sync" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "verify" | "claims" | "context" | "telemetry" | "setup" | "ask" | "guard" | "health" | "impact" | "who-calls" | "preflight" | "postflight" | "evidence-record" | "evidence-check" | "experiment" | "aidlc";
 
-const COMMANDS: Command[] = ["install", "create", "update", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "claims", "context", "telemetry"];
+const COMMANDS: Command[] = ["initialize", "providers", "install", "create", "update", "sync", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "verify", "claims", "context", "telemetry", "setup", "ask", "guard", "health", "impact", "who-calls", "preflight", "postflight", "evidence-record", "evidence-check", "experiment", "aidlc"];
 
 interface Options {
   command: Command;
@@ -32,30 +35,40 @@ interface Options {
   gateName?: string;
   base: string;
   positional?: string;   // action (claims) or task (context)
+  positionals: string[];
+  intent?: string;
+  id?: string;
+  full?: boolean;
+  transitive?: boolean;
   statement?: string;
   evidence?: string;
   confidence?: string;
+  author?: string;
   budget: number;
   strict: boolean;
   host: string;
+  failOn?: string;
+  providerPolicy?: ProviderPolicy;
+  offline: boolean;
+  requireProviders?: boolean;
+  expertMode: boolean;
+  providerAction?: "status" | "install" | "repair" | "upgrade" | "expose" | "hide" | "purge";
+  providerName?: ProviderName;
 }
 
-async function packageVersion(): Promise<string> {
-  const packageJson = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../package.json");
-  const parsed = JSON.parse(await readFile(packageJson, "utf8")) as { version: string };
-  return parsed.version;
-}
+function usage(all = false): string {
+  const core = `engineering-intelligence — codebase intelligence that lives in your repo.
 
-function usage(): string {
-  return `engineering-intelligence
-
-Install engineering intelligence orchestration assets for AI coding IDEs.
-Build a real dependency graph. Start an MCP server for tool-based queries.
+Core commands:
 
 Usage:
   engineering-intelligence install [path] [--ide <id>...] [--yes] [--dry-run] [--force]
+  engineering-intelligence initialize [path] [--providers auto|full|native] [--offline] [--require-providers] [--yes] [--dry-run]
+  engineering-intelligence providers status|install|repair|upgrade|expose|hide|purge [graphify|cce] [path]
   engineering-intelligence create [path] [--ide <id>...] [--yes]
   engineering-intelligence update [path] [--dry-run] [--force]
+  engineering-intelligence sync [path] [--files a,b] [--json]
+  engineering-intelligence health [path] [--strict] [--json]
   engineering-intelligence doctor [path] [--json]
   engineering-intelligence uninstall [path] [--dry-run] [--force]
   engineering-intelligence visualize [path] [--open]
@@ -65,9 +78,11 @@ Usage:
   engineering-intelligence git-analysis [path] [--window 90] [--json]
   engineering-intelligence user-profile [path] [--json]
   engineering-intelligence hook <event> [path]   (internal: driven by IDE lifecycle hooks)
-  engineering-intelligence gate <name> [path] [--base <ref>] [--json]
+  engineering-intelligence gate <name> [path] [--base <ref>] [--fail-on error|warning] [--json]
+  engineering-intelligence verify [path] [--json]
   engineering-intelligence claims verify [path] [--json] [--strict]
-  engineering-intelligence claims add --statement "..." --evidence "src/a.ts:10-20,src/b.ts" [path]
+  engineering-intelligence claims derive [path] [--json]
+  engineering-intelligence claims add --statement "..." --evidence "src/a.ts:10-20,src/b.ts" --author "name" [path]
   engineering-intelligence claims list [path] [--json]
   engineering-intelligence context "<task>" [path] [--files a,b] [--budget 2000] [--json]
   engineering-intelligence telemetry [path] [--json]
@@ -75,6 +90,20 @@ Usage:
 IDE ids: ${IDE_IDS.join(", ")}
 Hook events: session-start, pre-tool-use, post-tool-use, stop
 Gates: env-vars, dead-exports, api-diff, migration-lint
+`;
+  if (!all) return core + "\nRun `engineering-intelligence --help --all` for the full advanced command list.\n";
+  return core + `
+Advanced commands (the 4 verbs above orchestrate these; use directly if you want):
+  install / create / update / uninstall [path] [--ide <id>...] [--dry-run] [--force]
+  map [path] [--type dependency] [--update] [--files a,b,c]
+  impact <file...> [--json]            who-calls <symbol> [--transitive] [--json]
+  verify [path] [--strict] [--json]    visualize [path] [--open]
+  preflight --intent "<s>" [file...]   postflight [--id <flight>] [--strict]
+  evidence-record [path]               evidence-check [path] [--strict] [--json]
+  freshness [path] [--threshold 60]    git-analysis [path] [--window 90]
+  experiment candidates|history [path] [--json]
+  aidlc gate|clarify|state [phase|prompt] [path] [--json]
+  user-profile [path] [--json]
 `;
 }
 
@@ -85,7 +114,7 @@ function parseArgs(args: string[]): Options {
     command = remaining.shift() as Command;
   }
   if (remaining.includes("--help") || remaining.includes("-h")) {
-    output.write(usage());
+    output.write(usage(remaining.includes("--all")));
     process.exit(0);
   }
   const ides: IdeId[] = [];
@@ -107,9 +136,22 @@ function parseArgs(args: string[]): Options {
   let statement: string | undefined;
   let evidence: string | undefined;
   let confidence: string | undefined;
+  let author: string | undefined;
   let budget = 2000;
   let strict = false;
   let host = "claude-code";
+  let failOn: string | undefined;
+  let providerPolicy: ProviderPolicy | undefined;
+  let offline = false;
+  let requireProviders: boolean | undefined;
+  let expertMode = false;
+  let providerAction: Options["providerAction"];
+  let providerName: ProviderName | undefined;
+  const positionals: string[] = [];
+  let intent: string | undefined;
+  let id: string | undefined;
+  let full = false;
+  let transitive = false;
 
   for (let index = 0; index < remaining.length; index += 1) {
     const arg = remaining[index];
@@ -132,10 +174,36 @@ function parseArgs(args: string[]): Options {
       dryRun = true;
     } else if (arg === "--force") {
       force = true;
+    } else if (arg === "--providers") {
+      const value = remaining[++index];
+      if (value !== "auto" && value !== "full" && value !== "native") throw new Error("--providers requires auto, full, or native.");
+      providerPolicy = value;
+    } else if (arg.startsWith("--providers=")) {
+      const value = arg.slice("--providers=".length);
+      if (value !== "auto" && value !== "full" && value !== "native") throw new Error("--providers requires auto, full, or native.");
+      providerPolicy = value;
+    } else if (arg === "--offline") {
+      offline = true;
+    } else if (arg === "--require-providers") {
+      requireProviders = true;
+    } else if (arg === "--expert") {
+      expertMode = true;
     } else if (arg === "--json") {
       json = true;
     } else if (arg === "--open") {
       openBrowser = true;
+    } else if (arg === "--full") {
+      full = true;
+    } else if (arg === "--transitive") {
+      transitive = true;
+    } else if (arg === "--intent") {
+      intent = remaining[++index];
+    } else if (arg.startsWith("--intent=")) {
+      intent = arg.slice("--intent=".length);
+    } else if (arg === "--id") {
+      id = remaining[++index];
+    } else if (arg.startsWith("--id=")) {
+      id = arg.slice("--id=".length);
     } else if (arg === "--type") {
       const value = remaining[++index];
       if (!value) throw new Error("--type requires a value.");
@@ -176,6 +244,10 @@ function parseArgs(args: string[]): Options {
       evidence = remaining[++index];
     } else if (arg.startsWith("--evidence=")) {
       evidence = arg.slice("--evidence=".length);
+    } else if (arg === "--author") {
+      author = remaining[++index];
+    } else if (arg.startsWith("--author=")) {
+      author = arg.slice("--author=".length);
     } else if (arg === "--confidence") {
       confidence = remaining[++index];
     } else if (arg.startsWith("--confidence=")) {
@@ -190,23 +262,40 @@ function parseArgs(args: string[]): Options {
       host = remaining[++index] ?? host;
     } else if (arg.startsWith("--host=")) {
       host = arg.slice("--host=".length);
+    } else if (arg === "--fail-on") {
+      const value = remaining[++index];
+      if (!value) throw new Error("--fail-on requires a value.");
+      failOn = value;
+    } else if (arg.startsWith("--fail-on=")) {
+      failOn = arg.slice("--fail-on=".length);
     } else if (arg.startsWith("-")) {
       throw new Error(`Unknown option "${arg}".`);
     } else if (command === "hook" && hookEvent === undefined) {
       hookEvent = arg;
     } else if (command === "gate" && gateName === undefined) {
       gateName = arg;
-    } else if ((command === "claims" || command === "context") && positional === undefined) {
+    } else if ((command === "claims" || command === "context" || command === "experiment" || command === "aidlc") && positional === undefined) {
       positional = arg;
+    } else if (command === "providers" && providerAction === undefined) {
+      if (!["status", "install", "repair", "upgrade", "expose", "hide", "purge"].includes(arg)) throw new Error(`Unknown providers action "${arg}".`);
+      providerAction = arg as Options["providerAction"];
+    } else if (command === "providers" && providerName === undefined && (arg === "graphify" || arg === "cce")) {
+      providerName = arg;
     } else if (!target) {
       target = arg;
+      if (command === "aidlc" || command === "experiment" || command === "ask" || command === "guard" || command === "impact" || command === "who-calls") {
+        positionals.push(arg);
+      }
     } else {
-      throw new Error(`Unexpected argument "${arg}".`);
+      positionals.push(arg);
+      if (!target) target = arg;
     }
   }
+  // For commands whose positionals are a payload (not a path), the root is cwd.
+  const positionalIsPayload = command === "impact" || command === "who-calls" || command === "preflight" || command === "ask" || command === "guard" || command === "aidlc";
   return {
     command,
-    root: path.resolve(target ?? process.cwd()),
+    root: path.resolve(positionalIsPayload ? process.cwd() : (target ?? process.cwd())),
     ides: [...new Set(ides)],
     yes,
     dryRun,
@@ -222,29 +311,45 @@ function parseArgs(args: string[]): Options {
     gateName,
     base,
     positional,
+    positionals,
+    intent,
+    id,
+    full,
+    transitive,
     statement,
     evidence,
     confidence,
+    author,
     budget: Number.isNaN(budget) ? 2000 : budget,
     strict,
     host,
+    failOn,
+    providerPolicy,
+    offline,
+    requireProviders,
+    expertMode,
+    providerAction,
+    providerName,
   };
 }
 
 async function selectIdes(options: Options, readline: any): Promise<IdeId[]> {
-  if ((options.command !== "install" && options.command !== "create") || options.ides.length > 0) {
+  if (options.ides.length > 0) {
     return options.ides;
   }
+  const { detectIdes } = await import("../orchestrators/setup.js");
+  const detected = detectIdes(options.root);
   if (options.yes || !readline) {
-    return ["generic"];
+    return detected.length > 0 ? detected : ["generic"];
   }
-  output.write(`Select one or more IDE adapters:\n${IDE_IDS.map((ide, i) => `  ${i + 1}. ${ide}`).join("\n")}\n`);
-  const answer = (await readline.question("Adapter numbers or ids, comma separated [generic]: ")) as string;
-  const choices = answer.trim().length === 0 ? ["generic"] : answer.split(",").map((part: string) => part.trim());
-  const mapped = choices.map((choice: string) => {
+  const defaultChoices = detected.length > 0 ? detected.join(", ") : "generic";
+  output.write(`\nSelect target AI IDE adapter(s):\n${IDE_IDS.map((ide, i) => `  ${i + 1}. ${ide}${detected.includes(ide) ? " (auto-detected)" : ""}`).join("\n")}\n`);
+  const answer = (await readline.question(`Adapter numbers or names, comma-separated [${defaultChoices}]: `)) as string;
+  const rawChoices = answer.trim().length === 0 ? (detected.length > 0 ? detected : ["generic"]) : answer.split(",").map((part: string) => part.trim());
+  const mapped = rawChoices.map((choice: string) => {
     const numbered = Number.parseInt(choice, 10);
     const candidate = Number.isNaN(numbered) ? choice : IDE_IDS[numbered - 1];
-    if (!candidate || !isIdeId(candidate)) throw new Error(`Unknown IDE selection "${choice}".`);
+    if (!candidate || !isIdeId(candidate)) throw new Error(`Unknown IDE selection "${choice}". Supported: ${IDE_IDS.join(", ")}.`);
     return candidate;
   });
   return [...new Set(mapped)] as IdeId[];
@@ -305,6 +410,171 @@ async function main(): Promise<void> {
       }
     : undefined;
 
+  if (options.command === "providers") {
+    const { PROVIDER_NAMES, providerStatus, installProvider, inspectProjectProviderRuns, prepareProviders, purgeProjectProviderCache } = await import("../providers/index.js");
+    const { setProviderExpertMode } = await import("../config/index.js");
+    const action = options.providerAction ?? "status";
+    if (action === "expose" || action === "hide") {
+      if (action === "expose" && !options.expertMode) {
+        output.write("Raw provider evidence is an expert surface. Re-run `providers expose --expert` to enable it explicitly.\n");
+        process.exitCode = 2;
+      } else {
+        await setProviderExpertMode(options.root, action === "expose");
+        output.write(action === "expose" ? "Expert provider tools enabled for the EI MCP server.\n" : "Expert provider tools hidden; consolidated EI tools remain available.\n");
+      }
+      if (readline) readline.close();
+      return;
+    }
+    if (action === "purge") {
+      await purgeProjectProviderCache(options.root);
+      output.write("Removed the project-local provider indexes and manifests. Shared provider installations were preserved.\n");
+      if (readline) readline.close();
+      return;
+    }
+    const names = options.providerName ? [options.providerName] : [...PROVIDER_NAMES];
+    if (action === "install" || action === "repair" || action === "upgrade") {
+      const statuses = [];
+      for (const name of names) statuses.push(await installProvider(name, { dryRun: options.dryRun }));
+      if (!options.dryRun) await prepareProviders(options.root, { installMissing: false });
+      if (options.json) output.write(`${JSON.stringify(statuses, null, 2)}\n`);
+      else for (const status of statuses) output.write(`${status.displayName}: ${status.health} — ${status.message}\n`);
+      process.exitCode = statuses.some((status) => status.health !== "healthy" && !options.dryRun) ? 1 : 0;
+      if (readline) readline.close();
+      return;
+    }
+    const { loadEiConfig } = await import("../config/index.js");
+    const providerConfig = await loadEiConfig(options.root);
+    const disabled = providerConfig.providers.policy === "native";
+    const [statuses, projectRuns] = await Promise.all([
+      Promise.all(names.map((name) => providerStatus(name, { disabled }))),
+      inspectProjectProviderRuns(options.root, { disabled }),
+    ]);
+    const selectedRuns = projectRuns.filter((status) => names.includes(status.name));
+    if (options.json) output.write(`${JSON.stringify({ policy: providerConfig.providers.policy, requireProviders: providerConfig.providers.requireProviders, binaries: statuses, projectRuns: selectedRuns }, null, 2)}\n`);
+    else {
+      for (const status of statuses) output.write(`${status.displayName} binary: ${status.health} — ${status.message}\n`);
+      for (const status of selectedRuns) output.write(`${status.name} project state: ${status.health} — ${status.message}\n`);
+    }
+    const hardFailure = statuses.some((status) => status.health === "error") || (providerConfig.providers.requireProviders && (statuses.some((status) => status.health !== "healthy") || selectedRuns.some((status) => status.health !== "current")));
+    process.exitCode = hardFailure ? 1 : 0;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "initialize") {
+    const ides = await selectIdes(options, readline);
+    const { runInitialization } = await import("../orchestrators/initialize.js");
+    const onProgress = options.json ? undefined : (msg: string) => output.write(`  ${msg}\n`);
+    const result = await runInitialization(options.root, {
+      ides,
+      packageVersion: version,
+      policy: options.providerPolicy,
+      offline: options.offline,
+      requireProviders: options.requireProviders,
+      dryRun: options.dryRun,
+      force: options.force,
+      expertMode: options.expertMode,
+      promptOverwrite,
+      onProgress,
+    });
+    if (options.json) output.write(`${JSON.stringify(result, null, 2)}\n`);
+    else if (!options.dryRun && result.generationBriefPath) {
+      output.write(`Initialization evidence is ready. Run the installed initialize-engineering-intelligence workflow to synthesize and validate EI-owned knowledge from ${result.generationBriefPath}.\n`);
+    }
+    process.exitCode = result.ok ? 0 : 1;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "setup") {
+    const ides = await selectIdes(options, readline);
+    const { runSetup, mcpRegistrationHint } = await import("../orchestrators/setup.js");
+    const result = await runSetup(options.root, {
+      ides,
+      packageVersion: version,
+      dryRun: options.dryRun,
+      force: options.force,
+      promptOverwrite,
+    });
+    if (options.json) {
+      output.write(`${JSON.stringify(result, null, 2)}\n`);
+    } else {
+      for (const line of result.logs) output.write(`  ${line}\n`);
+      if (!options.dryRun) output.write(mcpRegistrationHint(options.root, result.ides));
+    }
+    process.exitCode = result.installOp.conflicts > 0 ? 1 : 0;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "ask") {
+    const { runAsk } = await import("../orchestrators/ask.js");
+    const query = options.positionals.join(" ").trim();
+    if (!query) {
+      output.write("Usage: engineering-intelligence ask \"<question>\" | <file...>\n");
+      process.exitCode = 1;
+      if (readline) readline.close();
+      return;
+    }
+    const result = await runAsk(options.root, query, options.positionals, { full: options.full });
+    output.write(options.json ? `${JSON.stringify(result.json, null, 2)}\n` : result.text);
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "guard") {
+    const { preflight, postflight, renderFlightReport } = await import("../flight/index.js");
+    const intent = options.intent || options.positionals[0];
+    const isPreflight = options.positionals.length > 0 || !!options.intent;
+    if (isPreflight) {
+      const files = options.intent ? options.positionals : options.positionals.slice(1);
+      const { ensureFreshGraph } = await import("../graph/index.js");
+      await ensureFreshGraph(options.root);
+      const record = await preflight(options.root, { intent, files });
+      try {
+        const { recordEvidenceHashes } = await import("../evidence/index.js");
+        if (existsSync(path.join(options.root, ".engineering-intelligence", "knowledge-base"))) await recordEvidenceHashes(options.root);
+      } catch { /* best-effort */ }
+      if (options.json) {
+        output.write(`${JSON.stringify(record, null, 2)}\n`);
+      } else {
+        output.write(`Flight opened: ${record.id}\n  Intent: ${record.intent}\n`);
+        output.write(`  Declared files (${record.declaredFiles.length}): ${record.declaredFiles.join(", ") || "none"}\n`);
+        output.write(`  Predicted radius: ${record.predictedRadius.files.length} file(s), ${record.predictedRadius.direct.length} direct dependent(s)\n`);
+        output.write("  …make your edits, then run `engineering-intelligence guard` to audit.\n");
+      }
+    } else {
+      const result = await postflight(options.root, {});
+      if ("error" in result) {
+        output.write(`${result.error}\n`);
+        process.exitCode = 1;
+        if (readline) readline.close();
+        return;
+      }
+      output.write(options.json ? `${JSON.stringify(result.record, null, 2)}\n` : renderFlightReport(result.record, result.report));
+      if (options.strict && result.report.verdict === "flagged") process.exitCode = 1;
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "health") {
+    const { runHealth } = await import("../orchestrators/health.js");
+    const result = await runHealth(options.root);
+    output.write(options.json ? `${JSON.stringify(result.json, null, 2)}\n` : result.text);
+    if (options.openBrowser) {
+      const { generateDashboardHTML } = await import("../visualizer/index.js");
+      const html = await generateDashboardHTML(options.root);
+      const outPath = path.join(options.root, ".engineering-intelligence", "dashboard.html");
+      await mkdir(path.dirname(outPath), { recursive: true });
+      await writeFile(outPath, html, "utf8");
+      output.write(`  Dashboard: ${outPath}\n`);
+    }
+    if (options.strict && !result.ok) process.exitCode = 1;
+    if (readline) readline.close();
+    return;
+  }
+
   if (options.command === "freshness") {
     const { writeFreshnessReport } = await import("../freshness/index.js");
     const { reportPath, report } = await writeFreshnessReport(options.root, options.threshold);
@@ -324,6 +594,33 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (options.command === "verify") {
+    const { runVerification } = await import("../verify/index.js");
+    const { loadHookConfig } = await import("../hooks/index.js");
+    const config = await loadHookConfig(options.root);
+    const { receipt, noCommands } = await runVerification(options.root, {
+      commands: config.verifyCommands.length > 0 ? config.verifyCommands : undefined,
+    });
+    if (options.json) {
+      output.write(`${JSON.stringify(receipt, null, 2)}\n`);
+    } else if (noCommands) {
+      output.write("No check commands detected. Set hooks.verifyCommands in .engineering-intelligence/ei.config.json.\n");
+    } else {
+      for (const run of receipt.commands) {
+        output.write(`${run.exitCode === 0 ? "PASS" : "FAIL"}  ${run.command}  (${run.durationMs}ms)\n`);
+      }
+      const covered = Object.keys(receipt.files).length;
+      output.write(`Verdict: ${receipt.verdict.toUpperCase()} — receipt covers ${covered} changed file(s).\n`);
+      if (receipt.verdict === "fail") {
+        const failing = receipt.commands.find((r) => r.exitCode !== 0);
+        if (failing?.outputTail) output.write(`${failing.outputTail.trimEnd()}\n`);
+      }
+    }
+    process.exitCode = receipt.verdict === "pass" ? 0 : 1;
+    if (readline) readline.close();
+    return;
+  }
+
   if (options.command === "gate") {
     const { runGate, isGateName, GATE_NAMES } = await import("../gates/index.js");
     if (!options.gateName || !isGateName(options.gateName)) {
@@ -332,7 +629,13 @@ async function main(): Promise<void> {
       if (readline) readline.close();
       return;
     }
-    const result = await runGate(options.gateName, options.root, { base: options.base });
+    if (options.failOn && !["error", "warning", "info"].includes(options.failOn)) {
+      throw new Error(`--fail-on must be error, warning, or info (got "${options.failOn}").`);
+    }
+    const result = await runGate(options.gateName, options.root, {
+      base: options.base,
+      failOn: options.failOn as "error" | "warning" | "info" | undefined,
+    });
     if (options.json) {
       output.write(`${JSON.stringify(result, null, 2)}\n`);
     } else {
@@ -352,8 +655,8 @@ async function main(): Promise<void> {
     const claims = await import("../claims/index.js");
     const action = options.positional ?? "verify";
     if (action === "add") {
-      if (!options.statement || !options.evidence) {
-        output.write('claims add requires --statement "..." and --evidence "path:start-end,path2".\n');
+      if (!options.statement || !options.evidence || !options.author) {
+        output.write('claims add records an ASSERTED (unchecked) claim and requires --statement "..." --evidence "path:start-end,path2" --author "name".\nDerived facts are not hand-authored — run `claims derive` to compute them.\n');
         process.exitCode = 2;
         if (readline) readline.close();
         return;
@@ -362,9 +665,11 @@ async function main(): Promise<void> {
         const claim = await claims.addClaim(options.root, {
           statement: options.statement,
           evidence: claims.parseEvidenceSpec(options.evidence),
-          confidence: (options.confidence as "verified" | "inferred" | "unknown" | undefined) ?? "verified",
+          author: options.author,
         });
-        output.write(options.json ? `${JSON.stringify(claim, null, 2)}\n` : `Added ${claim.id}: ${claim.statement}\n`);
+        output.write(options.json
+          ? `${JSON.stringify(claim, null, 2)}\n`
+          : `Added ${claim.id} (asserted — not machine-checked): ${claim.statement}\n`);
       } catch (error) {
         output.write(`${error instanceof Error ? error.message : String(error)}\n`);
         process.exitCode = 1;
@@ -374,19 +679,25 @@ async function main(): Promise<void> {
       if (options.json) output.write(`${JSON.stringify(store, null, 2)}\n`);
       else {
         output.write(`${store.claims.length} claim(s):\n`);
-        for (const c of store.claims) output.write(`  ${c.id} [${c.confidence}] ${c.statement}\n`);
+        for (const c of store.claims) output.write(`  ${c.id} [${c.kind ?? "asserted"}] ${c.statement}\n`);
       }
+    } else if (action === "derive") {
+      const { added, removed, total } = await claims.deriveClaims(options.root);
+      output.write(options.json
+        ? `${JSON.stringify({ added, removed, total }, null, 2)}\n`
+        : `Derived ${total} fact(s) from source (+${added} new, -${removed} no longer true). Asserted claims left untouched.\n`);
     } else { // verify
       const report = await claims.verifyClaims(options.root);
       output.write(options.json ? `${JSON.stringify(report, null, 2)}\n` : claims.renderVerifyReport(report));
-      if (options.strict && report.stale + report.missing > 0) process.exitCode = 1;
+      // A refuted derived fact is a real contradiction with the source and fails strict mode.
+      if (options.strict && report.refuted + report.stale + report.missing > 0) process.exitCode = 1;
     }
     if (readline) readline.close();
     return;
   }
 
   if (options.command === "context") {
-    const { getContext } = await import("../context/index.js");
+    const { getEngineeringContext } = await import("../context/orchestrator.js");
     const task = options.positional ?? "";
     if (!task) {
       output.write('context requires a task, e.g. context "add rate limiting" --files src/auth.ts\n');
@@ -394,12 +705,12 @@ async function main(): Promise<void> {
       if (readline) readline.close();
       return;
     }
-    const pack = await getContext(options.root, { task, files: options.files, budget: options.budget });
+    const pack = await getEngineeringContext(options.root, { task, files: options.files, budget: options.budget });
     if (options.json) {
       output.write(`${JSON.stringify(pack, null, 2)}\n`);
     } else {
       output.write(pack.markdown);
-      output.write(`\n<!-- ~${pack.tokensEstimated}/${pack.budget} tokens; included: ${pack.included.join(", ") || "none"}${pack.omitted.length ? `; omitted (budget): ${pack.omitted.join(", ")}` : ""} -->\n`);
+      output.write(`\n<!-- ${pack.tokenAllocation.used}/${pack.tokenAllocation.budget} evidence tokens; confidence: ${pack.overallConfidence.toFixed(2)}; CCE fallback: ${pack.providers.cce.fallback} -->\n`);
     }
     if (readline) readline.close();
     return;
@@ -460,6 +771,229 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (options.command === "impact") {
+    const { ensureFreshGraph, analyzeImpact } = await import("../graph/index.js");
+    const files = options.files.length > 0 ? options.files : options.positionals;
+    if (files.length === 0) {
+      output.write("Usage: engineering-intelligence impact <file...> [--json]\n");
+      process.exitCode = 1;
+      if (readline) readline.close();
+      return;
+    }
+    const fresh = await ensureFreshGraph(options.root);
+    const result = await analyzeImpact(options.root, files);
+    if (options.json) {
+      output.write(`${JSON.stringify(fresh.staleWarning ? { ...result, staleWarning: fresh.staleWarning } : result, null, 2)}\n`);
+    } else {
+      output.write(`Impact of changing: ${files.join(", ")}\n`);
+      if (fresh.staleWarning) output.write(`  ⚠ ${fresh.staleWarning}\n`);
+      output.write(`  Direct (${result.direct.length}): ${result.direct.slice(0, 20).join(", ") || "none"}\n`);
+      output.write(`  Indirect (${result.indirect.length}): ${result.indirect.slice(0, 20).join(", ") || "none"}\n`);
+      if (result.testsToRun.length > 0) output.write(`  Tests to run (${result.testsToRun.length}): ${result.testsToRun.join(", ")}\n`);
+      for (const note of result.riskNotes) output.write(`  ⚠ ${note}\n`);
+      if (result.direct.length === 0 && result.indirect.length === 0) {
+        output.write("  No dependents found (or no graph — run `map` first).\n");
+      }
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "who-calls") {
+    const { ensureFreshGraph, whoCalls } = await import("../graph/index.js");
+    const name = options.positionals[0];
+    if (!name) {
+      output.write("Usage: engineering-intelligence who-calls <symbol> [--transitive] [--json]\n");
+      process.exitCode = 1;
+      if (readline) readline.close();
+      return;
+    }
+    const fresh = await ensureFreshGraph(options.root);
+    const result = await whoCalls(options.root, name, { transitive: options.transitive });
+    if (options.json) {
+      output.write(`${JSON.stringify(fresh.staleWarning ? { ...result, staleWarning: fresh.staleWarning } : result, null, 2)}\n`);
+    } else {
+      if (result.unresolved) {
+        output.write(`${result.unresolved}\n`);
+      } else {
+        output.write(`Callers of ${name} (${result.matched.length} definition(s), ${result.callers.length} caller(s)):\n`);
+        for (const c of result.callers) {
+          output.write(`  ${c.label}  [${c.confidence}]  ${c.evidence[0] ?? ""}\n`);
+        }
+        if (result.callers.length === 0) output.write("  No callers found in the graph.\n");
+      }
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "preflight") {
+    const { preflight } = await import("../flight/index.js");
+    if (!options.intent) {
+      output.write("Usage: engineering-intelligence preflight --intent \"<what you're changing>\" [file...]\n");
+      process.exitCode = 1;
+      if (readline) readline.close();
+      return;
+    }
+    const files = options.files.length > 0 ? options.files : options.positionals;
+    const record = await preflight(options.root, { intent: options.intent, files });
+    if (options.json) {
+      output.write(`${JSON.stringify(record, null, 2)}\n`);
+    } else {
+      output.write(`Flight opened: ${record.id}\n`);
+      output.write(`  Intent: ${record.intent}\n`);
+      output.write(`  Declared files (${record.declaredFiles.length}): ${record.declaredFiles.join(", ") || "none"}\n`);
+      output.write(`  Predicted radius: ${record.predictedRadius.files.length} file(s), ${record.predictedRadius.direct.length} direct / ${record.predictedRadius.indirect.length} indirect dependents\n`);
+      output.write(`  Run \`engineering-intelligence postflight --id ${record.id}\` after editing.\n`);
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "postflight") {
+    const { postflight, renderFlightReport } = await import("../flight/index.js");
+    const result = await postflight(options.root, { id: options.id || undefined });
+    if ("error" in result) {
+      output.write(`${result.error}\n`);
+      process.exitCode = 1;
+      if (readline) readline.close();
+      return;
+    }
+    if (options.json) {
+      output.write(`${JSON.stringify(result.record, null, 2)}\n`);
+    } else {
+      output.write(renderFlightReport(result.record, result.report));
+    }
+    if (options.strict && result.report.verdict === "flagged") process.exitCode = 1;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "experiment") {
+    const { generateExperimentCandidates, loadExperiments, renderExperimentHistory } = await import("../experiment/index.js");
+    const subAction = options.positional || options.positionals[0] || "candidates";
+    if (subAction === "candidates") {
+      const candidates = await generateExperimentCandidates(options.root, { focusFile: options.files[0] });
+      if (options.json) {
+        output.write(`${JSON.stringify(candidates, null, 2)}\n`);
+      } else {
+        output.write(`Graph-Guided Autoresearch Candidates (${candidates.length}):\n\n`);
+        for (const c of candidates) {
+          output.write(`• [Score: ${c.score}] ${c.targetFile}${c.symbol ? `:${c.symbol}` : ""}\n`);
+          output.write(`  Category: ${c.category} | Direct dependents: ${c.directDependents}\n`);
+          output.write(`  Rationale: ${c.rationale}\n`);
+          output.write(`  Hypothesis: ${c.suggestedHypothesis}\n\n`);
+        }
+      }
+    } else if (subAction === "history") {
+      const history = await loadExperiments(options.root, { targetFile: options.files[0] });
+      if (options.json) {
+        output.write(`${JSON.stringify(history, null, 2)}\n`);
+      } else {
+        output.write(`${renderExperimentHistory(history)}\n`);
+      }
+    } else {
+      output.write(`Unknown experiment action "${subAction}". Expected "candidates" or "history".\n`);
+      process.exitCode = 1;
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "aidlc") {
+    const { checkPhaseGate, assessPromptClarity, loadAidlcState, saveAidlcState } = await import("../aidlc/index.js");
+    const subAction = options.positional || options.positionals[0] || "gate";
+    if (subAction === "gate") {
+      const validPhases = ["discovery", "inception", "construction", "operations"];
+      const targetPhase = (options.positionals.find((p) => validPhases.includes(p)) || "inception") as any;
+      const result = await checkPhaseGate(options.root, targetPhase);
+      if (options.json) {
+        output.write(`${JSON.stringify(result, null, 2)}\n`);
+      } else {
+        output.write(`AI-DLC Gate: ${result.phase.toUpperCase()} [${result.status.toUpperCase()}] (Score: ${result.score}/100)\n\n`);
+        if (result.missingPrerequisites.length > 0) {
+          output.write("Missing Prerequisites:\n");
+          for (const m of result.missingPrerequisites) output.write(`  ✗ ${m}\n`);
+        }
+        if (result.blockingQuestions.length > 0) {
+          output.write("Blocking Questions:\n");
+          for (const q of result.blockingQuestions) output.write(`  ⚠ ${q}\n`);
+        }
+        if (result.recommendations.length > 0) {
+          output.write("\nRecommendations:\n");
+          for (const r of result.recommendations) output.write(`  • ${r}\n`);
+        }
+      }
+      if (options.strict && result.status === "blocked") process.exitCode = 1;
+    } else if (subAction === "clarify") {
+      const promptText = options.positionals.join(" ").trim();
+      const result = assessPromptClarity(promptText);
+      if (options.json) {
+        output.write(`${JSON.stringify(result, null, 2)}\n`);
+      } else {
+        output.write(`Prompt Clarity: ${result.clarityScore}/100 [${result.isClear ? "CLEAR" : "NEEDS CLARIFICATION"}]\n\n`);
+        if (result.ambiguities.length > 0) {
+          output.write("Detected Ambiguities:\n");
+          for (const a of result.ambiguities) {
+            output.write(`  • [${a.category}] ${a.description}\n`);
+            output.write(`    Why it matters: ${a.whyItMatters}\n`);
+          }
+        }
+        if (result.questions.length > 0) {
+          output.write("\nClarification Questions (Socratic Gauntlet):\n");
+          for (const q of result.questions) {
+            output.write(`  ${q.id}: ${q.question}\n`);
+            for (const o of q.options) {
+              output.write(`     [${o.id}] ${o.text}${o.tradeoff ? ` (Tradeoff: ${o.tradeoff})` : ""}\n`);
+            }
+            output.write("\n");
+          }
+        }
+      }
+    } else if (subAction === "state") {
+      const state = await loadAidlcState(options.root);
+      if (options.json) {
+        output.write(`${JSON.stringify(state, null, 2)}\n`);
+      } else {
+        output.write(`AI-DLC Position:\n`);
+        output.write(`  Phase:             ${state.position.phase}\n`);
+        output.write(`  Stage:             ${state.position.stage}\n`);
+        if (state.position.activeWorkflow) output.write(`  Active Workflow:   ${state.position.activeWorkflow}\n`);
+        if (state.position.activeHat) output.write(`  Active Hat:        ${state.position.activeHat}\n`);
+        if (state.position.activeUnit) output.write(`  Active Unit:       ${state.position.activeUnit}\n`);
+        output.write(`  Breadcrumb:        ${state.breadcrumb}\n`);
+        output.write(`  Source of truth:   .engineering-intelligence/aidlc/aidlc-state.json\n`);
+        output.write(`  Markdown mirror:   .engineering-intelligence/aidlc/aidlc-state.md\n`);
+      }
+    } else {
+      output.write(`Unknown aidlc action "${subAction}". Expected "gate", "clarify", or "state".\n`);
+      process.exitCode = 1;
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "evidence-record") {
+    const { recordEvidenceHashes } = await import("../evidence/index.js");
+    const snapshot = await recordEvidenceHashes(options.root);
+    output.write(`Recorded ${snapshot.hashes.length} evidence hash(es) to .engineering-intelligence/knowledge-base/.evidence-hashes.json\n`);
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "evidence-check") {
+    const { checkEvidenceHashes, renderEvidenceReport } = await import("../evidence/index.js");
+    const report = await checkEvidenceHashes(options.root);
+    if (options.json) {
+      output.write(`${JSON.stringify(report, null, 2)}\n`);
+    } else {
+      output.write(renderEvidenceReport(report));
+    }
+    if (options.strict && report.stale > 0) process.exitCode = 1;
+    if (readline) readline.close();
+    return;
+  }
+
   if (options.command === "mcp") {
     const { startMcpServer } = await import("../mcp/index.js");
     if (readline) readline.close();
@@ -486,9 +1020,9 @@ async function main(): Promise<void> {
     await writeFile(outPath, html, "utf8");
     output.write(`Dashboard generated: ${outPath}\n`);
     if (options.openBrowser) {
-      const { exec } = await import("node:child_process");
-      const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
-      exec(`${cmd} ${JSON.stringify(outPath)}`);
+      const { runProcess } = await import("../process/index.js");
+      const command = process.platform === "darwin" ? "open" : process.platform === "win32" ? "explorer.exe" : "xdg-open";
+      await runProcess({ command, args: [outPath], timeoutMs: 15_000 });
     }
     if (readline) readline.close();
     return;
@@ -501,9 +1035,43 @@ async function main(): Promise<void> {
     return;
   }
   if (options.command === "update") {
-    const result = await update(options.root, { dryRun: options.dryRun, force: options.force, packageVersion: version, promptOverwrite });
+    const { migrateEiConfig } = await import("../config/index.js");
+    let ides: IdeId[] | undefined = options.ides.length > 0 ? options.ides : undefined;
+    if (!ides && readline && !options.yes) {
+      ides = await selectIdes(options, readline);
+    }
+    if (!options.dryRun) {
+      const migration = await migrateEiConfig(options.root);
+      if (migration.changed) output.write(`Configuration migrated to schema ${migration.config.schemaVersion}.\n`);
+    }
+    const result = ides && ides.length > 0
+      ? await install(options.root, ides, { dryRun: options.dryRun, force: options.force, packageVersion: version, promptOverwrite })
+      : await update(options.root, { dryRun: options.dryRun, force: options.force, packageVersion: version, promptOverwrite });
     printResult("Update complete", result, options.dryRun);
     process.exitCode = result.conflicts > 0 ? 1 : 0;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "sync") {
+    const { syncEngineeringKnowledge } = await import("../orchestrators/change.js");
+    const result = await syncEngineeringKnowledge(options.root, options.files.length > 0 ? options.files : undefined);
+    if (options.json) {
+      output.write(`${JSON.stringify(result, null, 2)}\n`);
+    } else {
+      const scope = result.changedFiles.length > 0 ? result.changedFiles.join(", ") : "the working tree";
+      output.write(`Synchronized EI evidence for ${scope}.\n`);
+      output.write(`  Graph: ${result.graph.nodeCount} nodes, ${result.graph.edgeCount} edges (${result.graph.fileCount} files)\n`);
+      output.write(`  Claims: ${result.claims.verified}/${result.claims.total} verified\n`);
+      output.write(`  Providers: ${result.providers.policy}${result.providers.degraded ? " with native fallback" : ""}\n`);
+      if (result.requiresModelKnowledgeSync) {
+        output.write("  Canonical prose needs evidence-aware model synchronization; no prose was rewritten by this command.\n");
+      } else {
+        output.write("  Canonical prose is still current; no model synchronization is required.\n");
+      }
+    }
+    const badClaims = result.claims.refuted + result.claims.stale + result.claims.missing;
+    process.exitCode = !result.providers.ok || badClaims > 0 || result.knowledge.drift > 0 || result.evidence.stale > 0 ? 1 : 0;
     if (readline) readline.close();
     return;
   }

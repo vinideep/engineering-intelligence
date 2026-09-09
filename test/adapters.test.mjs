@@ -8,31 +8,43 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   const ides = ["antigravity", "antigravity-cli", "codex", "claude-code", "cursor", "github-copilot", "gemini-cli", "commandcode", "generic"];
   const files = await renderAdapters(ides);
   const paths = new Set(files.map((item) => item.path));
-  assert.ok(paths.has(".agent/workflows/initialize-engineering-intelligence.md"));
-  assert.ok(paths.has(".agent/workflows/map-architecture.md"));
-  assert.ok(paths.has(".agent/workflows/analyze-impact.md"));
-  assert.ok(paths.has(".agent/workflows/sync-engineering-intelligence.md"));
-  assert.ok(paths.has(".agent/workflows/scope-requirement.md"));
-  assert.ok(paths.has(".agent/workflows/discover-codebase.md"));
-  assert.ok(paths.has(".agent/workflows/create-project.md"));
-  assert.ok(!paths.has(".agent/workflows/aidlc-default.md"));
-  assert.ok(paths.has(".agent/agents/engineering-orchestrator/agent.json"));
-  assert.ok(paths.has(".agent/agents/change-agent/agent.json"));
-  assert.ok(paths.has(".agent/agents/product-analyst/agent.json"));
-  assert.ok(paths.has(".agent/agents/system-architect/agent.json"));
-  assert.ok(paths.has(".agent/agents/security-officer/agent.json"));
-  assert.ok(paths.has(".agent/agents/site-reliability-engineer/agent.json"));
+  assert.ok(paths.has(".agents/workflows/initialize-engineering-intelligence.md"));
+  assert.ok(paths.has(".agents/workflows/map-architecture.md"));
+  assert.ok(paths.has(".agents/workflows/analyze-impact.md"));
+  assert.ok(paths.has(".agents/workflows/sync-engineering-intelligence.md"));
+  assert.ok(paths.has(".agents/workflows/scope-requirement.md"));
+  assert.ok(paths.has(".agents/workflows/discover-codebase.md"));
+  assert.ok(paths.has(".agents/workflows/create-project.md"));
+  assert.ok(paths.has(".agents/workflows/grill-me.md"));
+  assert.ok(paths.has(".agents/workflows/handoff.md"));
+  assert.ok(paths.has(".agents/workflows/tdd.md"));
+  assert.ok(paths.has(".agents/workflows/design-an-interface.md"));
+  assert.ok(!paths.has(".agents/workflows/aidlc-default.md"));
+  assert.ok(paths.has(".agents/agents/engineering-orchestrator/agent.md"));
+  assert.ok(paths.has(".agents/agents/change-agent/agent.md"));
+  assert.ok(paths.has(".agents/agents/product-analyst/agent.md"));
+  assert.ok(paths.has(".agents/agents/system-architect/agent.md"));
+  assert.ok(paths.has(".agents/agents/security-officer/agent.md"));
+  assert.ok(paths.has(".agents/agents/site-reliability-engineer/agent.md"));
   assert.ok(paths.has("AGENTS.md"));
   assert.ok(paths.has(".claude/commands/engineering-intelligence.md"));
   assert.ok(paths.has(".claude/commands/map-architecture.md"));
+  assert.ok(paths.has(".claude/commands/grill-me.md"));
+  assert.ok(paths.has(".claude/commands/tdd.md"));
   assert.ok(paths.has(".cursor/commands/scope-requirement.md"));
   assert.ok(paths.has(".cursor/commands/initialize-engineering-intelligence.md"));
   assert.ok(paths.has(".cursor/commands/analyze-impact.md"));
+  assert.ok(paths.has(".cursor/commands/handoff.md"));
+  assert.ok(paths.has(".cursor/commands/design-an-interface.md"));
   assert.ok(paths.has(".github/prompts/engineering-intelligence.prompt.md"));
   assert.ok(paths.has(".github/prompts/review-engineering-change.prompt.md"));
+  assert.ok(paths.has(".github/prompts/tdd.prompt.md"));
   assert.ok(paths.has(".gemini/commands/initialize-engineering-intelligence.toml"));
   assert.ok(paths.has(".gemini/commands/sync-engineering-intelligence.toml"));
   assert.ok(paths.has(".gemini/commands/scope-requirement.toml"));
+  assert.ok(paths.has(".gemini/commands/grill-me.toml"));
+  assert.ok(paths.has(".agents/skills/sync-engineering-intelligence/SKILL.md"));
+  assert.ok(paths.has(".agents/workflows/sync-engineering-intelligence.md"));
   assert.ok(paths.has(".commandcode/skills/engineering-intelligence-skill/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/aidlc-lifecycle-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/type-safety-engine/SKILL.md"));
@@ -46,28 +58,28 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.ok(paths.has(".commandcode/commands/engineering-intelligence.md"));
   assert.ok(paths.has(".commandcode/commands/scope-requirement.md"));
   assert.match(files.find((item) => item.path === "AGENTS.md").content, /map-architecture/);
-  // antigravity IDE uses .agent/ (singular)
-  assert.ok(paths.has(".agent/agents/engineering-orchestrator/agent.json"));
-  assert.ok(paths.has(".agent/agents/engineering-orchestrator/prompt.md"));
-  // antigravity-cli uses .agents/ (plural)
-  assert.ok(paths.has(".agents/agents/engineering-orchestrator/agent.json"));
-  assert.ok(paths.has(".agents/agents/engineering-orchestrator/prompt.md"));
-  assert.ok(paths.has(".agents/agents/product-analyst/agent.json"));
-  // Verify agent.json content is valid JSON with required fields
-  const orchJson = JSON.parse(files.find((item) => item.path === ".agent/agents/engineering-orchestrator/agent.json").content);
-  assert.equal(orchJson.name, "engineering-orchestrator");
-  assert.ok(orchJson.description.length > 0);
-  assert.deepEqual(orchJson.agents, ["product-analyst", "system-architect", "change-agent", "test-engineer", "quality-agent", "knowledge-agent"]);
-  const analystJson = JSON.parse(files.find((item) => item.path === ".agent/agents/product-analyst/agent.json").content);
-  assert.ok(analystJson.skills.includes("requirement-scoper"));
-  assert.ok(analystJson.skills.includes("context-budget-optimizer"));
-  assert.ok(analystJson.skills.includes("aidlc-lifecycle-engine"));
-  const architectJson = JSON.parse(files.find((item) => item.path === ".agent/agents/system-architect/agent.json").content);
-  assert.ok(architectJson.skills.includes("nfr-adr-governor"));
-  const changeJson = JSON.parse(files.find((item) => item.path === ".agent/agents/change-agent/agent.json").content);
-  assert.ok(changeJson.skills.includes("type-safety-engine"));
-  assert.ok(changeJson.skills.includes("api-backward-compatibility-engine"));
-  assert.ok(changeJson.skills.includes("context-budget-optimizer"));
+  // Modern Antigravity agents are Markdown files with frontmatter. The old
+  // JSON + prompt pair is intentionally absent from fresh output.
+  assert.ok(!paths.has(".agent/agents/engineering-orchestrator/agent.json"));
+  assert.ok(!paths.has(".agents/agents/engineering-orchestrator/agent.json"));
+  assert.ok(!paths.has(".agents/agents/engineering-orchestrator/prompt.md"));
+  const orchestrator = files.find((item) => item.path === ".agents/agents/engineering-orchestrator/agent.md").content;
+  assert.match(orchestrator, /^---\n/);
+  assert.match(orchestrator, /name: engineering-orchestrator/);
+  assert.match(orchestrator, /mainAgent: true/);
+  assert.match(orchestrator, /subagent: true/);
+  assert.match(orchestrator, /skills:\n  - skills\/session-handoff-engine/);
+  assert.match(orchestrator, /\.engineering-intelligence\/knowledge-base/);
+  assert.match(orchestrator, /product-analyst/);
+  const analyst = files.find((item) => item.path === ".agents/agents/product-analyst/agent.md").content;
+  assert.match(analyst, /skills\/requirement-scoper/);
+  assert.match(analyst, /skills\/context-budget-optimizer/);
+  const architect = files.find((item) => item.path === ".agents/agents/system-architect/agent.md").content;
+  assert.match(architect, /skills\/nfr-adr-governor/);
+  const changeAgent = files.find((item) => item.path === ".agents/agents/change-agent/agent.md").content;
+  assert.match(changeAgent, /skills\/type-safety-engine/);
+  assert.match(changeAgent, /skills\/api-backward-compatibility-engine/);
+  assert.match(changeAgent, /skills\/context-budget-optimizer/);
   assert.deepEqual(await validateRender(ides), []);
 });
 
@@ -165,20 +177,13 @@ test("Claude Code adapter generates skills index and workflow routing table with
   const indexTokens = Math.ceil(index.length / 4);
   assert.ok(indexTokens < 2000, `SKILLS-INDEX should be under 2,000 tokens, got ${indexTokens}`);
 
-  // Path aliases are applied in command files.
+  // Commands and skills carry literal runtime paths — aliases were removed because
+  // they broke frontmatter parsing and produced glued tokens like `$EIknowledge-base/`.
   const engCmd = files.find((item) => item.path === ".claude/commands/engineering-intelligence.md").content;
-  assert.match(engCmd, /\$AIDLC/, "command files should use $AIDLC alias");
-  assert.match(engCmd, /\$EI/, "command files should use $EI alias");
-  assert.match(engCmd, /Path aliases/, "alias preamble must be present");
-  // Raw path count in the body should be reduced to only the preamble definition line (≤2 occurrences).
-  const rawAidlcCount = (engCmd.match(/\.engineering-intelligence\/aidlc\//g) ?? []).length;
-  assert.ok(rawAidlcCount <= 2, `raw $AIDLC path in command should appear only in preamble, got ${rawAidlcCount} occurrences`);
+  assert.match(engCmd, /\.engineering-intelligence\//, "command files must use literal runtime paths");
 
-  // Path aliases are applied in skill files — the heavy aidlc-lifecycle-engine has many path refs.
   const skill = files.find((item) => item.path === ".claude/skills/aidlc-lifecycle-engine/SKILL.md").content;
-  assert.match(skill, /\$AIDLC/);
-  const rawSkillAidlcCount = (skill.match(/\.engineering-intelligence\/aidlc\//g) ?? []).length;
-  assert.ok(rawSkillAidlcCount <= 2, `raw $AIDLC path in skill should appear only in preamble, got ${rawSkillAidlcCount} occurrences`);
+  assert.match(skill, /\.engineering-intelligence\/aidlc\//, "skill files must use literal runtime paths");
 
   // CLAUDE.md managed block directs AI to use the index and routing table.
   const claudeMd = files.find((item) => item.path === "CLAUDE.md").content;
@@ -186,6 +191,47 @@ test("Claude Code adapter generates skills index and workflow routing table with
   assert.match(claudeMd, /WORKFLOW-ROUTING/);
 
   assert.deepEqual(await validateRender(["claude-code"]), []);
+});
+
+test("every rendered file that has frontmatter starts with it at byte 0", async () => {
+  // Regression guard: the path-alias preamble used to be prepended ABOVE the YAML
+  // fence, so `name`/`description`/`argument-hint` never parsed on any host that
+  // reads frontmatter — silently disabling model-driven skill invocation for every
+  // skill and every command across all adapters.
+  const ides = ["antigravity", "antigravity-cli", "codex", "claude-code", "cursor", "github-copilot", "gemini-cli", "commandcode", "generic"];
+  const files = await renderAdapters(ides);
+
+  const offenders = [];
+  for (const item of files) {
+    if (item.kind !== "file" || !item.path.endsWith(".md")) continue;
+    // A frontmatter block is a `---` fence on its own line at the very start.
+    // If a file contains a `key: value` fence anywhere but does not start with it,
+    // the frontmatter is unreachable to the host parser.
+    const hasFence = /^---\n[\s\S]*?\n---\n/m.test(item.content);
+    if (hasFence && !item.content.startsWith("---\n")) {
+      offenders.push(`${item.path}: starts with ${JSON.stringify(item.content.slice(0, 40))}`);
+    }
+  }
+  assert.deepEqual(offenders, [], `frontmatter must be at byte 0:\n${offenders.join("\n")}`);
+});
+
+test("rendered files contain no path-alias tokens", async () => {
+  // Aliases expanded into glued identifiers ($EIknowledge-base/, $EIreports/IMP-XXX-)
+  // that a model cannot reliably expand — 240 occurrences before removal.
+  const files = await renderAdapters(["claude-code", "commandcode", "github-copilot", "antigravity"]);
+  const offenders = files
+    .filter((item) => /\$EI\b|\$EI[A-Za-z]|\$AIDLC/.test(item.content))
+    .map((item) => item.path);
+  assert.deepEqual(offenders, [], `no rendered file may contain $EI/$AIDLC aliases: ${offenders.join(", ")}`);
+});
+
+test("Claude Code commands keep argument-hint inside frontmatter", async () => {
+  const files = await renderAdapters(["claude-code"]);
+  const cmd = files.find((item) => item.path === ".claude/commands/engineering-intelligence.md").content;
+  assert.ok(cmd.startsWith("---\n"), "command must open with frontmatter");
+  const fm = cmd.match(/^---\n([\s\S]*?)\n---\n/)[1];
+  assert.match(fm, /argument-hint:/, "argument-hint must live inside the frontmatter block");
+  assert.match(cmd, /\$ARGUMENTS/, "input workflows still receive the argument placeholder");
 });
 
 test("CLAUDE.md skill count is derived from SKILL_NAMES, not hardcoded", async () => {
@@ -347,16 +393,17 @@ test("question-file-engine skill ships for Claude Code with correct content and 
   assert.deepEqual(await validateRender(["claude-code"]), []);
 });
 
-test("antigravity-cli adapter writes agents to .agents/ (plural) matching CLI workspace path", async () => {
+test("antigravity-cli adapter writes modern Markdown agents to .agents/ (plural)", async () => {
   const files = await renderAdapters(["antigravity-cli"]);
   const paths = new Set(files.map((item) => item.path));
-  assert.ok(paths.has(".agents/agents/engineering-orchestrator/agent.json"));
-  assert.ok(paths.has(".agents/agents/engineering-orchestrator/prompt.md"));
-  assert.ok(paths.has(".agents/agents/change-agent/agent.json"));
-  assert.ok(paths.has(".agents/agents/product-analyst/agent.json"));
+  assert.ok(paths.has(".agents/agents/engineering-orchestrator/agent.md"));
+  assert.ok(paths.has(".agents/agents/change-agent/agent.md"));
+  assert.ok(paths.has(".agents/agents/product-analyst/agent.md"));
   assert.ok(paths.has(".agents/skills/engineering-intelligence-skill/SKILL.md"));
   assert.ok(paths.has(".agents/workflows/engineering-intelligence.md"));
-  assert.ok(!paths.has(".agent/agents/engineering-orchestrator/agent.json"), "CLI must not write to .agent/ (singular)");
+  assert.ok(!paths.has(".agents/agents/engineering-orchestrator/agent.json"));
+  assert.ok(!paths.has(".agents/agents/engineering-orchestrator/prompt.md"));
+  assert.ok(!paths.has(".agent/agents/engineering-orchestrator/agent.md"), "CLI must not write agents to .agent/ (singular)");
 });
 
 

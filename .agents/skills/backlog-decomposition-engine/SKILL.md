@@ -1,5 +1,3 @@
-> **Path aliases:** `$AIDLC`=`.engineering-intelligence/aidlc/`, `$EI`=`.engineering-intelligence/`. Expand before writing any file paths.
-
 ---
 name: backlog-decomposition-engine
 description: Autonomously decomposes a high-level initiative into a durable Epic to Feature to Ticket backlog with stable IDs, acceptance criteria, dependencies, execution order, and a per-feature human approval gate. Use to plan large product work before implementation.
@@ -20,23 +18,23 @@ Epic  (a business outcome / initiative)
 ## Inputs
 
 - The user's high-level initiative or request
-- `$EIknowledge-base/` (domain context)
-- `$EIgraph/` (dependency, service, runtime, business-flow graphs)
-- `$EImemory/` (durable architecture and business decisions)
-- `$AIDLCdiscovery/vision.md` and `agile/product-backlog.md` when present
+- `.engineering-intelligence/knowledge-base/` (domain context)
+- `.engineering-intelligence/graph/` (dependency, service, runtime, business-flow graphs)
+- `.engineering-intelligence/memory/` (durable architecture and business decisions)
+- `.engineering-intelligence/aidlc/discovery/vision.md` and `agile/product-backlog.md` when present
 
 ## Runtime Artifacts
 
-Write the backlog under `$AIDLCagile/backlog/`:
+Write the backlog under `.engineering-intelligence/aidlc/agile/backlog/`:
 
 | Path | Purpose |
 |---|---|
-| `$AIDLCagile/backlog/backlog-index.md` | Master index, ID counters, and status rollup for every epic, feature, and ticket |
-| `$AIDLCagile/backlog/epics/EPIC-XXX-<slug>.md` | One epic: outcome, success metrics, child features |
-| `$AIDLCagile/backlog/features/FEAT-XXX-<slug>.md` | One feature: user story, acceptance criteria, child tickets, approval state |
-| `$AIDLCagile/backlog/tickets/TKT-XXX-<slug>.md` | One ticket: executable acceptance criteria, affected files, Ready/Done gates, implementation command |
-| `$AIDLCagile/backlog/dependency-graph.md` | Feature and ticket dependency graph plus the derived execution order |
-| `$AIDLCagile/backlog/sync/tracker-sync-map.md` | Local ID to external tracker (e.g. GitHub issue) mapping, written only by `issue-tracker-sync-engine` |
+| `.engineering-intelligence/aidlc/agile/backlog/backlog-index.md` | Master index, ID counters, and status rollup for every epic, feature, and ticket |
+| `.engineering-intelligence/aidlc/agile/backlog/epics/EPIC-XXX-<slug>.md` | One epic: outcome, success metrics, child features |
+| `.engineering-intelligence/aidlc/agile/backlog/features/FEAT-XXX-<slug>.md` | One feature: user story, acceptance criteria, child tickets, approval state |
+| `.engineering-intelligence/aidlc/agile/backlog/tickets/TKT-XXX-<slug>.md` | One ticket: executable acceptance criteria, affected files, Ready/Done gates, implementation command |
+| `.engineering-intelligence/aidlc/agile/backlog/dependency-graph.md` | Feature and ticket dependency graph plus the derived execution order |
+| `.engineering-intelligence/aidlc/agile/backlog/sync/tracker-sync-map.md` | Local ID to external tracker (e.g. GitHub issue) mapping, written only by `issue-tracker-sync-engine` |
 
 This backlog is the structured expansion of `agile/product-backlog.md`; keep the high-level epic list in `product-backlog.md` consistent with `backlog-index.md`.
 
@@ -147,6 +145,12 @@ Implementation of this feature's tickets must not begin until a human records
 - Estimate: S | M | L
 - Risk: low | medium | high
 - Depends On: TKT-XXX (or none)
+<!-- Use proposed: prefix for entities not yet in the graph; use pkg: for external packages -->
+- Target Graph Nodes:
+  - module:<repo-relative-path>
+  - symbol:<repo-relative-path>#<symbolName>
+  - pkg:<package-name>
+  - proposed:<repo-relative-path>
 - Files Likely Affected: <paths from graph intelligence>
 
 ## Acceptance Criteria
@@ -155,6 +159,7 @@ Implementation of this feature's tickets must not begin until a human records
 ## Definition of Ready
 - [ ] Dependencies are done
 - [ ] Acceptance criteria are testable
+- [ ] Target graph nodes verified against dependency-graph.json
 - [ ] Affected files identified from graph intelligence
 
 ## Definition of Done
@@ -186,3 +191,17 @@ Implementation of this feature's tickets must not begin until a human records
 - [ ] `backlog-index.md` counters and status rollup match the child files
 - [ ] No product code was modified
 - [ ] Decomposition decisions appended to `aidlc/audit.md`
+
+## Tools
+
+- `get_engineering_context`: Load scoped graph and knowledge data for affected-file predictions.
+- `check_aidlc_gate`: Call with `phase: "inception"` after decomposition to verify readiness for Construction.
+- `update_aidlc_state`: Transition lifecycle state after decomposition (e.g. `phase: "inception"`, `stage: "backlog-decomposed"`).
+
+## Cross-References
+
+- Depends on: `get_engineering_context` (graph inputs), `aidlc-lifecycle-engine` (phase model)
+- Triggers: `deliver-backlog` (per-feature approval + implementation), `issue-tracker-sync-engine` (optional tracker sync)
+- Pre-flight: `socratic-clarification-gate` (when initiative has 3+ ambiguities before decomposition)
+- Used by: `engineering-intelligence-skill` (when epic-sized work is detected)
+
