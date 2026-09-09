@@ -1,7 +1,6 @@
 ---
 name: engineering-intelligence-skill
 description: Executes engineering changes with impact analysis, implementation, tests, validation, and incremental synchronization of project intelligence. Use for feature, bugfix, update, refactor, architecture, infrastructure, or security requests.
-version: 4.0.0
 ---
 
 # Engineering Intelligence Implementation
@@ -88,6 +87,7 @@ Before impact analysis or code edits:
 ### 2. Adaptive Pre-Flight Socratic Gauntlet
 
 Before finalizing the impact analysis and planning:
+- **Clarity Gate**: Call `assess_prompt_clarity` on the user prompt. If clarity score < 75 or blocking ambiguities exist, invoke `socratic-clarification-gate` to resolve them before proceeding. If score ≥ 75 and no blocking ambiguities, proceed directly.
 - **Trigger**: When the request is classified as `architecture`, `security`, cross-cutting (`high`/`critical` risk), or contains 3+ open ambiguities.
 - **Action**: Run `socratic-stress-tester` to challenge edge cases, failure/rollback modes, non-functional requirements, and blast radius.
 - **Output**: Record confirmed assumptions vs. verified facts (`[VERIFIED: path#lines]`) in the impact report before writing code.
@@ -95,7 +95,7 @@ Before finalizing the impact analysis and planning:
 
 ### 3. Impact Analysis: Write Report
 
-Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>.md`:
+Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>.md`. Call `analyze_change_impact` to compute direct and indirect impact programmatically, then incorporate its output into the report.
 
 ```markdown
 # IMP-XXX: <summary>
@@ -151,7 +151,7 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
   - `.engineering-intelligence/aidlc/agile/acceptance-criteria.md`
   - `.engineering-intelligence/aidlc/agile/definition-of-ready.md`
   - `.engineering-intelligence/aidlc/agile/definition-of-done.md`
-- Update `.engineering-intelligence/aidlc/execution-plan.md` and `.engineering-intelligence/aidlc/aidlc-state.md`
+- Update `.engineering-intelligence/aidlc/execution-plan.md` and call `update_aidlc_state` to transition the AI-DLC lifecycle
 - Split broad changes into construction units and keep `.engineering-intelligence/aidlc/construction/cross-unit-discoveries.md` current
 - Edit only the files necessary for the request
 - Follow existing coding patterns from `.engineering-intelligence/memory/coding-patterns.md`
@@ -166,7 +166,7 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
 - **Action**: Use `vertical-tdd-engine` to write vertical slice tests against public interfaces first (RED), write minimal passing code (GREEN), and clean code under tests (REFACTOR). Save failing output in `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md`.
 - If this sequence is skipped, mark the construction unit blocked unless the user explicitly approves non-TDD execution.
 
-### 4. Add/Update Tests
+### 5. Add/Update Tests
 
 - Add tests proportional to the change risk level
 - Map each acceptance criterion to at least one automated test, manual verification step, or explicitly recorded unavailable check
@@ -175,7 +175,7 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
 - For `architecture`/`security`: add boundary and negative-path tests
 - Run the project's test suite and record actual results
 
-### 5. Validate
+### 6. Validate
 
 - Run linters, type checks, and test suites available in the project
 - Use environmental backpressure: analyze failed diagnostics, fix, and rerun the relevant command until it passes or a blocker is recorded
@@ -189,6 +189,7 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
 - Write `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md` for non-trivial units
 - **Never claim validation passed unless it actually ran and passed**
 - Record partial or failed validation honestly
+- The 10 specialized safety engines listed above are **skills** invoked as subagents or inline procedures; `validate_change` runs the deterministic subset automatically
 
 #### Acceptance Criteria Verification Matrix
 
@@ -204,7 +205,7 @@ Before Definition of Done can pass, map every criterion from `.engineering-intel
 
 Missing mappings block the Done gate and must be copied into the CHG record as open items.
 
-### 6. Incremental Sync & Session Continuity
+### 7. Incremental Sync & Session Continuity
 
 Call `sync_engineering_knowledge` after edits, then use `incremental-sync-engine` to update only the affected canonical prose and durable artifacts it flags:
 - Knowledge docs reflecting changed behavior
@@ -221,7 +222,7 @@ Run `validate_change` after synchronization. Completion requires current graph/i
 - **Trigger**: When context window limits approach, work is paused across sessions, or task is transferred to another agent.
 - **Action**: Run `session-handoff-engine` to emit `.engineering-intelligence/handoffs/HO-<date>-<task>.md` with ground truth, modified files, and immediate next commands.
 
-### 7. Record Change
+### 8. Record Change
 
 Create `.engineering-intelligence/changes/CHG-XXX-<summary>.md`:
 
@@ -277,13 +278,13 @@ Create `.engineering-intelligence/changes/CHG-XXX-<summary>.md`:
 - <any remaining concerns>
 ```
 
-### 8. High-Risk Review Gate
+### 9. High-Risk Review Gate
 
 For changes classified as `high` or `critical` risk:
 - Run `engineering-change-review` before final reporting
 - Address any blocking findings before marking complete
 
-### 9. Report
+### 10. Report
 
 Summarize to the user:
 - Code changes made (files, lines)
@@ -330,5 +331,5 @@ Summarize to the user:
 
 - Depends on: `initialize-intelligence-skill` (prerequisite), `context-budget-optimizer`, `change-detection-engine`, `impact-analysis-engine`, `graph-engine`, `staleness-detector`
 - Uses during execution: `testing-intelligence-engine`, `type-safety-engine`, `api-backward-compatibility-engine`, `database-migration-safety-engine`, `security-audit-engine`, `environment-variable-auditor`, `adr-compliance-checker`, `llm-prompt-injection-guard`, `incremental-sync-engine`, `change-history-engine`, `vertical-tdd-engine`
-- Adaptive triggers: `socratic-stress-tester` (for high-risk/ambiguous pre-flight), `interface-design-explorer` (for new public API/types), `session-handoff-engine` (for context/session boundaries)
+- Adaptive triggers: `socratic-clarification-gate`, `socratic-stress-tester` (for high-risk/ambiguous pre-flight), `interface-design-explorer` (for new public API/types), `session-handoff-engine` (for context/session boundaries)
 - Optional: `engineering-change-review` (for high-risk), `refactoring-planner` (for refactors), `convention-detector` (for convention compliance)

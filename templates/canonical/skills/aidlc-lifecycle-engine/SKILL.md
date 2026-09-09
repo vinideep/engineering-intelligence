@@ -1,7 +1,6 @@
 ---
 name: aidlc-lifecycle-engine
 description: Runs the adaptive AI-DLC lifecycle with Discovery, Inception, Construction, Operations, durable artifacts, hatted agents, and objective completion gates.
-version: 1.0.0
 ---
 
 # AI-DLC Lifecycle Engine
@@ -35,6 +34,26 @@ Use `.engineering-intelligence/aidlc/` as the canonical AI-DLC root:
 | `.engineering-intelligence/aidlc/operations/` | Deployment readiness, observability, runbooks, rollback notes |
 
 These AI-DLC files complement `.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/memory/`, `.engineering-intelligence/context/`, `.engineering-intelligence/graph/`, `.engineering-intelligence/reports/`, and `.engineering-intelligence/changes/`.
+
+## MCP Tools
+
+Use these tools instead of manually editing AI-DLC markdown files. Manual markdown edits desynchronize `aidlc-state.json`.
+
+| Tool | Purpose | When to Call |
+|---|---|---|
+| `get_aidlc_state` | Read current lifecycle position, phase, stage, active unit, and breadcrumb | Before any phase transition or checkpoint resume |
+| `update_aidlc_state` | Transition phase, stage, hat, unit, and breadcrumb (writes JSON + projects to markdown) | After every major step, checkpoint, or phase transition |
+| `check_aidlc_gate` | Programmatically validate whether the repository satisfies exit criteria for a phase (`discovery`, `inception`, `construction`, `operations`) | Before transitioning to the next phase |
+| `assess_prompt_clarity` | Assess prompt ambiguity and missing NFRs | During Discovery or Inception when user intent is unclear |
+| `freeze_clarified_requirements` | Lock user-selected decisions into `inception/requirements.md` | After user answers clarification questions |
+
+### Gate Failure Handling
+
+When `check_aidlc_gate` returns `status: "blocked"`:
+1. Read the `blockers` array from the response.
+2. For each blocker, determine if it requires user input or can be resolved programmatically.
+3. Do NOT proceed to the next phase. Record blockers in `audit.md` and either resolve them or present them to the user.
+4. Re-run `check_aidlc_gate` after resolution to confirm the gate passes.
 
 ## Embedded Agile + AI-DLC Model
 
@@ -70,6 +89,13 @@ Ask role-aware questions. For multiple-choice questions in Markdown, put a blank
 ### 1. Inception
 
 Always run workspace detection. Classify the repository as `greenfield` or `brownfield`.
+
+Workspace detection procedure:
+1. Check for source directories (`src/`, `lib/`, `app/`, `packages/`).
+2. Check for package manifests (`package.json`, `go.mod`, `Cargo.toml`, `pyproject.toml`, `pom.xml`).
+3. If source directories AND manifests exist with meaningful code: `brownfield`.
+4. If repo is empty or has only scaffolding: `greenfield`.
+5. Call `update_aidlc_state` with `stage: "workspace-classified"` and record the classification in `discovery/technical-environment.md`.
 
 For brownfield systems, run reverse engineering and write:
 - `business-overview.md`
@@ -127,12 +153,12 @@ Each stage must end with binary evidence:
 - Unknowns are recorded or resolved
 - Required tests, type checks, linters, scans, or build commands ran, failed, or were explicitly unavailable
 - Human approval is recorded before irreversible actions
-- Breadcrumb is updated in `aidlc-state.md`
+- Breadcrumb is updated via `update_aidlc_state` with `breadcrumb: "AI-DLC: <phase> -> <stage> -> <status>"`
 - Checkpoint is written after impact analysis, implementation, type/API/migration safety gates, validation, synchronization, and change record
 
 ## Checkpoint And Resume
 
-Write `.engineering-intelligence/aidlc/checkpoints.md` and update `aidlc-state.md` after each major step:
+Write `.engineering-intelligence/aidlc/checkpoints.md` and call `update_aidlc_state` after each major step:
 
 | Checkpoint | Meaning | Resume Action |
 |---|---|---|
@@ -180,3 +206,12 @@ AI-DLC: <phase> -> <stage> -> <status>
 - [ ] Checkpoints are written and resume is supported
 - [ ] Validation uses environmental backpressure
 - [ ] Operations readiness is addressed when deployment or production behavior changes
+
+## Cross-References
+
+- Pre-flight: `socratic-clarification-gate` (clarity assessment), `question-file-engine` (3+ ambiguities)
+- Inception: `backlog-decomposition-engine` (Epic → Feature → Ticket), `requirement-scoper` (detailed scoping)
+- Construction: `engineering-intelligence-skill` (implementation), `vertical-tdd-engine` (TDD mode)
+- Operations: `operations-readiness-engine` (deployment, observability, rollback)
+- Used by: `engineering-intelligence` (main workflow), `engineering-orchestrator` (routing)
+

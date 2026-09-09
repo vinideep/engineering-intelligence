@@ -34,4 +34,18 @@ Interactively stress-test technical proposals, PRDs, or architecture plans using
 
 4. **Converge on Signed-Off Decisions**:
    - Once the user resolves the ambiguities, document the agreed decisions and trade-offs.
-   - Update the proposal or PRD with explicit decision rationales before proceeding to implementation.
+   - Call `freeze_clarified_requirements` with `topic` and `decisions` array to persist agreed decisions to `.engineering-intelligence/aidlc/inception/requirements.md`.
+   - Call `update_aidlc_state` with `stage: "requirements-frozen"` to record the transition.
+   - If the proposal or PRD is a separate document, update it with explicit decision rationales before proceeding to implementation.
+
+## Tools
+
+- `assess_prompt_clarity`: Assess prompt ambiguity before stress-testing.
+- `freeze_clarified_requirements`: Persist agreed decisions to `inception/requirements.md`.
+- `update_aidlc_state`: Record lifecycle transitions after decisions are frozen.
+
+## Cross-References
+
+- Depends on: `socratic-clarification-gate` (lightweight gate; this skill is the deep interrogation)
+- Used by: `engineering-intelligence-skill` (Step 2 Pre-Flight), `engineering-intelligence` (Step 4)
+- Related: `question-file-engine` (for 3+ ambiguities, write a question file instead of inline)

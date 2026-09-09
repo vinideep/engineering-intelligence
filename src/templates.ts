@@ -58,6 +58,8 @@ export const SKILL_NAMES = [
   "session-handoff-engine",
   "vertical-tdd-engine",
   "interface-design-explorer",
+  "socratic-clarification-gate",
+  "graph-guided-autoresearch",
 ] as const;
 
 export const AGENT_NAMES = [

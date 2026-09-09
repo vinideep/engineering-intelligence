@@ -1,7 +1,6 @@
 ---
 name: question-file-engine
 description: Writes structured MCQ clarification files to .engineering-intelligence/aidlc/open-questions/ instead of asking questions inline. Creates durable decision artifacts and enables context reset between question creation and answer processing. Use when a request has 3+ ambiguities or scope is unclear.
-version: 1.0.0
 ---
 
 # Question File Engine
@@ -107,4 +106,16 @@ When user signals answers are ready:
 - Never ask 3+ questions inline — always write a question file.
 - Never guess or assume answers to unresolved questions.
 - Always re-read the file from disk on resume; never trust in-memory question content.
-- Log confirmed decisions in `.engineering-intelligence/knowledge-base/19-requirements.md` section `## 4. Iterated QA Log`.
+- Log confirmed decisions by calling `freeze_clarified_requirements` with `topic` (the question file slug) and `decisions` array (`[{ questionId: "Q1", selectedOptionId: "A", customText?: "..." }]`). This writes to `.engineering-intelligence/aidlc/inception/requirements.md` where `check_aidlc_gate("inception")` expects them.
+- Mirror resolved question status in `.engineering-intelligence/aidlc/open-questions.md` by marking items `status: resolved` so `check_aidlc_gate` no longer treats them as blockers.
+
+## Tools
+
+- `freeze_clarified_requirements`: Persist confirmed decisions to `inception/requirements.md` on resume.
+- `update_aidlc_state`: Transition lifecycle after requirements are frozen.
+
+## Cross-References
+
+- Used by: `socratic-clarification-gate` (delegates here for 3+ ambiguities), `requirement-scoper`, `backlog-decomposition-engine`
+- Related: `aidlc-lifecycle-engine` (phase model and gate definitions)
+

@@ -57,11 +57,13 @@ export const WORKFLOW_SKILL_ROUTING: Record<
   "engineering-intelligence": {
     primary: [
       "engineering-intelligence-skill",
+      "socratic-clarification-gate",
       "aidlc-lifecycle-engine",
       "impact-analysis-engine",
       "context-budget-optimizer",
     ],
     optional: [
+      "graph-guided-autoresearch",
       "socratic-stress-tester",
       "interface-design-explorer",
       "vertical-tdd-engine",

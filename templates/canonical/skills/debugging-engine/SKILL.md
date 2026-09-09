@@ -1,7 +1,6 @@
 ---
 name: debugging-engine
 description: Performs structured root cause analysis using graph intelligence, log correlation, error propagation tracing, and reproduction step generation. Produces evidence-backed debug reports with fix suggestions and impact analysis.
-version: 3.0.0
 ---
 
 # Debugging Engine
@@ -60,7 +59,7 @@ Systematically diagnose issues through evidence-driven root cause analysis, leve
 
 4. **Error Propagation Tracing** — Using graph intelligence:
 
-   - Trace the error path through `runtime-graph.json` (call flows)
+   - Call `get_engineering_context` with the bug description to retrieve scoped graph data. If unavailable, fall back to reading graph files directly.
    - Identify affected services via `service-graph.json` (communication topology)
    - Map downstream impact via `dependency-graph.json` (module dependencies)
    - Assess business impact via `business-flow-graph.json` (affected flows)
@@ -98,7 +97,7 @@ Systematically diagnose issues through evidence-driven root cause analysis, leve
    | Risk assessment | Blast radius of the proposed fix |
    | Test requirements | Tests to add for regression prevention |
 
-   When applicable, invoke `impact-analysis-engine` on the proposed fix to assess its blast radius.
+   Call `analyze_change_impact` on the proposed fix files, then invoke `impact-analysis-engine` for detailed assessment.
 
 7. **Generate Debug Report** — Write `.engineering-intelligence/reports/DEBUG-XXX-<slug>.md`.
 
@@ -180,10 +179,18 @@ Write `.engineering-intelligence/reports/DEBUG-XXX-<slug>.md`:
 - [ ] Sensitive data is redacted from logs and traces in the report
 - [ ] Report ends with the "did not modify product code" statement
 
+## Fallback When Graph Intelligence Is Missing
+
+If `.engineering-intelligence/graph/` files do not exist or are empty:
+1. Use file-system search (`grep`, `find`) to trace imports and call chains manually.
+2. Use `git log --follow <file>` to identify recent changes near the fault area.
+3. Record `[DEGRADED: no graph intelligence available]` in the debug report.
+
 ## Cross-References
 
 - Depends on: `graph-engine` (error propagation tracing), `impact-analysis-engine` (fix impact assessment)
 - Used by: `engineering-intelligence-skill`
 - Consumed by: `engineering-change-review` (when fix is implemented as a change)
+- Reproduction harness: `vertical-tdd-engine` (for creating minimal reproduction tests)
 
 This capability is analytical only. It must not modify product code.

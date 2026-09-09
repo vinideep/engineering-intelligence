@@ -35,8 +35,8 @@ When receiving a request, classify it immediately:
 | "Handoff session", "Save context state" | `handoff` | Standalone session handoff shortcut |
 | "Map architecture" | `mapping` | Graph engine (read-only) |
 | "Analyze impact of X" | `analysis` | Impact analysis (read-only) |
-| "Sync intelligence" | `sync` | Incremental sync (read-only) |
 | "Review change X" | `review` | Change review (read-only) |
+| "Optimize metric", "Run autoresearch", "Tune performance" | `optimization` | Graph-guided autoresearch loop |
 
 ## Coordination Protocol
 
@@ -83,7 +83,7 @@ For non-trivial work, call `get_engineering_context` before direct file explorat
 
 ### Adaptive Implementation Pipeline
 
-1. **Pre-flight**: Request ContextPackV2 and AI-DLC state → identify verified relevant context, provider fallback, conflicts, and unknowns. Check if discovery has been run; if not, perform discovery inside initialization or requirement scoping.
+1. **Pre-flight & Clarification**: Request ContextPackV2 and AI-DLC state → identify verified relevant context, provider fallback, conflicts, and unknowns. Run `socratic-clarification-gate` (`assess_prompt_clarity`); if ambiguity score < 75 or requirements are underspecified, halt and resolve trade-offs before writing code. Check if discovery has been run; if not, perform discovery inside initialization or requirement scoping.
 2. **Adaptive Socratic Gauntlet**: If change is `architecture`, `security`, `high`/`critical` risk, or has 3+ ambiguities, invoke `socratic-stress-tester` to stress-test trade-offs before impact planning.
 3. **Impact**: Run `impact-analysis-engine` → write impact report
 4. **AI-DLC + Agile Plan**: Run `aidlc-lifecycle-engine` → select delivery mode, update backlog, acceptance criteria, state, and unit plan.
