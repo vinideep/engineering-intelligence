@@ -207,8 +207,16 @@ async function findPythonForProvider(name: ProviderName, runner: ProcessRunner):
   if (process.platform === "darwin") {
     const candidates = [
       "/opt/homebrew/bin/python3.12",
-      "/opt/homebrew/bin/python3",
+      "/opt/homebrew/bin/python3.13",
+      "/opt/homebrew/opt/python@3.12/bin/python3.12",
+      "/opt/homebrew/opt/python@3.13/bin/python3.13",
       "/usr/local/bin/python3.12",
+      "/usr/local/bin/python3.13",
+      "/usr/local/opt/python@3.12/bin/python3.12",
+      "/usr/local/opt/python@3.13/bin/python3.13",
+      "python3.12",
+      "python3.13",
+      "/opt/homebrew/bin/python3",
       "/usr/local/bin/python3",
       "python3",
     ];
@@ -216,7 +224,7 @@ async function findPythonForProvider(name: ProviderName, runner: ProcessRunner):
       try {
         const check = await runner({
           command: py,
-          args: ["-c", 'import sqlite3; con = sqlite3.connect(":memory:"); con.enable_load_extension(True); print("OK")'],
+          args: ["-c", 'import sys, sqlite3; assert (3, 11) <= sys.version_info < (3, 14); con = sqlite3.connect(":memory:"); con.enable_load_extension(True); print("OK")'],
           timeoutMs: 10_000,
         });
         if (check.exitCode === 0 && check.stdout.trim() === "OK") {

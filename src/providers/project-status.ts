@@ -3,7 +3,7 @@ import path from "node:path";
 import { CCE_RUN_PATH, type CceRunManifest } from "./cce.js";
 import { PROVIDER_COMPATIBILITY } from "./compatibility.js";
 import { GRAPHIFY_GRAPH_PATH, GRAPHIFY_RUN_PATH, type GraphifyRunManifest } from "./graphify.js";
-import { computeProviderSourceSnapshot, PROVIDER_DIR } from "./workspace.js";
+import { computeProviderSourceSnapshot, PROVIDER_DIR, toCanonicalPath } from "./workspace.js";
 import type { ProviderName } from "./types.js";
 
 export type ProjectProviderRunHealth = "current" | "missing" | "stale" | "invalid" | "disabled";
@@ -22,9 +22,11 @@ async function readJson<T>(location: string): Promise<T | undefined> {
 }
 
 function inside(parent: string, candidate: string): boolean {
-  const base = path.resolve(parent);
-  const target = path.resolve(candidate);
-  return target === base || target.startsWith(`${base}${path.sep}`);
+  const base = toCanonicalPath(parent).replace(/\\/g, "/");
+  const target = toCanonicalPath(candidate).replace(/\\/g, "/");
+  const b = process.platform === "win32" ? base.toLowerCase() : base;
+  const t = process.platform === "win32" ? target.toLowerCase() : target;
+  return t === b || t.startsWith(`${b}/`);
 }
 
 async function graphifyState(root: string, workspaceHash: string): Promise<ProjectProviderRunStatus> {

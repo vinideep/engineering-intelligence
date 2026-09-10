@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { ProjectFilePolicy } from "../project-files/index.js";
 import { GRAPHIFY_GRAPH_PATH, GRAPHIFY_RUN_PATH, graphifyContentHash, type GraphifyRunManifest } from "../providers/graphify.js";
+import { toCanonicalPath } from "../providers/workspace.js";
 import type { Confidence, DependencyGraph, GraphEdge, GraphNode } from "./schema.js";
 
 export type TrustState = "fresh" | "stale" | "contested" | "unverifiable" | "missing";
@@ -74,6 +75,11 @@ function evidenceFor(sourceFile?: string, sourceLocation?: string): string[] {
   return [location ? `${sourceFile}:${location}` : sourceFile];
 }
 
+function normalizePathForComparison(p: string): string {
+  const resolved = toCanonicalPath(p).replace(/\\/g, "/");
+  return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+}
+
 async function normalizeSourcePath(root: string, providerWorkspace: string, input: unknown): Promise<string | undefined> {
   const raw = stringValue(input);
   if (!raw) return undefined;
@@ -81,8 +87,11 @@ async function normalizeSourcePath(root: string, providerWorkspace: string, inpu
   let candidate: string;
   if (path.isAbsolute(raw)) {
     const absolute = path.resolve(raw);
-    if (absolute === providerWorkspace || absolute.startsWith(`${providerWorkspace}${path.sep}`)) candidate = path.relative(providerWorkspace, absolute);
-    else if (absolute === root || absolute.startsWith(`${root}${path.sep}`)) candidate = path.relative(root, absolute);
+    const absNorm = normalizePathForComparison(raw);
+    const wsNorm = normalizePathForComparison(providerWorkspace);
+    const rootNorm = normalizePathForComparison(root);
+    if (absNorm === wsNorm || absNorm.startsWith(`${wsNorm}/`)) candidate = path.relative(providerWorkspace, absolute);
+    else if (absNorm === rootNorm || absNorm.startsWith(`${rootNorm}/`)) candidate = path.relative(root, absolute);
     else return undefined;
   } else {
     candidate = cleaned.replace(/^\.\//, "");
@@ -90,7 +99,9 @@ async function normalizeSourcePath(root: string, providerWorkspace: string, inpu
     if (candidate.startsWith(`${workspaceName}/`)) candidate = candidate.slice(workspaceName.length + 1);
   }
   const absolute = path.resolve(root, candidate);
-  if (absolute !== root && !absolute.startsWith(`${root}${path.sep}`)) return undefined;
+  const absNorm = normalizePathForComparison(absolute);
+  const rootNorm = normalizePathForComparison(root);
+  if (absNorm !== rootNorm && !absNorm.startsWith(`${rootNorm}/`)) return undefined;
   return path.relative(root, absolute).replace(/\\/g, "/");
 }
 
