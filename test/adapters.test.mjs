@@ -5,7 +5,7 @@ import { validateRender } from "../dist/validation/index.js";
 import { SKILL_NAMES } from "../dist/templates.js";
 
 test("all V2 IDE adapters render internally valid native destinations and workflows", async () => {
-  const ides = ["antigravity", "antigravity-cli", "codex", "claude-code", "cursor", "github-copilot", "gemini-cli", "commandcode", "generic"];
+  const ides = ["antigravity", "antigravity-cli", "codex", "claude-code", "cursor", "github-copilot", "gemini-cli", "commandcode", "generic", "roo-code", "cline"];
   const files = await renderAdapters(ides);
   const paths = new Set(files.map((item) => item.path));
   assert.ok(paths.has(".agents/workflows/initialize-engineering-intelligence.md"));
@@ -427,4 +427,24 @@ test("Installing claude-code + cursor together dedups ei.config.json without con
   // Both IDE-specific hook files coexist.
   assert.ok(files.some((f) => f.path === ".claude/settings.json"));
   assert.ok(files.some((f) => f.path === ".cursor/hooks.json"));
+});
+
+test("Roo Code and Cline adapters generate non-recursive skill directories and routing instructions", async () => {
+  const files = await renderAdapters(["roo-code", "cline"]);
+  const paths = new Set(files.map((item) => item.path));
+
+  assert.ok(paths.has(".roo/rules/engineering-intelligence.md"));
+  assert.ok(paths.has(".roo/skills/SKILLS-INDEX.md"));
+  assert.ok(paths.has(".roo/WORKFLOW-ROUTING.md"));
+  assert.ok(paths.has(".roo/mcp.json"));
+
+  assert.ok(paths.has(".clinerules/engineering-intelligence.md"));
+  assert.ok(paths.has(".cline/skills/SKILLS-INDEX.md"));
+  assert.ok(paths.has(".cline/WORKFLOW-ROUTING.md"));
+
+  const rooRule = files.find(f => f.path === ".roo/rules/engineering-intelligence.md").content;
+  assert.match(rooRule, /Token-Efficient Skill Loading/);
+  
+  const clineRule = files.find(f => f.path === ".clinerules/engineering-intelligence.md").content;
+  assert.match(clineRule, /Token-Efficient Skill Loading/);
 });

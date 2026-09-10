@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { loadClaims, verifyClaims } from "../claims/index.js";
 import { checkEvidenceHashes } from "../evidence/index.js";
-import { analyzeImpact, ensureFreshGraph, loadExistingGraph } from "../graph/index.js";
+import { analyzeImpact, ensureFreshGraph, findExecutionPaths, loadExistingGraph } from "../graph/index.js";
 import type { DependencyGraph, GraphEdge } from "../graph/schema.js";
 import { ProjectFilePolicy } from "../project-files/index.js";
 import { readProviderManifest } from "../providers/manager.js";
@@ -12,6 +12,7 @@ import type { ProcessRunner } from "../process/index.js";
 import { estimateTokens } from "../token-optimizer.js";
 import { verifyKnowledge } from "../verify/index.js";
 import { loadExperiments } from "../experiment/ledger.js";
+import { generateCodeSkeleton } from "./skeleton.js";
 
 export interface NegativeConstraint {
   experimentId: string;
@@ -84,11 +85,13 @@ export interface ContextPackV2 {
     nodes: ArchitectureContextNode[];
     edges: ArchitectureContextEdge[];
     approvedScope: string[];
+    callChains?: Array<{ from: string; to: string; chain: string[] }>;
   };
   code: {
     primary: RetrievedCodeChunk[];
     secondary: RetrievedCodeChunk[];
     tests: RetrievedCodeChunk[];
+    skeletons?: Array<{ path: string; outline: string; tokenSavings: number }>;
   };
   evidence: Array<{ path: string; lines: [number, number]; hash: string; provider: string; current: true }>;
   claims: Array<{ id: string; statement: string; evidence: string[] }>;
@@ -163,10 +166,15 @@ function excerpt(markdown: string, maxLines = 28): string {
   return markdown.split("\n").filter((line) => line.trim()).slice(0, maxLines).join("\n");
 }
 
-async function loadKnowledge(root: string, task: string) {
+async function loadKnowledge(root: string, task: string, requestedFiles: string[] = []) {
   const [verification, evidence] = await Promise.all([verifyKnowledge(root), checkEvidenceHashes(root)]);
   const files = await walkMarkdown(path.join(root, ".engineering-intelligence", "knowledge-base"));
   const taskWords = words(task);
+  const fileKeywords = requestedFiles.flatMap((f) => {
+    const rel = path.relative(root, path.resolve(root, f)).replace(/\\/g, "/").toLowerCase();
+    const base = path.basename(f).toLowerCase();
+    return [rel, base].filter((k) => k.length > 2);
+  });
   const brokenDocs = new Set(verification.details.map((detail) => detail.file.replace(/\\/g, "/")));
   const documents: KnowledgeContextItem[] = [];
   // A document is promoted to verified context only when the repository has a
@@ -174,17 +182,32 @@ async function loadKnowledge(root: string, task: string) {
   // remains canonical storage, but source retrieval wins for this request.
   if (evidence.checked > 0 && evidence.stale === 0) {
     const ranked: Array<KnowledgeContextItem & { score: number }> = [];
+    const allVerified: KnowledgeContextItem[] = [];
     for (const absolute of files) {
       const relative = path.relative(root, absolute).replace(/\\/g, "/");
       if (brokenDocs.has(relative)) continue;
       let content: string;
       try { content = await readFile(absolute, "utf8"); } catch { continue; }
-      const score = relevance(`${relative}\n${content}`, taskWords);
-      if (taskWords.length > 0 && score === 0) continue;
-      ranked.push({ path: relative, title: content.match(/^#\s+(.+)$/m)?.[1] ?? path.basename(relative), excerpt: excerpt(content), trust: "verified", score });
+      const item: KnowledgeContextItem = {
+        path: relative,
+        title: content.match(/^#\s+(.+)$/m)?.[1] ?? path.basename(relative),
+        excerpt: excerpt(content),
+        trust: "verified",
+      };
+      allVerified.push(item);
+      const contentLower = `${relative}\n${content}`.toLowerCase();
+      let score = relevance(contentLower, taskWords);
+      for (const kw of fileKeywords) {
+        if (contentLower.includes(kw)) score += 3;
+      }
+      if (score > 0) ranked.push({ ...item, score });
     }
     ranked.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
-    documents.push(...ranked.slice(0, 5).map(({ score: _score, ...item }) => item));
+    if (ranked.length > 0) {
+      documents.push(...ranked.slice(0, 5).map(({ score: _score, ...item }) => item));
+    } else if (allVerified.length > 0) {
+      documents.push(...allVerified.slice(0, 5));
+    }
   }
   const decisionFiles = [
     ...(await walkMarkdown(path.join(root, ".engineering-intelligence", "aidlc", "decisions"))),
@@ -344,11 +367,26 @@ function renderMarkdown(pack: Omit<ContextPackV2, "markdown">): string {
     for (const node of pack.architecture.nodes.slice(0, 30)) lines.push(`- ${node.id}${node.path ? ` (${node.path})` : ""} [${node.trustState}]`);
     lines.push("");
   }
+  if (pack.architecture.callChains && pack.architecture.callChains.length > 0) {
+    lines.push("## Execution Flow Paths");
+    for (const c of pack.architecture.callChains) lines.push(`- ${c.chain.join(" -> ")}`);
+    lines.push("");
+  }
   const allChunks = [...pack.code.primary, ...pack.code.secondary, ...pack.code.tests];
   if (allChunks.length > 0) {
     lines.push("## Current source evidence");
     for (const chunk of allChunks) lines.push(`- ${chunk.path}:${chunk.startLine}-${chunk.endLine} [${chunk.provider}, ${chunk.contentHash.slice(0, 12)}]`);
     lines.push("");
+  }
+  if (pack.code.skeletons && pack.code.skeletons.length > 0) {
+    lines.push("## Interface Outlines (Budget-Compressed)");
+    for (const s of pack.code.skeletons) {
+      lines.push(`### ${s.path} (saved ${s.tokenSavings} tokens)`);
+      lines.push("```");
+      lines.push(s.outline);
+      lines.push("```");
+      lines.push("");
+    }
   }
   if (pack.claims.length > 0) {
     lines.push("## Verified claims");
@@ -381,7 +419,7 @@ export async function getEngineeringContext(
   // reads begin; otherwise concurrent derivation can race a graph refresh.
   await ensureFreshGraph(root);
   const [knowledge, architecture, claimStore, claimReport, providerManifest, providerRuns] = await Promise.all([
-    loadKnowledge(root, request.task),
+    loadKnowledge(root, request.task, requestedFiles),
     architectureNeighborhood(root, request.task, requestedFiles),
     loadClaims(root),
     verifyClaims(root),
@@ -394,7 +432,26 @@ export async function getEngineeringContext(
     approvedScope = policy.configuredRoots();
   }
   const fullApprovedScope = approvedScope;
-  const codeBudget = Math.max(0, Math.floor(budget * 0.55));
+  const requestedSet = new Set(requestedFiles.map((file) => path.relative(root, path.resolve(root, file)).replace(/\\/g, "/")));
+
+  const knowledgeBudget = Math.max(0, Math.floor(budget * 0.15));
+  knowledge.documents = trimKnowledge(knowledge.documents, Math.floor(knowledgeBudget * 0.75));
+  knowledge.decisions = trimKnowledge(knowledge.decisions, Math.floor(knowledgeBudget * 0.25));
+  const knowledgeTokens = knowledge.documents.reduce((total, item) => total + estimateTokens(JSON.stringify(item)), 0) +
+                          knowledge.decisions.reduce((total, item) => total + estimateTokens(JSON.stringify(item)), 0);
+  const unusedKnowledge = Math.max(0, knowledgeBudget - knowledgeTokens);
+
+  const architectureBudget = Math.max(0, Math.floor(budget * 0.20));
+  const visibleArchitecture = trimArchitecture(architecture.nodes, architecture.edges, architecture.seeds, architectureBudget);
+  architecture.nodes = visibleArchitecture.nodes;
+  architecture.edges = visibleArchitecture.edges;
+  architecture.approvedScope = fullApprovedScope.filter((scope) => architecture.nodes.some((node) => node.path === scope) || requestedSet.has(scope)).slice(0, 50);
+  const architectureTokens = estimateTokens(JSON.stringify({ nodes: architecture.nodes, edges: architecture.edges }));
+  const unusedArchitecture = Math.max(0, architectureBudget - architectureTokens);
+
+  const baseCodeBudget = Math.max(0, Math.floor(budget * 0.55));
+  const codeBudget = baseCodeBudget + unusedKnowledge + unusedArchitecture;
+
   let retrieval = await searchCodeContext(root, request.task, approvedScope, { topK: 5, runner: options.runner, providerHome: options.providerHome });
   const testsInitially = retrieval.chunks.filter((chunk) => /(?:^|\/)(?:test|tests|__tests__)(?:\/|\b)|\.(?:test|spec)\./i.test(chunk.path));
   const preliminary = Math.min(1, (architecture.nodes.length > 0 ? 0.25 : 0) + (retrieval.chunks.length > 0 ? 0.35 : 0) + (testsInitially.length > 0 ? 0.15 : 0) + (knowledge.trust === "healthy" ? 0.15 : 0));
@@ -403,10 +460,32 @@ export async function getEngineeringContext(
     retrieval = { ...expanded, chunks: dedupeChunks([...retrieval.chunks, ...expanded.chunks]) };
   }
   const trimmed = trimChunks(retrieval.chunks, codeBudget);
-  const requestedSet = new Set(requestedFiles.map((file) => path.relative(root, path.resolve(root, file)).replace(/\\/g, "/")));
   const tests = trimmed.filter((chunk) => /(?:^|\/)(?:test|tests|__tests__)(?:\/|\b)|\.(?:test|spec)\./i.test(chunk.path));
   const primary = trimmed.filter((chunk) => !tests.includes(chunk) && (requestedSet.has(chunk.path) || architecture.seeds.some((id) => architecture.graph?.nodes.find((node) => node.id === id)?.path === chunk.path)));
   const secondary = trimmed.filter((chunk) => !tests.includes(chunk) && !primary.includes(chunk));
+
+  // Progressive Code Skeletonization:
+  // For secondary code chunks that exceeded budget or were dropped, generate interface/skeleton outlines.
+  const trimmedKeySet = new Set(trimmed.map((c) => `${c.path}:${c.startLine}-${c.endLine}`));
+  const droppedSecondaryChunks = retrieval.chunks.filter((c) => {
+    if (trimmedKeySet.has(`${c.path}:${c.startLine}-${c.endLine}`)) return false;
+    const isTest = /(?:^|\/)(?:test|tests|__tests__)(?:\/|\b)|\.(?:test|spec)\./i.test(c.path);
+    const isPrimary = requestedSet.has(c.path) || architecture.seeds.some((id) => architecture.graph?.nodes.find((node) => node.id === id)?.path === c.path);
+    return !isTest && !isPrimary;
+  });
+
+  const skeletons: Array<{ path: string; outline: string; tokenSavings: number }> = [];
+  const skeletonizedPaths = new Set<string>();
+  for (const chunk of droppedSecondaryChunks) {
+    if (skeletonizedPaths.has(chunk.path)) continue;
+    const skel = generateCodeSkeleton(chunk.content, chunk.path);
+    skeletons.push({
+      path: chunk.path,
+      outline: skel.skeleton,
+      tokenSavings: Math.max(0, skel.originalTokens - skel.skeletonTokens),
+    });
+    skeletonizedPaths.add(chunk.path);
+  }
 
   const relevantPaths = new Set([...approvedScope, ...trimmed.map((chunk) => chunk.path)]);
   const claims = claimReport.results.flatMap((result) => {
@@ -451,15 +530,6 @@ export async function getEngineeringContext(
   const graphify = statuses.find((status) => status.name === "graphify");
   const cce = statuses.find((status) => status.name === "cce");
   const graphifyRun = providerRuns.find((status) => status.name === "graphify");
-  const knowledgeBudget = Math.max(0, Math.floor(budget * 0.15));
-  knowledge.documents = trimKnowledge(knowledge.documents, Math.floor(knowledgeBudget * 0.75));
-  knowledge.decisions = trimKnowledge(knowledge.decisions, Math.floor(knowledgeBudget * 0.25));
-  const visibleArchitecture = trimArchitecture(architecture.nodes, architecture.edges, architecture.seeds, Math.max(0, Math.floor(budget * 0.20)));
-  architecture.nodes = visibleArchitecture.nodes;
-  architecture.edges = visibleArchitecture.edges;
-  architecture.approvedScope = fullApprovedScope.filter((scope) => architecture.nodes.some((node) => node.path === scope) || requestedSet.has(scope)).slice(0, 50);
-  const knowledgeTokens = knowledge.documents.reduce((total, item) => total + estimateTokens(item.excerpt), 0);
-  const architectureTokens = estimateTokens(JSON.stringify({ nodes: architecture.nodes, edges: architecture.edges }));
   const codeTokens = chunkTokens(trimmed);
 
   let negativeConstraints: NegativeConstraint[] = [];
@@ -487,6 +557,32 @@ export async function getEngineeringContext(
     // Non-fatal if no experiment ledger exists
   }
 
+  // Multi-Hop Execution Path Tracing:
+  const callChains: Array<{ from: string; to: string; chain: string[] }> = [];
+  if (architecture.seeds.length > 0 && architecture.graph) {
+    const targetCandidates = [
+      ...testsToRun,
+      ...architecture.nodes.filter((n) => !architecture.seeds.includes(n.id)).map((n) => n.id),
+    ].slice(0, 5);
+
+    for (const seed of architecture.seeds.slice(0, 3)) {
+      for (const target of targetCandidates) {
+        try {
+          const paths = await findExecutionPaths(root, seed, target, { maxDepth: 4 });
+          for (const p of paths) {
+            if (p.nodes.length > 1) {
+              callChains.push({ from: seed, to: target, chain: p.nodes });
+            }
+          }
+          if (callChains.length >= 5) break;
+        } catch {
+          // ignore path search failure
+        }
+      }
+      if (callChains.length >= 5) break;
+    }
+  }
+
   const base: Omit<ContextPackV2, "markdown"> = {
     schemaVersion: 2,
     generatedAt: new Date().toISOString(),
@@ -499,8 +595,19 @@ export async function getEngineeringContext(
         ...negativeConstraints.map((nc) => `AVOID: '${nc.hypothesis}' on ${nc.targetFile} regressed/failed (${nc.revertReason})`),
       ],
     },
-    architecture: { seeds: architecture.seeds, nodes: architecture.nodes, edges: architecture.edges, approvedScope },
-    code: { primary, secondary, tests },
+    architecture: {
+      seeds: architecture.seeds,
+      nodes: architecture.nodes,
+      edges: architecture.edges,
+      approvedScope,
+      callChains: callChains.length > 0 ? callChains : undefined,
+    },
+    code: {
+      primary,
+      secondary,
+      tests,
+      skeletons: skeletons.length > 0 ? skeletons : undefined,
+    },
     evidence: trimmed.map((chunk) => ({ path: chunk.path, lines: [chunk.startLine, chunk.endLine], hash: chunk.contentHash, provider: chunk.provider, current: true })),
     claims,
     conflicts,

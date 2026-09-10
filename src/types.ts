@@ -7,6 +7,8 @@ export const IDE_IDS = [
   "github-copilot",
   "gemini-cli",
   "commandcode",
+  "cline",
+  "roo-code",
   "generic",
 ] as const;
 

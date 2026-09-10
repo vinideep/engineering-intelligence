@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { runProcessSync } from "../process/index.js";
 import { collectProjectFiles, ProjectFilePolicy } from "../project-files/index.js";
-import { validateGraph, type DependencyGraph, type GraphNode } from "./schema.js";
+import { validateGraph, type DependencyGraph, type GraphNode, type GraphEdge } from "./schema.js";
 import { buildDependencyGraph, loadExistingGraph, mergeIncrementalUpdate } from "./builders/dependency.js";
 import { reconcileGraphifyEvidence } from "./provider-evidence.js";
 
@@ -453,3 +453,71 @@ export async function whoCalls(root: string, name: string, options: { transitive
 
   return { target: name, matched, callers };
 }
+
+export interface ExecutionPath {
+  nodes: string[];
+  edges: GraphEdge[];
+}
+
+// Find multi-hop execution / import paths connecting sourceId to targetId
+export async function findExecutionPaths(
+  root: string,
+  sourceId: string,
+  targetId: string,
+  options: { maxDepth?: number; relations?: string[] } = {},
+): Promise<ExecutionPath[]> {
+  const existing = await loadExistingGraph(graphFilePath(root));
+  if (!existing) return [];
+
+  const maxDepth = options.maxDepth ?? 5;
+  const allowedRelations = new Set(options.relations ?? ["calls", "imports"]);
+
+  const nodeById = new Map<string, GraphNode>(existing.nodes.map((n) => [n.id, n]));
+  const resolveNodeId = (query: string): string | undefined => {
+    if (nodeById.has(query)) return query;
+    const byLabel = existing.nodes.find((n) => n.label === query);
+    if (byLabel) return byLabel.id;
+    const byPath = existing.nodes.find((n) => n.path === query || Boolean(n.path && (n.path.endsWith(`/${query}`) || n.path.endsWith(query))));
+    if (byPath) return byPath.id;
+    return undefined;
+  };
+
+  const startId = resolveNodeId(sourceId);
+  const endId = resolveNodeId(targetId);
+  if (!startId || !endId) return [];
+  if (startId === endId) return [{ nodes: [startId], edges: [] }];
+
+  const adj = new Map<string, Array<{ to: string; edge: GraphEdge }>>();
+  for (const edge of existing.edges) {
+    if (!allowedRelations.has(edge.relation)) continue;
+    if (!adj.has(edge.from)) adj.set(edge.from, []);
+    adj.get(edge.from)!.push({ to: edge.to, edge });
+  }
+
+  const paths: ExecutionPath[] = [];
+  const queue: Array<{ current: string; pathNodes: string[]; pathEdges: GraphEdge[] }> = [
+    { current: startId, pathNodes: [startId], pathEdges: [] },
+  ];
+
+  while (queue.length > 0) {
+    const { current, pathNodes, pathEdges } = queue.shift()!;
+    if (pathNodes.length > maxDepth + 1) continue;
+
+    for (const neighbor of adj.get(current) ?? []) {
+      if (pathNodes.includes(neighbor.to)) continue; // avoid cycles
+      const nextNodes = [...pathNodes, neighbor.to];
+      const nextEdges = [...pathEdges, neighbor.edge];
+
+      if (neighbor.to === endId) {
+        paths.push({ nodes: nextNodes, edges: nextEdges });
+        if (paths.length >= 10) break;
+      } else if (nextNodes.length <= maxDepth) {
+        queue.push({ current: neighbor.to, pathNodes: nextNodes, pathEdges: nextEdges });
+      }
+    }
+    if (paths.length >= 10) break;
+  }
+
+  return paths;
+}
+

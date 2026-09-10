@@ -277,6 +277,18 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
 
     try {
       if (consolidated.has(name)) {
+        if (name === "who_calls") {
+          const rawResult = (await consolidated.execute(name, { ...args, root })) as any;
+          const callersList = Array.isArray(rawResult.callers) ? rawResult.callers : (rawResult.callers?.rows ?? []);
+          const callersPacked = packRows(
+            callersList as unknown as Array<Record<string, unknown>>,
+            ["id", "label", "kind", "confidence", "evidence", "path"],
+          );
+          return text(shape(
+            { ...rawResult, callers: callersPacked },
+            { budget: budgetOf(args, cfg, "who_calls", 1500), hints: { callers: { hint: "who_calls <caller> transitive=true (packed: {cols,rows})", mustKeep: true }, matched: { hint: "find_symbol <name>", mustKeep: true } } },
+          ));
+        }
         return text(JSON.stringify(await consolidated.execute(name, { ...args, root }), null, 2));
       }
       if (name === "get_brief") {

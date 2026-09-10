@@ -13,9 +13,9 @@ import { packageVersion } from "../version.js";
 import type { ProviderName } from "../providers/types.js";
 import type { ProviderPolicy } from "../config/index.js";
 
-type Command = "initialize" | "providers" | "install" | "update" | "sync" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "verify" | "claims" | "context" | "telemetry" | "setup" | "ask" | "guard" | "health" | "impact" | "who-calls" | "preflight" | "postflight" | "evidence-record" | "evidence-check" | "experiment" | "aidlc";
+type Command = "initialize" | "providers" | "install" | "update" | "sync" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "verify" | "claims" | "context" | "telemetry" | "setup" | "ask" | "guard" | "health" | "impact" | "who-calls" | "preflight" | "postflight" | "evidence-record" | "evidence-check" | "experiment" | "aidlc" | "handoff" | "learn";
 
-const COMMANDS: Command[] = ["initialize", "providers", "install", "create", "update", "sync", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "verify", "claims", "context", "telemetry", "setup", "ask", "guard", "health", "impact", "who-calls", "preflight", "postflight", "evidence-record", "evidence-check", "experiment", "aidlc"];
+const COMMANDS: Command[] = ["initialize", "providers", "install", "create", "update", "sync", "doctor", "uninstall", "visualize", "map", "mcp", "freshness", "git-analysis", "user-profile", "hook", "gate", "verify", "claims", "context", "telemetry", "setup", "ask", "guard", "health", "impact", "who-calls", "preflight", "postflight", "evidence-record", "evidence-check", "experiment", "aidlc", "handoff", "learn"];
 
 interface Options {
   command: Command;
@@ -54,6 +54,14 @@ interface Options {
   expertMode: boolean;
   providerAction?: "status" | "install" | "repair" | "upgrade" | "expose" | "hide" | "purge";
   providerName?: ProviderName;
+  note?: string;
+  targetIde?: string;
+  title?: string;
+  rule?: string;
+  description?: string;
+  topic?: string;
+  trigger?: string;
+  area?: string;
 }
 
 function usage(all = false): string {
@@ -152,6 +160,14 @@ function parseArgs(args: string[]): Options {
   let id: string | undefined;
   let full = false;
   let transitive = false;
+  let note: string | undefined;
+  let targetIde: string | undefined;
+  let title: string | undefined;
+  let rule: string | undefined;
+  let description: string | undefined;
+  let topic: string | undefined;
+  let trigger: string | undefined;
+  let area: string | undefined;
 
   for (let index = 0; index < remaining.length; index += 1) {
     const arg = remaining[index];
@@ -268,13 +284,45 @@ function parseArgs(args: string[]): Options {
       failOn = value;
     } else if (arg.startsWith("--fail-on=")) {
       failOn = arg.slice("--fail-on=".length);
+    } else if (arg === "--note") {
+      note = remaining[++index];
+    } else if (arg.startsWith("--note=")) {
+      note = arg.slice("--note=".length);
+    } else if (arg === "--target-ide" || arg === "--target") {
+      targetIde = remaining[++index];
+    } else if (arg.startsWith("--target-ide=") || arg.startsWith("--target=")) {
+      targetIde = arg.slice(arg.indexOf("=") + 1);
+    } else if (arg === "--title") {
+      title = remaining[++index];
+    } else if (arg.startsWith("--title=")) {
+      title = arg.slice("--title=".length);
+    } else if (arg === "--rule") {
+      rule = remaining[++index];
+    } else if (arg.startsWith("--rule=")) {
+      rule = arg.slice("--rule=".length);
+    } else if (arg === "--description") {
+      description = remaining[++index];
+    } else if (arg.startsWith("--description=")) {
+      description = arg.slice("--description=".length);
+    } else if (arg === "--topic") {
+      topic = remaining[++index];
+    } else if (arg.startsWith("--topic=")) {
+      topic = arg.slice("--topic=".length);
+    } else if (arg === "--trigger") {
+      trigger = remaining[++index];
+    } else if (arg.startsWith("--trigger=")) {
+      trigger = arg.slice("--trigger=".length);
+    } else if (arg === "--area") {
+      area = remaining[++index];
+    } else if (arg.startsWith("--area=")) {
+      area = arg.slice("--area=".length);
     } else if (arg.startsWith("-")) {
       throw new Error(`Unknown option "${arg}".`);
     } else if (command === "hook" && hookEvent === undefined) {
       hookEvent = arg;
     } else if (command === "gate" && gateName === undefined) {
       gateName = arg;
-    } else if ((command === "claims" || command === "context" || command === "experiment" || command === "aidlc") && positional === undefined) {
+    } else if ((command === "claims" || command === "context" || command === "experiment" || command === "aidlc" || command === "handoff" || command === "learn") && positional === undefined) {
       positional = arg;
     } else if (command === "providers" && providerAction === undefined) {
       if (!["status", "install", "repair", "upgrade", "expose", "hide", "purge"].includes(arg)) throw new Error(`Unknown providers action "${arg}".`);
@@ -330,6 +378,14 @@ function parseArgs(args: string[]): Options {
     expertMode,
     providerAction,
     providerName,
+    note,
+    targetIde,
+    title,
+    rule,
+    description,
+    topic,
+    trigger,
+    area,
   };
 }
 
@@ -865,6 +921,121 @@ async function main(): Promise<void> {
       output.write(renderFlightReport(result.record, result.report));
     }
     if (options.strict && result.report.verdict === "flagged") process.exitCode = 1;
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "handoff") {
+    const { createSessionHandoff, getSessionHandoff, listActiveFlights } = await import("../flight/index.js");
+    const subAction = options.positional || "create";
+
+    if (subAction === "list") {
+      const flights = await listActiveFlights(options.root);
+      if (options.json) {
+        output.write(`${JSON.stringify(flights, null, 2)}\n`);
+      } else {
+        output.write(`Active flights (${flights.length}):\n`);
+        for (const f of flights) {
+          output.write(`  [${f.id}] ${f.intent} (declared: ${f.declaredFiles.join(", ") || "none"})\n`);
+        }
+        if (flights.length === 0) output.write("  No active flights.\n");
+      }
+      if (readline) readline.close();
+      return;
+    }
+
+    if (subAction === "get") {
+      const packet = await getSessionHandoff(options.root, options.id);
+      if (options.json) {
+        output.write(`${JSON.stringify(packet, null, 2)}\n`);
+      } else if (!packet) {
+        output.write("No session handoff found.\n");
+      } else {
+        output.write(`Session Handoff: ${packet.sessionId} (${packet.createdAt})\n`);
+        if (packet.targetIde) output.write(`  Target IDE: ${packet.targetIde}\n`);
+        if (packet.note) output.write(`  Note: ${packet.note}\n`);
+        output.write(`  Dirty files (${packet.dirtyFiles.length}): ${packet.dirtyFiles.join(", ") || "none"}\n`);
+        if (packet.activeFlight) output.write(`  Active flight: ${packet.activeFlight.id} (${packet.activeFlight.intent})\n`);
+      }
+      if (readline) readline.close();
+      return;
+    }
+
+    const packet = await createSessionHandoff(options.root, {
+      sessionId: options.id,
+      sourceIde: options.host,
+      targetIde: options.targetIde,
+      note: options.note,
+      intent: options.intent,
+      files: options.files.length > 0 ? options.files : undefined,
+    });
+    if (options.json) {
+      output.write(`${JSON.stringify(packet, null, 2)}\n`);
+    } else {
+      output.write(`Created session handoff: ${packet.sessionId}\n`);
+      output.write(`  Dirty files: ${packet.dirtyFiles.length}\n`);
+      output.write(`  Saved to .engineering-intelligence/flight/session-handoff.json\n`);
+    }
+    if (readline) readline.close();
+    return;
+  }
+
+  if (options.command === "learn") {
+    const { recordLearnedPattern, logUncertaintyEvent, queryProjectMemory } = await import("../learning/index.js");
+    const subAction = options.positional || "query";
+
+    if (subAction === "pattern") {
+      const type = (options.graphType as any) || "convention";
+      const title = options.title || options.positionals[0] || "Learned Pattern";
+      const rule = options.rule || options.statement || "Follow project convention.";
+      const description = options.description || "Captured from agent learning.";
+      const res = await recordLearnedPattern(options.root, {
+        type: ["convention", "regression", "constraint"].includes(type) ? type : "convention",
+        title,
+        rule,
+        description,
+        targetFiles: options.files.length > 0 ? options.files : undefined,
+      });
+      if (options.json) {
+        output.write(`${JSON.stringify(res, null, 2)}\n`);
+      } else {
+        output.write(`Recorded ${type} pattern "${title}" to ${res.path}\n`);
+      }
+      if (readline) readline.close();
+      return;
+    }
+
+    if (subAction === "uncertainty") {
+      const trigger = options.trigger || options.positionals[0] || "Code ambiguity";
+      const area = options.area || "general";
+      const description = options.description || "Uncertainty encountered during session.";
+      const res = await logUncertaintyEvent(options.root, {
+        trigger,
+        area,
+        description,
+        severity: (options.failOn as any) || "medium",
+      });
+      if (options.json) {
+        output.write(`${JSON.stringify(res, null, 2)}\n`);
+      } else {
+        output.write(`Logged uncertainty event ${res.id}\n`);
+      }
+      if (readline) readline.close();
+      return;
+    }
+
+    const res = await queryProjectMemory(options.root, {
+      file: options.files?.[0],
+      topic: options.topic || options.positionals[0],
+    });
+    if (options.json) {
+      output.write(`${JSON.stringify(res, null, 2)}\n`);
+    } else {
+      output.write(`Project Memory Query Results:\n`);
+      output.write(`Conventions (${res.conventions.length}):\n${res.conventions.map((c) => `  - ${c}`).join("\n") || "  (none)"}\n`);
+      output.write(`Constraints (${res.constraints.length}):\n${res.constraints.map((c) => `  - ${c}`).join("\n") || "  (none)"}\n`);
+      output.write(`Regressions (${res.regressions.length}):\n${res.regressions.map((c) => `  - ${c}`).join("\n") || "  (none)"}\n`);
+    }
     if (readline) readline.close();
     return;
   }

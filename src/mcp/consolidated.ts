@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { loadEiConfig } from "../config/index.js";
 import { getEngineeringContext } from "../context/orchestrator.js";
-import { analyzeImpact, ensureFreshGraph } from "../graph/index.js";
+import { analyzeImpact, ensureFreshGraph, findSymbol, whoCalls } from "../graph/index.js";
 import { validateChange, syncEngineeringKnowledge } from "../orchestrators/change.js";
 import { GRAPHIFY_GRAPH_PATH } from "../providers/graphify.js";
 import { providerStatus } from "../providers/manager.js";
@@ -11,6 +11,9 @@ import { inspectProjectProviderRuns } from "../providers/project-status.js";
 import { PROVIDER_NAMES } from "../providers/types.js";
 import { generateExperimentCandidates, evaluateExperimentStep, loadExperiments, type EvaluateStepOptions } from "../experiment/index.js";
 import { assessPromptClarity, checkPhaseGate, freezeRequirements, loadAidlcState, saveAidlcState, type Phase, type UserDecision, type AidlcState } from "../aidlc/index.js";
+import { createSessionHandoff, getSessionHandoff, listActiveFlights } from "../flight/index.js";
+import { recordLearnedPattern, queryProjectMemory } from "../learning/index.js";
+import { packRows } from "./shaper.js";
 import { McpToolRegistry } from "./registry.js";
 
 const rootProperty = { type: "string" as const };
@@ -249,6 +252,181 @@ export async function createConsolidatedRegistry(projectRoot: string): Promise<M
       }
       await saveAidlcState(root, state);
       return { status: "updated", state };
+    },
+  });
+
+  registry.register({
+    name: "find_symbol",
+    description: "Find symbol definitions across the repository with exact file:line evidence using the deterministic graph.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        root: rootProperty,
+        name: { type: "string" },
+        query: { type: "string" },
+        limit: { type: "number", minimum: 1 },
+      },
+    },
+    handler: async (args) => {
+      const root = rootOf(args, projectRoot);
+      const symName = (typeof args.name === "string" ? args.name : "") || (typeof args.query === "string" ? args.query : "");
+      if (!symName) return { matches: [], error: "name or query is required" };
+      await ensureFreshGraph(root);
+      const matches = await findSymbol(root, symName);
+      const limit = typeof args.limit === "number" ? args.limit : 50;
+      return { matches: matches.slice(0, limit) };
+    },
+  });
+
+  registry.register({
+    name: "who_calls",
+    description: "Reverse-walk the call graph to find callers of a symbol with call-site file:line evidence and confidence.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        root: rootProperty,
+        name: { type: "string" },
+        symbol: { type: "string" },
+        file: { type: "string" },
+        transitive: { type: "boolean" },
+        limit: { type: "number", minimum: 1 },
+      },
+    },
+    handler: async (args) => {
+      const root = rootOf(args, projectRoot);
+      const symName = (typeof args.name === "string" ? args.name : "") || (typeof args.symbol === "string" ? args.symbol : "");
+      if (!symName) return { callers: [], error: "name or symbol is required" };
+      await ensureFreshGraph(root);
+      const result = await whoCalls(root, symName, { transitive: args.transitive === true });
+      let filteredCallers = result.callers;
+      if (typeof args.file === "string") {
+        const fileTarget = args.file;
+        filteredCallers = filteredCallers.filter(
+          (c) => c.path === fileTarget || c.evidence?.some((e) => e.startsWith(fileTarget)),
+        );
+      }
+      const limit = typeof args.limit === "number" ? args.limit : 50;
+      const callers = filteredCallers.slice(0, limit);
+      return {
+        ...result,
+        callers,
+        packed: packRows(callers as unknown as Array<Record<string, unknown>>, ["id", "label", "kind", "confidence", "evidence", "path"]),
+      };
+    },
+  });
+
+  registry.register({
+    name: "create_session_handoff",
+    description: "Package active flight predictions, uncommitted dirty files, test receipts, and AI-DLC state for cross-IDE session handoff.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        root: rootProperty,
+        sessionId: { type: "string" },
+        sourceIde: { type: "string" },
+        targetIde: { type: "string" },
+        note: { type: "string" },
+        intent: { type: "string" },
+        files: filesProperty,
+      },
+    },
+    handler: async (args) => {
+      const root = rootOf(args, projectRoot);
+      return createSessionHandoff(root, {
+        sessionId: typeof args.sessionId === "string" ? args.sessionId : undefined,
+        sourceIde: typeof args.sourceIde === "string" ? args.sourceIde : undefined,
+        targetIde: typeof args.targetIde === "string" ? args.targetIde : undefined,
+        note: typeof args.note === "string" ? args.note : undefined,
+        intent: typeof args.intent === "string" ? args.intent : undefined,
+        files: Array.isArray(args.files) ? (args.files as string[]) : undefined,
+      });
+    },
+  });
+
+  registry.register({
+    name: "get_session_handoff",
+    description: "Retrieve the latest cross-IDE session handoff packet or a specific session by ID.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        root: rootProperty,
+        sessionId: { type: "string" },
+      },
+    },
+    handler: async (args) => {
+      const root = rootOf(args, projectRoot);
+      const packet = await getSessionHandoff(root, typeof args.sessionId === "string" ? args.sessionId : undefined);
+      return packet ?? { found: false, message: "no session handoff found" };
+    },
+  });
+
+  registry.register({
+    name: "list_active_flights",
+    description: "List all open agent flight records to identify active changes and detect potential multi-IDE edit conflicts.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        root: rootProperty,
+      },
+    },
+    handler: async (args) => {
+      const root = rootOf(args, projectRoot);
+      const flights = await listActiveFlights(root);
+      return { activeFlights: flights, count: flights.length };
+    },
+  });
+
+  registry.register({
+    name: "record_learned_pattern",
+    description: "Record a learned coding convention, regression pattern, or project constraint into durable engineering memory.",
+    inputSchema: {
+      type: "object",
+      required: ["type", "title", "description", "rule"],
+      additionalProperties: false,
+      properties: {
+        root: rootProperty,
+        type: { type: "string", enum: ["convention", "regression", "constraint"] },
+        title: { type: "string" },
+        description: { type: "string" },
+        rule: { type: "string" },
+        targetFiles: filesProperty,
+      },
+    },
+    handler: async (args) => {
+      const root = rootOf(args, projectRoot);
+      return recordLearnedPattern(root, {
+        type: args.type as "convention" | "regression" | "constraint",
+        title: args.title as string,
+        description: args.description as string,
+        rule: args.rule as string,
+        targetFiles: Array.isArray(args.targetFiles) ? (args.targetFiles as string[]) : undefined,
+      });
+    },
+  });
+
+  registry.register({
+    name: "query_project_memory",
+    description: "Query durable project memory for coding conventions, negative constraints, and regression patterns.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        root: rootProperty,
+        file: { type: "string" },
+        topic: { type: "string" },
+      },
+    },
+    handler: async (args) => {
+      const root = rootOf(args, projectRoot);
+      return queryProjectMemory(root, {
+        file: typeof args.file === "string" ? args.file : undefined,
+        topic: typeof args.topic === "string" ? args.topic : undefined,
+      });
     },
   });
 

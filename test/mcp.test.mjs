@@ -91,16 +91,23 @@ test("MCP server: initialize, list tools, call get_graph and analyze_impact", as
       "analyze_change_impact",
       "assess_prompt_clarity",
       "check_aidlc_gate",
+      "create_session_handoff",
       "evaluate_experiment_step",
+      "find_symbol",
       "freeze_clarified_requirements",
       "generate_experiment_candidates",
       "get_aidlc_state",
       "get_engineering_context",
       "get_experiment_history",
+      "get_session_handoff",
+      "list_active_flights",
       "provider_status",
+      "query_project_memory",
+      "record_learned_pattern",
       "sync_engineering_knowledge",
       "update_aidlc_state",
       "validate_change",
+      "who_calls",
     ];
     assert.deepEqual([...toolNames].sort(), expectedTools.sort());
     assert.ok(!toolNames.some((name) => name.startsWith("provider_graphify_") || name.startsWith("provider_cce_")), "raw provider tools must be hidden by default");

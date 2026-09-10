@@ -584,6 +584,41 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
         block("AGENTS.md", sharedInstructions, ide),
       ];
     }
+    case "roo-code": {
+      const ruleContent = prepareRendered(await readTemplate("rules", "engineering-intelligence"));
+      const routing = routingInstructions(".roo/WORKFLOW-ROUTING.md", ".roo/skills/SKILLS-INDEX.md");
+      const finalRule = `${ruleContent}\n\n${routing}`;
+      const [bundle] = await Promise.all([
+        skillBundle(ide, {
+          skillsDir: ".roo/skills",
+          indexPath: `.roo/skills/${SKILLS_INDEX_FILENAME}`,
+          routingPath: `.roo/${WORKFLOW_ROUTING_FILENAME}`,
+          emitBriefs: false,
+        }),
+      ]);
+      return [
+        ...bundle,
+        file(".roo/rules/engineering-intelligence.md", finalRule, ide),
+        jsonMerge(".roo/mcp.json", mcpServerRegistration(), ide),
+      ];
+    }
+    case "cline": {
+      const ruleContent = prepareRendered(await readTemplate("rules", "engineering-intelligence"));
+      const routing = routingInstructions(".cline/WORKFLOW-ROUTING.md", ".cline/skills/SKILLS-INDEX.md");
+      const finalRule = `${ruleContent}\n\n${routing}`;
+      const [bundle] = await Promise.all([
+        skillBundle(ide, {
+          skillsDir: ".cline/skills",
+          indexPath: `.cline/skills/${SKILLS_INDEX_FILENAME}`,
+          routingPath: `.cline/${WORKFLOW_ROUTING_FILENAME}`,
+          emitBriefs: false,
+        }),
+      ]);
+      return [
+        ...bundle,
+        file(".clinerules/engineering-intelligence.md", finalRule, ide),
+      ];
+    }
   }
 }
 

@@ -310,3 +310,167 @@ export function renderFlightReport(record: FlightRecord, report: FlightReport): 
   }
   return lines.join("\n") + "\n";
 }
+
+export interface SessionHandoffInput {
+  sessionId?: string;
+  sourceIde?: string;
+  targetIde?: string;
+  note?: string;
+  intent?: string;
+  files?: string[];
+}
+
+export interface SessionHandoffPacket {
+  schemaVersion: 1;
+  sessionId: string;
+  createdAt: string;
+  sourceIde?: string;
+  targetIde?: string;
+  note?: string;
+  intent?: string;
+  dirtyFiles: string[];
+  activeFlight?: {
+    id: string;
+    intent: string;
+    declaredFiles: string[];
+    createdAt: string;
+  } | null;
+  validationSummary?: {
+    receiptCount: number;
+    lastVerdict?: string;
+  };
+  aidlcSummary?: {
+    phase?: string;
+    stage?: string;
+  };
+}
+
+export interface ActiveFlightSummary {
+  id: string;
+  intent: string;
+  declaredFiles: string[];
+  createdAt: string;
+  status: "open";
+}
+
+export async function createSessionHandoff(
+  root: string,
+  data: SessionHandoffInput = {},
+): Promise<SessionHandoffPacket> {
+  const dir = flightDir(root);
+  await mkdir(dir, { recursive: true });
+
+  const sessionId = data.sessionId || `session-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e4).toString(36)}`;
+  const dirty = dirtyFiles(root);
+  const openFlight = await latestOpenFlight(root);
+
+  let validationSummary: { receiptCount: number; lastVerdict?: string } | undefined;
+  try {
+    const receiptsPath = path.join(root, ".engineering-intelligence", ".verify", "receipts.json");
+    if (existsSync(receiptsPath)) {
+      const receiptsContent = await readFile(receiptsPath, "utf8");
+      const receipts = JSON.parse(receiptsContent);
+      if (Array.isArray(receipts) && receipts.length > 0) {
+        validationSummary = {
+          receiptCount: receipts.length,
+          lastVerdict: receipts[receipts.length - 1]?.verdict,
+        };
+      }
+    }
+  } catch {
+    // best effort
+  }
+
+  let aidlcSummary: { phase?: string; stage?: string } | undefined;
+  try {
+    const aidlcStatePath = path.join(root, ".engineering-intelligence", "aidlc", "aidlc-state.json");
+    if (existsSync(aidlcStatePath)) {
+      const aidlcContent = await readFile(aidlcStatePath, "utf8");
+      const aidlc = JSON.parse(aidlcContent);
+      aidlcSummary = {
+        phase: aidlc.currentPhase,
+        stage: aidlc.currentStage,
+      };
+    }
+  } catch {
+    // best effort
+  }
+
+  const packet: SessionHandoffPacket = {
+    schemaVersion: 1,
+    sessionId,
+    createdAt: new Date().toISOString(),
+    sourceIde: data.sourceIde,
+    targetIde: data.targetIde,
+    note: data.note,
+    intent: data.intent || openFlight?.intent,
+    dirtyFiles: dirty,
+    activeFlight: openFlight
+      ? {
+          id: openFlight.id,
+          intent: openFlight.intent,
+          declaredFiles: openFlight.declaredFiles,
+          createdAt: openFlight.createdAt,
+        }
+      : null,
+    validationSummary,
+    aidlcSummary,
+  };
+
+  const handoffPath = path.join(dir, "session-handoff.json");
+  await writeFile(handoffPath, `${JSON.stringify(packet, null, 2)}\n`, "utf8");
+
+  const specificPath = path.join(dir, `handoff-${sessionId}.json`);
+  await writeFile(specificPath, `${JSON.stringify(packet, null, 2)}\n`, "utf8");
+
+  return packet;
+}
+
+export async function getSessionHandoff(
+  root: string,
+  sessionId?: string,
+): Promise<SessionHandoffPacket | null> {
+  const dir = flightDir(root);
+  const targetFile = sessionId ? path.join(dir, `handoff-${sessionId}.json`) : path.join(dir, "session-handoff.json");
+  try {
+    const content = await readFile(targetFile, "utf8");
+    return JSON.parse(content) as SessionHandoffPacket;
+  } catch {
+    if (sessionId) {
+      try {
+        const defaultContent = await readFile(path.join(dir, "session-handoff.json"), "utf8");
+        const defaultPacket = JSON.parse(defaultContent) as SessionHandoffPacket;
+        if (defaultPacket.sessionId === sessionId) return defaultPacket;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+}
+
+export async function listActiveFlights(root: string): Promise<ActiveFlightSummary[]> {
+  let entries: string[];
+  try {
+    entries = await readdir(flightDir(root));
+  } catch {
+    return [];
+  }
+  const active: ActiveFlightSummary[] = [];
+  for (const e of entries) {
+    if (!e.startsWith("flt-") || !e.endsWith(".json")) continue;
+    const rec = await loadFlight(root, e.replace(/\.json$/, ""));
+    if (rec && rec.status === "open") {
+      active.push({
+        id: rec.id,
+        intent: rec.intent,
+        declaredFiles: rec.declaredFiles,
+        createdAt: rec.createdAt,
+        status: "open",
+      });
+    }
+  }
+  active.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return active;
+}
+

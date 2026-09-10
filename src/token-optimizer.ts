@@ -192,9 +192,17 @@ function parseFrontmatterDescription(content: string): string {
 export async function generateSkillsIndex(
   skillNames: ReadonlyArray<string>,
   skillsDir = ".claude/skills",
+  activeWorkflow?: string,
 ): Promise<string> {
+  let relevantSkills = skillNames;
+  if (activeWorkflow && activeWorkflow in WORKFLOW_SKILL_ROUTING) {
+    const route = WORKFLOW_SKILL_ROUTING[activeWorkflow as keyof typeof WORKFLOW_SKILL_ROUTING];
+    const allowed = new Set([...route.primary, ...route.optional]);
+    relevantSkills = skillNames.filter((name) => allowed.has(name));
+  }
+
   const rows = await Promise.all(
-    skillNames.map(async (name) => {
+    relevantSkills.map(async (name) => {
       const content = await readTemplate("skills", name).catch(() => "");
       const desc = parseFrontmatterDescription(content);
       const short = desc.length > 110 ? desc.slice(0, 107) + "…" : desc;
@@ -305,6 +313,9 @@ export function smartCrush(content: string): string {
     .replace(/^(---\n(?:(?!---)[^\n]*\n)*)version:[^\n]*\n/m, "$1")
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/[ \t]+$/gm, "")
+    .replace(/[Pp]lease note that\s*/g, "")
+    .replace(/([Mm])ake sure to\s*/g, (match, p1) => (p1 === "M" ? "Ensure " : "ensure "))
+    .replace(/([Ii])t is important to\s*/g, (match, p1) => (p1 === "I" ? "Must " : "must "))
     .replace(/\n{3,}/g, "\n\n")
     .trimEnd() + "\n";
 }
