@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
+import { existsSync, realpathSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
@@ -50,7 +51,8 @@ function runCli(args) {
   return JSON.parse(result.stdout);
 }
 
-const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "ei-provider-smoke-"));
+const rawTemp = await mkdtemp(path.join(os.tmpdir(), "ei-provider-smoke-"));
+const temporaryRoot = process.platform === "win32" && existsSync(rawTemp) ? realpathSync(rawTemp) : rawTemp;
 const projectRoot = path.join(temporaryRoot, "complex-backend");
 const accuracyRoot = path.join(temporaryRoot, "accuracy-project");
 

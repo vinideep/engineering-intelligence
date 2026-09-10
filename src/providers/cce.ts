@@ -5,7 +5,7 @@ import { collectProjectFiles, ProjectFilePolicy } from "../project-files/index.j
 import { runProcess, type ProcessRunner } from "../process/index.js";
 import { PROVIDER_COMPATIBILITY } from "./compatibility.js";
 import { defaultProviderHome, providerStatus } from "./manager.js";
-import { computeProviderSourceSnapshot, PROVIDER_DIR, syncProviderWorkspace } from "./workspace.js";
+import { computeProviderSourceSnapshot, PROVIDER_DIR, syncProviderWorkspace, toCanonicalPath } from "./workspace.js";
 import type { ProviderStatus } from "./types.js";
 
 export const CCE_DIR = `${PROVIDER_DIR}/cce`;
@@ -96,11 +96,12 @@ export async function runCceIndex(
   if (status.health !== "healthy" || !status.executable) {
     return { ok: false, degraded: true, status, message: `${status.message} EI native scoped retrieval remains active.` };
   }
+  const canonicalRoot = toCanonicalPath(root);
   options.onProgress?.("Syncing provider workspace for CCE...");
-  const project = path.join(root, CCE_PROJECT);
-  const workspace = await syncProviderWorkspace(root, `${CCE_PROJECT}/workspace`);
+  const project = toCanonicalPath(path.join(canonicalRoot, CCE_PROJECT));
+  const workspace = await syncProviderWorkspace(canonicalRoot, `${CCE_PROJECT}/workspace`);
   await mkdir(project, { recursive: true });
-  const storagePath = path.join(project, "storage");
+  const storagePath = toCanonicalPath(path.join(project, "storage"));
   const modelCache = path.join(options.providerHome ?? defaultProviderHome(), "cce", "models");
   await mkdir(modelCache, { recursive: true });
   await writeTextAtomic(path.join(project, ".context-engine.yaml"), [
@@ -154,7 +155,7 @@ export async function runCceIndex(
   try {
     index = await runner({
       command: status.executable,
-      args: ["index", "--full", "--path", workspace.path],
+      args: ["index", "--full", "--path", toCanonicalPath(workspace.path)],
       cwd: project,
       env: cceEnv,
       timeoutMs: 15 * 60_000,
@@ -175,7 +176,7 @@ export async function runCceIndex(
     generatedAt: new Date().toISOString(),
     workspaceHash: workspace.workspaceHash,
     sourceHashes: await sourceHashes(workspace.manifestPath),
-    indexedPath: workspace.path,
+    indexedPath: toCanonicalPath(workspace.path),
     storagePath,
   };
   await writeAtomic(path.join(root, CCE_RUN_PATH), manifest);
@@ -195,12 +196,13 @@ function normalizeCandidatePath(root: string, workspace: string, cceProject: str
   let absolute: string;
   if (path.isAbsolute(value)) absolute = path.resolve(value);
   else absolute = path.resolve(cceProject, value);
-  const normalizedWorkspace = path.resolve(workspace);
-  const normalizedRoot = path.resolve(root);
-  if (absolute === normalizedWorkspace || absolute.startsWith(`${normalizedWorkspace}${path.sep}`)) {
+  absolute = toCanonicalPath(absolute);
+  const normalizedWorkspace = toCanonicalPath(workspace);
+  const normalizedRoot = toCanonicalPath(root);
+  if (absolute === normalizedWorkspace || absolute.startsWith(`${normalizedWorkspace}${path.sep}`) || absolute.startsWith(`${normalizedWorkspace}/`)) {
     return path.relative(normalizedWorkspace, absolute).replace(/\\/g, "/");
   }
-  if (absolute === normalizedRoot || absolute.startsWith(`${normalizedRoot}${path.sep}`)) {
+  if (absolute === normalizedRoot || absolute.startsWith(`${normalizedRoot}${path.sep}`) || absolute.startsWith(`${normalizedRoot}/`)) {
     const relative = path.relative(normalizedRoot, absolute).replace(/\\/g, "/");
     const workspacePrefix = `${PROVIDER_DIR}/workspace/`;
     return relative.startsWith(workspacePrefix) ? relative.slice(workspacePrefix.length) : relative;
@@ -308,8 +310,9 @@ export async function searchCodeContext(
     const chunks = await nativeScopedSearch(root, query, approvedPaths, topK);
     return { chunks, provider: "native", providerHealth: status.health, fallbackUsed: true, staleRejected: 0, scopeRejected: 0, message: manifest ? "CCE index is stale, incompatible, or unavailable; native scoped retrieval used." : "CCE index is unavailable; native scoped retrieval used." };
   }
-  const workspace = path.join(root, CCE_PROJECT, "workspace");
-  const cceProject = path.join(root, CCE_PROJECT);
+  const canonicalRoot = toCanonicalPath(root);
+  const workspace = toCanonicalPath(path.join(canonicalRoot, CCE_PROJECT, "workspace"));
+  const cceProject = toCanonicalPath(path.join(canonicalRoot, CCE_PROJECT));
   const overfetch = Math.min(200, Math.max(topK * 4, 20));
   const modelCache = path.join(options.providerHome ?? defaultProviderHome(), "cce", "models");
   const result = await runner({ command: status.executable, args: ["search", query, "--top-k", String(overfetch)], cwd: cceProject, env: { ...process.env, CI: "1", NO_COLOR: "1", CCE_EMBED_BACKEND: "fastembed", CCE_FASTEMBED_CACHE_PATH: modelCache }, timeoutMs: 2 * 60_000, maxBuffer: 20 * 1024 * 1024 });

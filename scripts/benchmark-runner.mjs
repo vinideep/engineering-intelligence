@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
 import { readFile, writeFile, rm, cp, mkdtemp } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -351,13 +351,16 @@ async function main() {
   // Every run gets a disposable copy. The tracked fixture and its generated
   // report are never used as a mutable project workspace.
   WORKSPACE_DIR = await mkdtemp(path.join(tmpdir(), "ei-benchmark-"));
+  if (process.platform === "win32" && existsSync(WORKSPACE_DIR)) {
+    WORKSPACE_DIR = realpathSync(WORKSPACE_DIR);
+  }
   TARGET_DIR = path.join(WORKSPACE_DIR, "complex-backend");
   await cp(FIXTURE_DIR, TARGET_DIR, { recursive: true });
 
   if (!RUN_MODELS) {
     try {
       console.log("🧪 2. Running deterministic initialization and verification...");
-      const initialized = runSync("node", [CLI_PATH, "initialize", TARGET_DIR, "--providers", "native", "--yes"]);
+      const initialized = runSync("node", [CLI_PATH, "initialize", TARGET_DIR, "--providers", "native", "--yes", "--force"]);
       const compiled = runSync(process.execPath, [TSC_SCRIPT, "-p", "tsconfig.json", "--typeRoots", TYPE_ROOTS]);
       const tests = runSync("node", ["--test", "test/orders.test.mjs", "test/payments.test.mjs"]);
       const claims = runSync("node", [CLI_PATH, "claims", "verify", TARGET_DIR, "--json"]);
@@ -375,7 +378,11 @@ async function main() {
         graph: { nodes: graph.nodes.length, edges: graph.edges.length, disallowedScopeLeakage: leakage.length },
       };
       console.log(`${JSON.stringify(result, null, 2)}\n`);
+      if (!result.initialized) console.error(`Initialize failed:\nSTDOUT:\n${initialized.stdout}\nSTDERR:\n${initialized.stderr}`);
       if (!result.compile) console.error(`TypeScript compile failed: ${compiled.stdout || compiled.stderr}`);
+      if (!result.baselineTests) console.error(`Baseline tests failed:\nSTDOUT:\n${tests.stdout}\nSTDERR:\n${tests.stderr}`);
+      if (!result.claimsVerified) console.error(`Claims verify failed:\nSTDOUT:\n${claims.stdout}\nSTDERR:\n${claims.stderr}`);
+      if (!result.strictHealth) console.error(`Strict health failed:\nSTDOUT:\n${health.stdout}\nSTDERR:\n${health.stderr}`);
       const passed = Object.values({ initialized: result.initialized, compile: result.compile, baselineTests: result.baselineTests, claimsVerified: result.claimsVerified, strictHealth: result.strictHealth }).every(Boolean) && leakage.length === 0;
       if (!passed) {
         throw new Error("Deterministic benchmark gates failed.");

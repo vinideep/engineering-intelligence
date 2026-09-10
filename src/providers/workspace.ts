@@ -1,7 +1,20 @@
+import { existsSync, realpathSync } from "node:fs";
 import { copyFile, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { collectProjectFiles, ProjectFilePolicy } from "../project-files/index.js";
+
+export function toCanonicalPath(p: string): string {
+  if (process.platform === "win32") {
+    try {
+      if (existsSync(p)) {
+        const real = realpathSync.native ? realpathSync.native(p) : realpathSync(p);
+        return real.startsWith("\\\\?\\") ? real.slice(4) : real;
+      }
+    } catch {}
+  }
+  return path.resolve(p);
+}
 
 export const PROVIDER_DIR = ".engineering-intelligence/providers";
 export const PROVIDER_WORKSPACE = `${PROVIDER_DIR}/workspace`;
@@ -90,21 +103,22 @@ export interface ProviderWorkspaceResult {
  * hooks, MCP configuration, or agent instructions.
  */
 export async function syncProviderWorkspace(root: string, workspaceRelative = PROVIDER_WORKSPACE): Promise<ProviderWorkspaceResult> {
-  await ensureProviderCacheIgnored(root);
+  const canonicalRoot = toCanonicalPath(root);
+  await ensureProviderCacheIgnored(canonicalRoot);
   const normalizedRelative = workspaceRelative.replace(/\\/g, "/").replace(/^\.\//, "");
   if (normalizedRelative !== PROVIDER_DIR && !normalizedRelative.startsWith(`${PROVIDER_DIR}/`)) {
     throw new Error("Provider workspaces must remain inside EI's ignored provider directory.");
   }
-  const workspace = path.join(root, normalizedRelative);
+  const workspace = toCanonicalPath(path.join(canonicalRoot, normalizedRelative));
   const manifestPath = path.join(workspace, ".ei-source-manifest.json");
   const prior = await readManifest(manifestPath);
-  const snapshot = await computeProviderSourceSnapshot(root);
+  const snapshot = await computeProviderSourceSnapshot(canonicalRoot);
   const entries = snapshot.files;
   let copied = 0;
   for (const entry of entries) {
     const old = prior?.files.find((candidate) => candidate.path === entry.path);
     if (old?.hash === entry.hash) continue;
-    const absolute = path.join(root, entry.path);
+    const absolute = path.join(canonicalRoot, entry.path);
     const destination = path.join(workspace, entry.path);
     await mkdir(path.dirname(destination), { recursive: true });
     await copyFile(absolute, destination);
@@ -121,7 +135,7 @@ export async function syncProviderWorkspace(root: string, workspaceRelative = PR
     } catch { /* already absent */ }
   }
   const workspaceHash = snapshot.workspaceHash;
-  const manifest: SourceManifest = { schemaVersion: 1, root: path.resolve(root), generatedAt: new Date().toISOString(), files: entries, workspaceHash };
+  const manifest: SourceManifest = { schemaVersion: 1, root: canonicalRoot, generatedAt: new Date().toISOString(), files: entries, workspaceHash };
   await mkdir(workspace, { recursive: true });
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   return { path: workspace, manifestPath, workspaceHash, files: entries.map((entry) => entry.path), copied, removed, skippedLarge: snapshot.skippedLarge };
