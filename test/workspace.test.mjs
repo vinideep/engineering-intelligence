@@ -28,7 +28,7 @@ function initRepo() {
     "import { compute } from './compute.js';\nexport function run() {\n  return compute();\n}\n",
   );
   git("add -A");
-  git("commit -q -m 'initial repo setup'");
+  git('commit -q -m "initial repo setup"');
   return { dir, git };
 }
 

@@ -348,7 +348,7 @@ async function onSessionStart(root: string, input: HookInput, config: HookConfig
 async function onPreToolUse(root: string, input: HookInput, config: HookConfig): Promise<HookDecision> {
   const targetPath = input.tool_input?.file_path;
   if (!targetPath) return ALLOW;
-  const rel = path.relative(root, path.resolve(root, targetPath));
+  const rel = path.relative(root, path.resolve(root, targetPath)).replace(/\\/g, "/");
   if (!isSourceFile(rel)) return ALLOW; // editing docs/config/intelligence is always fine
 
   const report = await computeFreshness(root, config.freshnessThreshold);
@@ -383,7 +383,7 @@ async function onPostToolUse(root: string, input: HookInput): Promise<HookDecisi
   if (/^(Edit|Write|NotebookEdit|MultiEdit)$/.test(tool)) {
     const targetPath = input.tool_input?.file_path;
     if (targetPath) {
-      const rel = path.relative(root, path.resolve(root, targetPath));
+      const rel = path.relative(root, path.resolve(root, targetPath)).replace(/\\/g, "/");
       if (isSourceFile(rel) && !state.changedFiles.includes(rel)) {
         state.changedFiles.push(rel);
         dirty = true;

@@ -174,7 +174,7 @@ async function agentsAt(directory: string, owner: IdeId): Promise<RenderedFile[]
 // or create frontmatter if the template has none. Used for hosts that read
 // command frontmatter to drive their slash-command UX.
 function withArgumentHint(content: string, hint: string): string {
-  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
   if (!match) {
     return `---\nargument-hint: ${hint}\n---\n\n${content}`;
   }

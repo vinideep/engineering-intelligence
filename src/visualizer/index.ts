@@ -76,7 +76,7 @@ function humanizeSkillId(id: string): string {
 }
 
 function frontmatterField(content: string, field: string): string {
-  const fm = content.match(/^---\n([\s\S]*?)\n---/);
+  const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   const line = (fm ? fm[1] : "").match(new RegExp(`^${field}:\\s*(.+)$`, "m"));
   return line ? line[1].trim() : "";
 }

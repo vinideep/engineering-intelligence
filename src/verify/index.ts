@@ -250,7 +250,7 @@ async function runOne(root: string, command: string, timeoutMs: number): Promise
   // the platform shell as an argument-array process so all subprocesses still
   // flow through the shared timeout/output/error contract.
   const shell = process.platform === "win32"
-    ? { command: "cmd.exe", args: ["/d", "/s", "/c", command] }
+    ? { command: process.env.ComSpec || "cmd.exe", args: ["/d", "/s", "/c", command], windowsVerbatimArguments: true }
     : { command: "/bin/sh", args: ["-c", command] };
   const result = await runProcess({ ...shell, cwd: root, timeoutMs, maxBuffer: 20 * 1024 * 1024 });
   return {
