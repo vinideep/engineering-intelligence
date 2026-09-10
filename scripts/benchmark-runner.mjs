@@ -345,7 +345,8 @@ async function main() {
 
   // 1. Build Core
   console.log("📦 1. Compiling Engineering Intelligence core...");
-  execFileSync("npm", ["run", "build"], { cwd: REPO_ROOT, stdio: "inherit" });
+  const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
+  execFileSync(npmCmd, ["run", "build"], { cwd: REPO_ROOT, stdio: "inherit", shell: process.platform === "win32" });
   console.log("   ✓ Core compiled.\n");
 
   // Every run gets a disposable copy. The tracked fixture and its generated
@@ -366,7 +367,7 @@ async function main() {
       const claims = runSync("node", [CLI_PATH, "claims", "verify", TARGET_DIR, "--json"]);
       const health = runSync("node", [CLI_PATH, "health", TARGET_DIR, "--strict", "--json"]);
       const graph = JSON.parse(await readFile(path.join(TARGET_DIR, ".engineering-intelligence/graph/dependency-graph.json"), "utf8"));
-      const leakage = graph.nodes.filter((node) => typeof node.path === "string" && /(^|\/)(?:dist|benchmark|node_modules|\.engineering-intelligence)(?:\/|$)/.test(node.path));
+      const leakage = graph.nodes.filter((node) => typeof node.path === "string" && /(^|[/\\])(?:dist|benchmark|node_modules|\.engineering-intelligence)(?:[/\\]|$)/.test(node.path));
       const result = {
         mode: "non-model-dry-run",
         disposableWorkspace: true,
