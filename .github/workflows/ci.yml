@@ -80,7 +80,9 @@ jobs:
           enable-cache: true
       - name: Ensure Python 3.12 with SQLite extension support on macOS
         if: runner.os == 'macOS'
-        run: brew install python@3.12
+        run: |
+          brew install python@3.12 || true
+          brew link --overwrite python@3.12 || true
       - run: npm ci
       - run: npm run build
       - name: Install pinned provider tuple

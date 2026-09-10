@@ -86,23 +86,24 @@ async function normalizeSourcePath(root: string, providerWorkspace: string, inpu
   const cleaned = raw.replace(/\\/g, "/");
   let candidate: string;
   if (path.isAbsolute(raw)) {
-    const absolute = path.resolve(raw);
     const absNorm = normalizePathForComparison(raw);
     const wsNorm = normalizePathForComparison(providerWorkspace);
     const rootNorm = normalizePathForComparison(root);
-    if (absNorm === wsNorm || absNorm.startsWith(`${wsNorm}/`)) candidate = path.relative(providerWorkspace, absolute);
-    else if (absNorm === rootNorm || absNorm.startsWith(`${rootNorm}/`)) candidate = path.relative(root, absolute);
-    else return undefined;
+    if (absNorm === wsNorm || absNorm.startsWith(`${wsNorm}/`)) {
+      candidate = absNorm.slice(wsNorm.length).replace(/^\//, "");
+    } else if (absNorm === rootNorm || absNorm.startsWith(`${rootNorm}/`)) {
+      candidate = absNorm.slice(rootNorm.length).replace(/^\//, "");
+    } else {
+      return undefined;
+    }
   } else {
     candidate = cleaned.replace(/^\.\//, "");
     const workspaceName = path.basename(providerWorkspace);
     if (candidate.startsWith(`${workspaceName}/`)) candidate = candidate.slice(workspaceName.length + 1);
   }
-  const absolute = path.resolve(root, candidate);
-  const absNorm = normalizePathForComparison(absolute);
-  const rootNorm = normalizePathForComparison(root);
-  if (absNorm !== rootNorm && !absNorm.startsWith(`${rootNorm}/`)) return undefined;
-  return path.relative(root, absolute).replace(/\\/g, "/");
+  candidate = candidate.replace(/^\//, "");
+  if (candidate.startsWith("../") || candidate === "..") return undefined;
+  return candidate;
 }
 
 async function currentFileHash(root: string, relative: string): Promise<string | undefined> {
