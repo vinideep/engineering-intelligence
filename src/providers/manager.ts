@@ -202,6 +202,40 @@ export interface InstallProviderOptions {
   onProgress?: (message: string) => void;
 }
 
+async function findPythonForProvider(name: ProviderName, runner: ProcessRunner): Promise<string | undefined> {
+  if (name !== "cce") return undefined;
+  if (process.platform === "darwin") {
+    const candidates = [
+      "/opt/homebrew/bin/python3.12",
+      "/opt/homebrew/bin/python3.13",
+      "/opt/homebrew/opt/python@3.12/bin/python3.12",
+      "/opt/homebrew/opt/python@3.13/bin/python3.13",
+      "/usr/local/bin/python3.12",
+      "/usr/local/bin/python3.13",
+      "/usr/local/opt/python@3.12/bin/python3.12",
+      "/usr/local/opt/python@3.13/bin/python3.13",
+      "python3.12",
+      "python3.13",
+      "/opt/homebrew/bin/python3",
+      "/usr/local/bin/python3",
+      "python3",
+    ];
+    for (const py of candidates) {
+      try {
+        const check = await runner({
+          command: py,
+          args: ["-c", 'import sys, sqlite3; assert (3, 11) <= sys.version_info < (3, 14); con = sqlite3.connect(":memory:"); con.enable_load_extension(True); print("OK")'],
+          timeoutMs: 10_000,
+        });
+        if (check.exitCode === 0 && check.stdout.trim() === "OK") {
+          return py;
+        }
+      } catch {}
+    }
+  }
+  return undefined;
+}
+
 export async function installProvider(name: ProviderName, options: InstallProviderOptions = {}): Promise<ProviderStatus> {
   const runner = options.runner ?? runProcess;
   const providerHome = options.providerHome ?? defaultProviderHome();
@@ -236,7 +270,17 @@ export async function installProvider(name: ProviderName, options: InstallProvid
     await mkdir(staging.versionRoot, { recursive: true });
     const spec = `${provider.package}==${provider.version}`;
     options.onProgress?.(`Installing ${provider.displayName} (${spec}) via uv...`);
-    const installed = await runner({ command: "uv", args: ["tool", "install", "--force", spec], env: managedEnv(staging), timeoutMs: 10 * 60_000, maxBuffer: 20 * 1024 * 1024 });
+    const pythonArg = await findPythonForProvider(name, runner);
+    const installArgs = ["tool", "install", "--force"];
+    if (pythonArg) {
+      installArgs.push("--python", pythonArg);
+    }
+    installArgs.push(spec);
+    const env = managedEnv(staging);
+    if (pythonArg) {
+      delete env.UV_PYTHON;
+    }
+    const installed = await runner({ command: "uv", args: installArgs, env, timeoutMs: 10 * 60_000, maxBuffer: 20 * 1024 * 1024 });
     if (installed.exitCode !== 0) {
       await rm(staging.versionRoot, { recursive: true, force: true });
       return { name, displayName: provider.displayName, purpose: provider.purpose, health: "error", requiredVersion: provider.version, message: `Installation failed: ${(installed.stderr || installed.error || "unknown error").trim().slice(-1000)}`, remediation: provider.prerequisites.map((item) => `Verify prerequisite: ${item}`), checkedAt: new Date().toISOString() };

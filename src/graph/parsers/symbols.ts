@@ -261,7 +261,7 @@ export async function extractSymbols(filePath: string, root: string): Promise<Sy
     return { nodes: [], edges: [], pendingCalls: [] };
   }
 
-  const relFile = path.relative(root, filePath);
+  const relFile = path.relative(root, filePath).replace(/\\/g, "/");
   const rel = stripExt(relFile);
   const moduleId = `module:${rel}`;
   const lineStarts = buildLineIndex(content);

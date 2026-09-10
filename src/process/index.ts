@@ -7,6 +7,8 @@ export interface ProcessRequest {
   env?: NodeJS.ProcessEnv;
   timeoutMs?: number;
   maxBuffer?: number;
+  shell?: boolean | string;
+  windowsVerbatimArguments?: boolean;
   onChunk?: (chunk: string, source: "stdout" | "stderr") => void;
 }
 
@@ -37,6 +39,8 @@ export const runProcess: ProcessRunner = (request) => {
         cwd: request.cwd,
         env: request.env,
         windowsHide: true,
+        shell: request.shell,
+        windowsVerbatimArguments: request.windowsVerbatimArguments,
       });
     } catch (error) {
       resolve({

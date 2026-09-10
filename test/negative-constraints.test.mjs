@@ -20,7 +20,7 @@ function initRepo() {
     "export function compute() {\n  return 100;\n}\n",
   );
   git("add -A");
-  git("commit -q -m 'initial repo setup'");
+  git('commit -q -m "initial repo setup"');
   return { dir, git };
 }
 

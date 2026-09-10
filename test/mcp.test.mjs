@@ -87,7 +87,22 @@ test("MCP server: initialize, list tools, call get_graph and analyze_impact", as
     const listResponse = await readResponse(proc, 2);
     assert.ok(!listResponse.error, `tools/list failed: ${JSON.stringify(listResponse.error)}`);
     const toolNames = (listResponse.result?.tools ?? []).map((t) => t.name);
-    assert.deepEqual([...toolNames].sort(), ["get_engineering_context", "analyze_change_impact", "validate_change", "sync_engineering_knowledge", "provider_status"].sort());
+    const expectedTools = [
+      "analyze_change_impact",
+      "assess_prompt_clarity",
+      "check_aidlc_gate",
+      "evaluate_experiment_step",
+      "freeze_clarified_requirements",
+      "generate_experiment_candidates",
+      "get_aidlc_state",
+      "get_engineering_context",
+      "get_experiment_history",
+      "provider_status",
+      "sync_engineering_knowledge",
+      "update_aidlc_state",
+      "validate_change",
+    ];
+    assert.deepEqual([...toolNames].sort(), expectedTools.sort());
     assert.ok(!toolNames.some((name) => name.startsWith("provider_graphify_") || name.startsWith("provider_cce_")), "raw provider tools must be hidden by default");
 
     // 3. Call get_graph (graph already built by graph.test.mjs)

@@ -44,7 +44,7 @@ async function resolveRelative(specifier: string, fromFile: string, root: string
 function resolveSpecifier(specifier: string, sourceFile: string, root: string): { id: string; kind: "module" | "package" | "external"; label: string; filePath?: string } {
   if (specifier.startsWith(".")) {
     // Internal module — resolve relative to source file
-    const resolved = path.relative(root, path.resolve(path.dirname(sourceFile), specifier));
+    const resolved = path.relative(root, path.resolve(path.dirname(sourceFile), specifier)).replace(/\\/g, "/");
     // Normalise: strip extensions for stability
     const base = resolved.replace(/\.(ts|tsx|js|mjs|cjs)$/, "");
     return { id: `module:${base}`, kind: "module", label: path.basename(base), filePath: resolved };
@@ -435,7 +435,7 @@ async function extractRubyImports(filePath: string, root: string): Promise<Impor
     // require_relative './path'
     const relReq = line.match(/^require_relative\s+['"]([^'"]+)['"]/);
     if (relReq) {
-      const resolved = path.relative(root, path.resolve(path.dirname(filePath), relReq[1]));
+      const resolved = path.relative(root, path.resolve(path.dirname(filePath), relReq[1])).replace(/\\/g, "/");
       const id = `module:${resolved}`;
       nodes.push({ id, kind: "module", label: path.basename(resolved), path: resolved, confidence: "verified", metadata: {}, evidence: [] });
       edges.push({ from: sourceId, to: id, relation: "imports", confidence: "verified", metadata: {}, evidence: [`${path.relative(root, filePath)}:${i + 1}`] });

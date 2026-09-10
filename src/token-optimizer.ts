@@ -301,6 +301,7 @@ export async function generateAllSkillBriefs(
  */
 export function smartCrush(content: string): string {
   return content
+    .replace(/\r\n/g, "\n")
     .replace(/^(---\n(?:(?!---)[^\n]*\n)*)version:[^\n]*\n/m, "$1")
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/[ \t]+$/gm, "")

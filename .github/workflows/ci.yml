@@ -75,6 +75,14 @@ jobs:
           node-version: "22"
           cache: npm
       - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Ensure Python 3.12 with SQLite extension support on macOS
+        if: runner.os == 'macOS'
+        run: |
+          brew install python@3.12 || true
+          brew link --overwrite python@3.12 || true
       - run: npm ci
       - run: npm run build
       - name: Install pinned provider tuple
@@ -92,6 +100,9 @@ jobs:
           node-version: "22"
           cache: npm
       - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
       - run: npm ci
       - run: npm run build
       - name: Install pinned provider tuple

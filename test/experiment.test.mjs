@@ -35,7 +35,7 @@ function initRepo() {
     "import { run } from './service.js';\nexport function handler() {\n  return run();\n}\n",
   );
   git("add -A");
-  git("commit -q -m 'initial repo setup'");
+  git('commit -q -m "initial repo setup"');
   return { dir, git };
 }
 

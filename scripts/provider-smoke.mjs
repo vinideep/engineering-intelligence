@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
+import { existsSync, realpathSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
@@ -38,13 +39,20 @@ function runCli(args) {
     timeout: 30 * 60_000,
   });
   if (result.status !== 0) {
+    let extra = "";
+    try {
+      const parsed = JSON.parse(result.stdout);
+      if (parsed.cce?.status?.message) extra += `\nCCE: ${parsed.cce.status.message}`;
+      if (parsed.graphify?.status?.message) extra += `\nGraphify: ${parsed.graphify.status.message}`;
+    } catch {}
     const detail = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim().slice(-4000);
-    throw new Error(`CLI failed (${result.status}): ${args.join(" ")}\n${detail}`);
+    throw new Error(`CLI failed (${result.status}): ${args.join(" ")}${extra}\n${detail}`);
   }
   return JSON.parse(result.stdout);
 }
 
-const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "ei-provider-smoke-"));
+const rawTemp = await mkdtemp(path.join(os.tmpdir(), "ei-provider-smoke-"));
+const temporaryRoot = process.platform === "win32" && existsSync(rawTemp) ? realpathSync(rawTemp) : rawTemp;
 const projectRoot = path.join(temporaryRoot, "complex-backend");
 const accuracyRoot = path.join(temporaryRoot, "accuracy-project");
 
@@ -75,7 +83,7 @@ try {
   assert.equal(context.providers.cce.fallback, false, "CCE retrieval must not fall back");
   assert.ok(chunks.length > 0, "ContextPackV2 must contain code evidence");
   assert.ok(chunks.every((chunk) => chunk.provider === "cce" && chunk.current === true), "all provider smoke spans must be current CCE evidence");
-  assert.ok(context.evidence.every((item) => !/(^|\/)(?:dist|benchmark|node_modules|\.engineering-intelligence|\.agent|\.agents|\.claude|\.cursor)(?:\/|$)/.test(item.path)), "context must not leak disallowed paths");
+  assert.ok(context.evidence.every((item) => !/(^|\/)(?:dist|benchmark|node_modules|\.engineering-intelligence|\.agent|\.agents|\.claude|\.cursor)(?:\/|$)/.test(item.path.replace(/\\/g, "/"))), "context must not leak disallowed paths");
   assert.ok(context.tokenAllocation.used <= context.tokenAllocation.budget, "context must obey its token budget");
 
   const health = await runHealth(projectRoot);
