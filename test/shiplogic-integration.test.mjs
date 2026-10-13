@@ -68,7 +68,7 @@ test("Shiplogic-style onboarding and incremental sync work through the real CLI"
   const settings = JSON.parse(await readFile(path.join(root, ".claude", "settings.json"), "utf8"));
   assert.deepEqual(settings.permissions, { allow: ["Bash(npm test)"] }, "project settings must survive installation");
   assert.equal(settings.model, "opus");
-  assert.ok(settings.hooks.SessionStart.some((entry) => entry.hooks.some((hook) => hook.command.includes("engineering-intelligence hook"))));
+  assert.ok(settings.hooks.SessionStart.some((entry) => entry.hooks.some((hook) => /graphward@[^ ]+ hook/.test(hook.command))));
 
   const doctor = cli(["doctor", root, "--json"], root);
   assert.equal(doctor.status, 0, doctor.stdout);
@@ -85,7 +85,7 @@ test("Shiplogic-style onboarding and incremental sync work through the real CLI"
   assert.equal(pack.knowledge.trust, "healthy");
   assert.ok(pack.architecture.nodes.some((node) => node.path === "src/routes/route-plan.ts"));
 
-  const originalOverview = await readFile(path.join(root, ".engineering-intelligence", "knowledge-base", "00-project-overview.md"), "utf8");
+  const originalOverview = await readFile(path.join(root, ".graphward", "knowledge-base", "00-project-overview.md"), "utf8");
   await writeFile(path.join(root, "src", "domain", "country.ts"),
     "export function normalizeCountry(country: string) { return country.trim().toUpperCase(); }\n");
   await writeFile(path.join(root, "src", "routes", "route-plan.ts"),
@@ -106,9 +106,9 @@ test("Shiplogic-style onboarding and incremental sync work through the real CLI"
   assert.equal(sync.claims.stale, 0);
   assert.equal(sync.claims.missing, 0);
   assert.equal(sync.requiresModelKnowledgeSync, true, "source edits need an explicit prose-review handoff");
-  const graph = JSON.parse(await readFile(path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json"), "utf8"));
+  const graph = JSON.parse(await readFile(path.join(root, ".graphward", "graph", "dependency-graph.json"), "utf8"));
   assert.ok(graph.nodes.some((node) => node.path === "src/domain/country.ts"));
-  assert.equal(await readFile(path.join(root, ".engineering-intelligence", "knowledge-base", "00-project-overview.md"), "utf8"), originalOverview, "deterministic sync must not rewrite canonical prose");
+  assert.equal(await readFile(path.join(root, ".graphward", "knowledge-base", "00-project-overview.md"), "utf8"), originalOverview, "deterministic sync must not rewrite canonical prose");
 
   const finalClaims = cli(["claims", "verify", root, "--strict", "--json"], root);
   assert.equal(finalClaims.status, 0, finalClaims.stdout);
@@ -130,9 +130,9 @@ test("Shiplogic-style Antigravity onboarding installs agents and keeps workflow 
   assert.match(agent, /^---\nname: engineering-orchestrator\n/);
   assert.match(agent, /mainAgent: true/);
   assert.match(agent, /skills\/session-handoff-engine/);
-  assert.match(agent, /\.engineering-intelligence\/knowledge-base/);
-  await readFile(path.join(root, ".agents/workflows/engineering-intelligence.md"), "utf8");
-  await readFile(path.join(root, ".agents/skills/engineering-intelligence-skill/SKILL.md"), "utf8");
+  assert.match(agent, /\.graphward\/knowledge-base/);
+  await readFile(path.join(root, ".agents/workflows/graphward.md"), "utf8");
+  await readFile(path.join(root, ".agents/skills/graphward-skill/SKILL.md"), "utf8");
 
   const legacyAgentJson = path.join(root, ".agent/agents/engineering-orchestrator/agent.json");
   await assert.rejects(readFile(legacyAgentJson, "utf8"), "fresh installs must not emit legacy JSON agents");

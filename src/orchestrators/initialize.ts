@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { deriveClaims, verifyClaims } from "../claims/index.js";
-import { loadEiConfig, migrateEiConfig, updateProviderConfig, type ProviderPolicy } from "../config/index.js";
+import { loadGwConfig, migrateGwConfig, updateProviderConfig, type ProviderPolicy } from "../config/index.js";
 import { checkEvidenceHashes, recordEvidenceHashes } from "../evidence/index.js";
 import { buildGraph, loadExistingGraph } from "../graph/index.js";
 import { collectProjectFiles, ProjectFilePolicy } from "../project-files/index.js";
@@ -81,9 +81,9 @@ async function gitHead(root: string, runner?: ProcessRunner): Promise<string | u
 
 function renderGenerationBrief(evidence: InitializationEvidence): string {
   const lines = [
-    "# EI knowledge generation brief",
+    "# GraphWard knowledge generation brief",
     "",
-    "EI owns the canonical knowledge base. Graphify supplied structural evidence only; CCE supplies current source spans only.",
+    "GraphWard owns the canonical knowledge base. Graphify supplied structural evidence only; CCE supplies current source spans only.",
     "Do not copy provider prose into canonical documents. Resolve every material statement against current repository source and record a hash-pinned claim.",
     "",
     `Provider state: ${evidence.providers.degraded ? "degraded with native fallback" : "healthy or intentionally native"}.`,
@@ -110,20 +110,20 @@ function renderBootstrapKnowledge(evidence: InitializationEvidence): Record<stri
   const providerLines = evidence.providers.statuses.map((provider) => `- ${provider.displayName}: ${provider.health}; required ${provider.requiredVersion}${provider.detectedVersion ? `, detected ${provider.detectedVersion}` : ""}.`).join("\n");
   const evidenceLine = exactCitation ? `\nHash-pinned bootstrap citation: ${exactCitation}.` : "";
   const header = (title: string) => `# ${title}\n<!-- freshness: last_checked=${checked} -->\n\n`;
-  const authority = "Repository source, tests, manifests and Git are ground truth. EI owns canonical knowledge, claims, decisions, memory and its normalized graph. Graphify and CCE are non-canonical evidence providers.";
+  const authority = "Repository source, tests, manifests and Git are ground truth. GraphWard owns canonical knowledge, claims, decisions, memory and its normalized graph. Graphify and CCE are non-canonical evidence providers.";
   return {
     "00-project-overview.md": `${header("Project Overview")}${authority}\n\n- Approved files discovered: ${evidence.source.approvedFiles}.\n- Languages: ${languages}.\n- Manifests: ${manifests}.\n- Source commit: ${evidence.source.commit ? `\`${evidence.source.commit}\`` : "unavailable; freshness is source-hash based"}.\n\nThis is a deterministic publishable baseline. The installed initialization workflow may enrich it only with verified current evidence. ${sourceAnnotation}${evidenceLine}\n\n## Unknowns\n\n- Product intent and business terminology require model/user synthesis when they are not explicit in source.\n`,
-    "01-repository-structure.md": `${header("Repository Structure")}EI's shared project-file policy selected ${evidence.source.approvedFiles} file(s) and the canonical graph scanned ${evidence.graph.files} source file(s). Generated output, provider caches, secrets, vendored dependencies and path escapes are excluded before graphing or retrieval. ${sourceAnnotation}${evidenceLine}\n\n## Highest-connectivity modules\n\n${topology}\n\n## Unknowns\n\n- Ownership boundaries not encoded in source or Git remain unknown.\n`,
-    "02-architecture.md": `${header("Architecture")}The EI-owned normalized dependency graph contains ${evidence.graph.nodes} nodes and ${evidence.graph.edges} edges. ${evidence.graph.graphifyCorroboratedEdges} edge(s) were corroborated by Graphify; ${evidence.graph.providerOnlyEdges} are provider-only evidence; ${evidence.graph.contestedEdges} are contested and must not be promoted to fact. ${sourceAnnotation}${evidenceLine}\n\n## Authority\n\n${authority}\n\n## Structural neighborhood\n\n${topology}\n\n## Unknowns\n\n${evidence.graph.unknowns.length > 0 ? evidence.graph.unknowns.map((item) => `- ${item}`).join("\n") : "- No graph-reported unknowns; runtime-only behavior still requires targeted verification."}\n`,
-    "03-runtime-flow.md": `${header("Runtime Flow")}Initialization follows: approved source discovery, provider health/install, Graphify code-only extraction when healthy, native EI graph extraction and reconciliation, CCE indexing inside the approved scope, claim derivation, and publication checks. Graphify failure falls back to EI's native graph; CCE failure falls back to EI's scoped native retrieval. ${sourceAnnotation}${evidenceLine}\n\nRuntime flows specific to the target application are deliberately not invented by the deterministic bootstrap. They must be added from verified source spans and labeled inferred when structural evidence is incomplete.\n`,
-    "15-validation-report.md": `${header("Validation Report")}- Claims: ${evidence.claims.verified}/${evidence.claims.total} verified; ${evidence.claims.conflicts} conflicts.\n- Provider mode: ${evidence.providers.policy}; degraded=${evidence.providers.degraded}.\n- Graph: ${evidence.graph.nodes} nodes, ${evidence.graph.edges} edges, ${evidence.graph.contestedEdges} contested.\n- Knowledge authority: EI; provider output is evidence only.\n\n## Provider health\n\n${providerLines}\n\n## Publication rule\n\nOnly verified facts are published as current. Inferences, contested relationships and unknowns retain those labels. ${sourceAnnotation}${evidenceLine}\n`,
+    "01-repository-structure.md": `${header("Repository Structure")}GraphWard's shared project-file policy selected ${evidence.source.approvedFiles} file(s) and the canonical graph scanned ${evidence.graph.files} source file(s). Generated output, provider caches, secrets, vendored dependencies and path escapes are excluded before graphing or retrieval. ${sourceAnnotation}${evidenceLine}\n\n## Highest-connectivity modules\n\n${topology}\n\n## Unknowns\n\n- Ownership boundaries not encoded in source or Git remain unknown.\n`,
+    "02-architecture.md": `${header("Architecture")}The GraphWard-owned normalized dependency graph contains ${evidence.graph.nodes} nodes and ${evidence.graph.edges} edges. ${evidence.graph.graphifyCorroboratedEdges} edge(s) were corroborated by Graphify; ${evidence.graph.providerOnlyEdges} are provider-only evidence; ${evidence.graph.contestedEdges} are contested and must not be promoted to fact. ${sourceAnnotation}${evidenceLine}\n\n## Authority\n\n${authority}\n\n## Structural neighborhood\n\n${topology}\n\n## Unknowns\n\n${evidence.graph.unknowns.length > 0 ? evidence.graph.unknowns.map((item) => `- ${item}`).join("\n") : "- No graph-reported unknowns; runtime-only behavior still requires targeted verification."}\n`,
+    "03-runtime-flow.md": `${header("Runtime Flow")}Initialization follows: approved source discovery, provider health/install, Graphify code-only extraction when healthy, native GraphWard graph extraction and reconciliation, CCE indexing inside the approved scope, claim derivation, and publication checks. Graphify failure falls back to GraphWard's native graph; CCE failure falls back to GraphWard's scoped native retrieval. ${sourceAnnotation}${evidenceLine}\n\nRuntime flows specific to the target application are deliberately not invented by the deterministic bootstrap. They must be added from verified source spans and labeled inferred when structural evidence is incomplete.\n`,
+    "15-validation-report.md": `${header("Validation Report")}- Claims: ${evidence.claims.verified}/${evidence.claims.total} verified; ${evidence.claims.conflicts} conflicts.\n- Provider mode: ${evidence.providers.policy}; degraded=${evidence.providers.degraded}.\n- Graph: ${evidence.graph.nodes} nodes, ${evidence.graph.edges} edges, ${evidence.graph.contestedEdges} contested.\n- Knowledge authority: GraphWard; provider output is evidence only.\n\n## Provider health\n\n${providerLines}\n\n## Publication rule\n\nOnly verified facts are published as current. Inferences, contested relationships and unknowns retain those labels. ${sourceAnnotation}${evidenceLine}\n`,
   };
 }
 
 async function ensureBootstrapKnowledge(root: string, evidence: InitializationEvidence): Promise<string[]> {
   const written: string[] = [];
   for (const [name, markdown] of Object.entries(renderBootstrapKnowledge(evidence))) {
-    const relative = path.join(".engineering-intelligence", "knowledge-base", name);
+    const relative = path.join(".graphward", "knowledge-base", name);
     try {
       await readFile(path.join(root, relative), "utf8");
     } catch {
@@ -145,7 +145,7 @@ async function buildInitializationEvidence(root: string, providers: PrepareProvi
   }
   const manifestNames = new Set(["package.json", "pyproject.toml", "requirements.txt", "go.mod", "Cargo.toml", "Gemfile", "pom.xml", "build.gradle", "build.gradle.kts"]);
   const manifests = allFiles.map((file) => path.relative(root, file).replace(/\\/g, "/")).filter((relative) => manifestNames.has(path.basename(relative)));
-  const graph = await loadExistingGraph(path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json"));
+  const graph = await loadExistingGraph(path.join(root, ".graphward", "graph", "dependency-graph.json"));
   const incoming = new Map<string, number>();
   for (const edge of graph?.edges ?? []) incoming.set(edge.to, (incoming.get(edge.to) ?? 0) + 1);
   const topology = (graph?.nodes ?? []).filter((node) => node.kind === "module").map((node) => ({ id: node.id, path: node.path, dependents: incoming.get(node.id) ?? 0 })).sort((a, b) => b.dependents - a.dependents || a.id.localeCompare(b.id)).slice(0, 20);
@@ -160,10 +160,10 @@ async function buildInitializationEvidence(root: string, providers: PrepareProvi
     generatedAt: new Date().toISOString(),
     source: { root: path.resolve(root), commit: await gitHead(root, runner), approvedFiles: allFiles.length, languages, manifests },
     authority: {
-      canonical: "EI knowledge base, claims, ADRs, memory, and normalized graph",
+      canonical: "GraphWard knowledge base, claims, ADRs, memory, and normalized graph",
       structuralProvider: "Graphify code-only evidence; never canonical prose",
-      retrievalProvider: "CCE current source spans inside EI-approved scope; never durable memory",
-      sourcePrecedence: ["repository source/tests/manifests/Git", "verified EI knowledge and claims", "fresh corroborated provider evidence", "inferred/contested/unknown"],
+      retrievalProvider: "CCE current source spans inside GraphWard-approved scope; never durable memory",
+      sourcePrecedence: ["repository source/tests/manifests/Git", "verified GraphWard knowledge and claims", "fresh corroborated provider evidence", "inferred/contested/unknown"],
     },
     providers,
     graph: { path: graphResult.graphPath, nodes: graph?.nodes.length ?? 0, edges: graph?.edges.length ?? 0, files: graphResult.fileCount, graphifyCorroboratedEdges: corroborated, providerOnlyEdges: providerOnly, contestedEdges: contested, unknowns: graph?.unknowns ?? [] },
@@ -189,7 +189,7 @@ export async function runInitialization(root: string, options: InitializeOptions
   const setup = await runSetup(root, { ides: options.ides, packageVersion: options.packageVersion, dryRun: options.dryRun, force: options.force, promptOverwrite: options.promptOverwrite, deferIntelligenceBuild: true });
   for (const line of setup.logs) log(line);
   if (!options.dryRun) {
-    const migration = await migrateEiConfig(root);
+    const migration = await migrateGwConfig(root);
     log(migration.changed ? `Configuration migrated to schema ${migration.config.schemaVersion}.` : `Configuration schema ${migration.config.schemaVersion} is current.`);
     const providerPatch = {
       ...(options.policy ? { policy: options.policy } : {}),
@@ -199,7 +199,7 @@ export async function runInitialization(root: string, options: InitializeOptions
     };
     if (Object.keys(providerPatch).length > 0) {
       await updateProviderConfig(root, providerPatch);
-      log("Initialization provider policy persisted in the versioned EI configuration.");
+      log("Initialization provider policy persisted in the versioned GraphWard configuration.");
     }
   }
   const providers = await prepareProviders(root, {
@@ -221,34 +221,34 @@ export async function runInitialization(root: string, options: InitializeOptions
   const graphifyStatus = providers.statuses.find((status) => status.name === "graphify");
   const graphify = graphifyStatus?.health === "healthy"
     ? await runGraphifyExtraction(root, { runner: options.runner, providerHome: options.providerHome, onProgress: options.onProgress })
-    : { ok: false as const, degraded: providers.policy !== "native", message: "Graphify unavailable or disabled; native EI graph extraction used." };
+    : { ok: false as const, degraded: providers.policy !== "native", message: "Graphify unavailable or disabled; native GraphWard graph extraction used." };
   log(graphify.message);
   const graph = await buildGraph(root, { providerEvidence: graphify.ok });
   setup.graph = { nodeCount: graph.nodeCount, edgeCount: graph.edgeCount, fileCount: graph.fileCount };
-  log(`Canonical EI graph built: ${graph.nodeCount} nodes, ${graph.edgeCount} edges (${graph.fileCount} files).`);
+  log(`Canonical GraphWard graph built: ${graph.nodeCount} nodes, ${graph.edgeCount} edges (${graph.fileCount} files).`);
 
   const cceStatus = providers.statuses.find((status) => status.name === "cce");
   const cce = cceStatus?.health === "healthy"
     ? await runCceIndex(root, { runner: options.runner, providerHome: options.providerHome, onProgress: options.onProgress })
-    : { ok: false as const, degraded: providers.policy !== "native", message: "CCE unavailable or disabled; native EI scoped retrieval used." };
+    : { ok: false as const, degraded: providers.policy !== "native", message: "CCE unavailable or disabled; native GraphWard scoped retrieval used." };
   log(cce.message);
   const derived = await deriveClaims(root);
   log(`Derived claim baseline: ${derived.total} claim(s), ${derived.added} added, ${derived.removed} removed.`);
 
   let evidence = await buildInitializationEvidence(root, providers, graph, options.runner);
   const bootstrapDocuments = await ensureBootstrapKnowledge(root, evidence);
-  if (bootstrapDocuments.length > 0) log(`Published ${bootstrapDocuments.length} deterministic EI knowledge document(s).`);
+  if (bootstrapDocuments.length > 0) log(`Published ${bootstrapDocuments.length} deterministic GraphWard knowledge document(s).`);
   const snapshot = await recordEvidenceHashes(root);
   log(`Recorded ${snapshot.hashes.length} hash-pinned knowledge citation(s).`);
   evidence = await buildInitializationEvidence(root, providers, graph, options.runner);
-  const evidencePath = ".engineering-intelligence/context/initialization-evidence.json";
-  const generationBriefPath = ".engineering-intelligence/context/KNOWLEDGE-GENERATION-BRIEF.md";
+  const evidencePath = ".graphward/context/initialization-evidence.json";
+  const generationBriefPath = ".graphward/context/KNOWLEDGE-GENERATION-BRIEF.md";
   await writeAtomic(path.join(root, evidencePath), `${JSON.stringify(evidence, null, 2)}\n`);
   await writeAtomic(path.join(root, generationBriefPath), renderGenerationBrief(evidence));
   log(`Initialization evidence: ${evidencePath}`);
   log(`Knowledge generation brief: ${generationBriefPath}`);
   const degraded = providers.degraded || graphify.degraded || cce.degraded || evidence.knowledge.status === "degraded";
-  const config = await loadEiConfig(root);
+  const config = await loadGwConfig(root);
   const requiredProviderRunFailed = providers.policy !== "native"
     && providers.ok
     && config.providers.requireProviders === true

@@ -18,7 +18,7 @@ and cites file:line evidence — no LLM in the loop.
 
    ```bash
    mkdir -p .github/workflows
-   cp node_modules/engineering-intelligence/templates/github-action/engineering-intelligence-impact.yml \
+   cp node_modules/graphward/templates/github-action/graphward-impact.yml \
       .github/workflows/
    ```
 
@@ -35,8 +35,8 @@ grants itself `pull-requests: write` to post the comment.
 Under the hood the workflow is just the CLI you can run locally:
 
 ```bash
-engineering-intelligence map .
-git diff --name-only origin/main...HEAD | xargs engineering-intelligence impact --json
+graphward map .
+git diff --name-only origin/main...HEAD | xargs graphward impact --json
 ```
 
 ## Customizing
@@ -52,11 +52,11 @@ Everything the action does is available locally:
 
 ```bash
 # What breaks if I change these files?
-engineering-intelligence impact src/graph/index.ts src/mcp/index.ts
+graphward impact src/graph/index.ts src/mcp/index.ts
 
 # Who calls this function?
-engineering-intelligence who-calls buildGraph
+graphward who-calls buildGraph
 
-# Does the knowledge base still match the code?
-engineering-intelligence verify --strict
+# Do the recorded claims still match the code?
+graphward claims verify . --strict
 ```

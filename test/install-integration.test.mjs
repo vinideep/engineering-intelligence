@@ -55,7 +55,7 @@ test("CLI writes WORKFLOW-ROUTING.md and SKILLS-INDEX.md for claude-code", async
 
   const routing = await read(root, ".claude/WORKFLOW-ROUTING.md");
   assert.match(routing, /Workflow Routing Table/, "routing file should contain its own header");
-  assert.match(routing, /engineering-intelligence/, "routing table should list at least one workflow");
+  assert.match(routing, /graphward/, "routing table should list at least one workflow");
 
   const index = await read(root, ".claude/skills/SKILLS-INDEX.md");
   assert.match(index, /Skills Index/, "index file should contain its own header");
@@ -74,10 +74,10 @@ test("CLI initialize performs a complete native-only bootstrap without provider 
   assert.ok(parsed.providers.statuses.every((status) => status.health === "disabled"));
   assert.ok(parsed.evidence.graph.nodes > 0);
   assert.ok(parsed.evidence.claims.total > 0);
-  assert.equal(parsed.evidence.knowledge.status, "ready", "one command must publish a hash-pinned EI-owned baseline without requiring a model");
-  assert.match(await read(root, ".engineering-intelligence/context/KNOWLEDGE-GENERATION-BRIEF.md"), /canonical knowledge base/);
-  assert.match(await read(root, ".engineering-intelligence/knowledge-base/00-project-overview.md"), /EI owns canonical knowledge/);
-  const config = JSON.parse(await read(root, ".engineering-intelligence/ei.config.json"));
+  assert.equal(parsed.evidence.knowledge.status, "ready", "one command must publish a hash-pinned GraphWard-owned baseline without requiring a model");
+  assert.match(await read(root, ".graphward/context/KNOWLEDGE-GENERATION-BRIEF.md"), /canonical knowledge base/);
+  assert.match(await read(root, ".graphward/knowledge-base/00-project-overview.md"), /GraphWard owns canonical knowledge/);
+  const config = JSON.parse(await read(root, ".graphward/gw.config.json"));
   assert.equal(config.providers.policy, "native", "the requested provider policy must survive future task runs");
 });
 
@@ -88,11 +88,11 @@ test("CLI requires explicit expert acknowledgement before exposing raw provider 
   assert.match(denied.stdout, /--expert/);
   const exposed = cli(["providers", "expose", root, "--expert"]);
   assert.equal(exposed.status, 0);
-  let config = JSON.parse(await read(root, ".engineering-intelligence/ei.config.json"));
+  let config = JSON.parse(await read(root, ".graphward/gw.config.json"));
   assert.equal(config.providers.exposeRawMcp, true);
   const hidden = cli(["providers", "hide", root]);
   assert.equal(hidden.status, 0);
-  config = JSON.parse(await read(root, ".engineering-intelligence/ei.config.json"));
+  config = JSON.parse(await read(root, ".graphward/gw.config.json"));
   assert.equal(config.providers.exposeRawMcp, false);
 });
 
@@ -106,7 +106,7 @@ test("on-disk skills start with frontmatter and use literal paths", async () => 
   // `name`/`description` here cannot auto-invoke the skill at all.
   assert.ok(skill.startsWith("---\n"), `on-disk SKILL.md must start with frontmatter, got: ${JSON.stringify(skill.slice(0, 40))}`);
   assert.match(skill.match(/^---\n([\s\S]*?)\n---\n/)[1], /name:\s*aidlc-lifecycle-engine/);
-  assert.match(skill, /\.engineering-intelligence\/aidlc\//, "on-disk SKILL.md must carry literal runtime paths");
+  assert.match(skill, /\.graphward\/aidlc\//, "on-disk SKILL.md must carry literal runtime paths");
   assert.doesNotMatch(skill, /\$AIDLC|\$EI/, "aliases must not reach disk");
 });
 
@@ -116,7 +116,7 @@ test("CLI writes SKILL-BRIEF.md smaller than SKILL.md for claude-code", async ()
   assert.equal(result.status, 0, `CLI exited ${result.status}:\n${result.stderr}`);
 
   // Check tiering for a representative skill
-  for (const name of ["aidlc-lifecycle-engine", "engineering-intelligence-skill", "impact-analysis-engine"]) {
+  for (const name of ["aidlc-lifecycle-engine", "graphward-skill", "impact-analysis-engine"]) {
     const brief = await read(root, `.claude/skills/${name}/SKILL-BRIEF.md`);
     const full = await read(root, `.claude/skills/${name}/SKILL.md`);
     assert.ok(
@@ -137,16 +137,16 @@ test("CLI installs routing directives into CLAUDE.md", async () => {
   assert.match(claudeMd, /Three-tier loading/, "CLAUDE.md should contain the three-tier loading protocol");
 });
 
-test("CLI installs enforcement hooks (settings.json + ei.config.json)", async () => {
+test("CLI installs enforcement hooks (settings.json + gw.config.json)", async () => {
   const root = await tmpProject();
   const result = cli(["install", root, "--ide", "claude-code", "--yes"]);
   assert.equal(result.status, 0, `CLI exited ${result.status}:\n${result.stderr}`);
 
   const settings = JSON.parse(await read(root, ".claude/settings.json"));
-  assert.match(settings.hooks.SessionStart[0].hooks[0].command, /engineering-intelligence hook session-start/);
-  assert.match(settings.hooks.Stop[0].hooks[0].command, /engineering-intelligence hook stop/);
+  assert.match(settings.hooks.SessionStart[0].hooks[0].command, /graphward@[^ ]+ hook session-start/);
+  assert.match(settings.hooks.Stop[0].hooks[0].command, /graphward@[^ ]+ hook stop/);
 
-  const config = JSON.parse(await read(root, ".engineering-intelligence/ei.config.json"));
+  const config = JSON.parse(await read(root, ".graphward/gw.config.json"));
   assert.equal(config.hooks.requireValidationOnStop, false, "hard gates are opt-in by default");
 
   // doctor reports the managed hook files as unchanged (installed and hash-matched).
@@ -180,11 +180,11 @@ test("installs into a repo that already owns .claude/settings.json", async () =>
   assert.equal(settings.model, "opus", "user model preserved");
   const starts = settings.hooks.SessionStart.map((e) => e.hooks[0].command);
   assert.ok(starts.includes("echo mine"), "user's own hook preserved");
-  assert.ok(starts.some((c) => c.includes("engineering-intelligence hook")), "our hook wired alongside");
+  assert.ok(starts.some((c) => /graphward@[^ ]+ hook/.test(c)), "our hook wired alongside");
 
   // The MCP server is registered, so its tools are actually reachable.
   const mcp = JSON.parse(await read(root, ".mcp.json"));
-  assert.ok(mcp.mcpServers["engineering-intelligence"], "MCP server must be registered");
+  assert.ok(mcp.mcpServers["graphward"], "MCP server must be registered");
 
   assert.equal(cli(["doctor", root]).status, 0, "doctor must be clean");
 
@@ -195,20 +195,20 @@ test("installs into a repo that already owns .claude/settings.json", async () =>
   assert.equal(after.hooks.SessionStart.length, 1, "only the user's hook remains");
 });
 
-test("editing ei.config.json does not conflict or warn", async () => {
+test("editing gw.config.json does not conflict or warn", async () => {
   // Editing it is the documented way to enable enforcement; doing so must not
   // break the update path or permanently flag doctor.
   const root = await tmpProject();
   cli(["install", root, "--ide", "claude-code", "--yes"]);
 
-  const configPath = path.join(root, ".engineering-intelligence/ei.config.json");
+  const configPath = path.join(root, ".graphward/gw.config.json");
   const config = JSON.parse(await readFile(configPath, "utf8"));
   config.hooks.requireValidationOnStop = true;
   await writeFile(configPath, JSON.stringify(config, null, 2), "utf8");
 
   const doc = cli(["doctor", root]);
   assert.equal(doc.status, 0);
-  assert.doesNotMatch(doc.stdout, /warning\s+\.engineering-intelligence\/ei\.config\.json/, "user config edits are expected, not warnings");
+  assert.doesNotMatch(doc.stdout, /warning\s+\.graphward\/ei\.config\.json/, "user config edits are expected, not warnings");
 
   const upd = cli(["update", root, "--yes"]);
   assert.match(upd.stdout, /0 conflict/, `update must not conflict:\n${upd.stdout}`);
@@ -220,7 +220,7 @@ test("hook CLI enforces the Stop gate with real verification receipts", async ()
   const root = await tmpProject();
   cli(["install", root, "--ide", "claude-code", "--yes"]);
   // Opt into the hard gate and give the project a real, passing check command.
-  await writeFile(path.join(root, ".engineering-intelligence/ei.config.json"), JSON.stringify({ hooks: { requireValidationOnStop: true } }), "utf8");
+  await writeFile(path.join(root, ".graphward/gw.config.json"), JSON.stringify({ hooks: { requireValidationOnStop: true } }), "utf8");
   await writeFile(path.join(root, "package.json"), JSON.stringify({ scripts: { test: 'node -e "0"' } }), "utf8");
   await mkdir(path.join(root, "src"), { recursive: true });
   await writeFile(path.join(root, "src/x.ts"), "export const x = 1;\n", "utf8");
@@ -263,7 +263,7 @@ test("CLI applies SmartCrush to command files (no bare 'version:' key in frontma
   assert.equal(result.status, 0, `CLI exited ${result.status}:\n${result.stderr}`);
 
   // SmartCrush strips `version:` from YAML frontmatter in all rendered command files
-  const cmd = await read(root, ".claude/commands/engineering-intelligence.md");
+  const cmd = await read(root, ".claude/commands/graphward.md");
   assert.doesNotMatch(cmd, /^version:/m, "version: key should be stripped by SmartCrush");
   assert.ok(cmd.startsWith("---\n"), "command file must start with frontmatter so argument-hint parses");
   assert.doesNotMatch(cmd, /\$AIDLC|\$EI/, "aliases must not reach disk");

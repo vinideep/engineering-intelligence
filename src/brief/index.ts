@@ -6,7 +6,7 @@ import type { DependencyGraph } from "../graph/schema.js";
 // module free of a circular dependency — buildGraph calls generateBrief.
 async function loadGraphFile(root: string): Promise<DependencyGraph | null> {
   try {
-    const content = await readFile(path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json"), "utf8");
+    const content = await readFile(path.join(root, ".graphward", "graph", "dependency-graph.json"), "utf8");
     return JSON.parse(content) as DependencyGraph;
   } catch {
     return null;
@@ -30,7 +30,7 @@ const EXT_LANG: Record<string, string> = {
 };
 
 function briefPath(root: string): string {
-  return path.join(root, ".engineering-intelligence", "context", "repo-brief.md");
+  return path.join(root, ".graphward", "context", "repo-brief.md");
 }
 
 function extOf(evidenceFile: string | undefined): string | null {
@@ -76,7 +76,7 @@ export async function readBrief(root: string): Promise<string | null> {
 function renderBrief(root: string, graph: DependencyGraph | null, pkg: Record<string, unknown> | null): string {
   const scope = graph?.scope ?? path.basename(root);
   if (!graph) {
-    return `# Repo Brief — ${scope}\n\n_No dependency graph yet. Run \`engineering-intelligence setup\` (or \`map\`) to generate one._\n`;
+    return `# Repo Brief — ${scope}\n\n_No dependency graph yet. Run \`graphward setup\` (or \`map\`) to generate one._\n`;
   }
 
   const modules = graph.nodes.filter((n) => n.kind === "module");
@@ -136,7 +136,7 @@ function renderBrief(root: string, graph: DependencyGraph | null, pkg: Record<st
   lines.push("");
   lines.push("<!-- Generated deterministically from the dependency graph. ~500-token orientation digest. -->");
   lines.push("<!-- freshness derives from the current graph and package manifest evidence below. -->");
-  lines.push("(evidence: .engineering-intelligence/graph/dependency-graph.json, package.json)");
+  lines.push("(evidence: .graphward/graph/dependency-graph.json, package.json)");
   lines.push("");
   lines.push(`- **Scale**: ${modules.length} source modules, ${symbols.length} symbols, ${packages.length} external packages, ${graph.edges.length} edges.`);
   if (langs.length) lines.push(`- **Languages**: ${langs.join(", ")}.`);

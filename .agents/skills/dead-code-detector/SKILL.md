@@ -7,7 +7,7 @@ description: Detects unused exports, unreachable code paths, zombie dependencies
 
 Use this skill during initialization, major refactors, dependency cleanup, and technical-debt reviews.
 
-**Run the deterministic gate first:** `npx engineering-intelligence gate dead-exports .` (add `--json`). It reports JS/TS exports that are never imported anywhere, conservatively (namespace, dynamic, and re-export usage are treated as live, entry points and tests are exempt). Use the steps below to extend detection to unreachable branches, zombie dependencies, and git-history staleness the gate does not cover.
+**Run the deterministic gate first:** `npx graphward@6.0.0 gate dead-exports .` (add `--json`). It reports JS/TS exports that are never imported anywhere, conservatively (namespace, dynamic, and re-export usage are treated as live, entry points and tests are exempt). Use the steps below to extend detection to unreachable branches, zombie dependencies, and git-history staleness the gate does not cover.
 
 ## Procedure
 
@@ -19,7 +19,7 @@ Use this skill during initialization, major refactors, dependency cleanup, and t
 
 ## Output
 
-Write or update `.engineering-intelligence/knowledge-base/12-technical-debt.md`:
+Write or update `.graphward/knowledge-base/12-technical-debt.md`:
 
 ```markdown
 ## Dead Code Candidates

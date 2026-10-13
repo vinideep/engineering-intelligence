@@ -18,7 +18,7 @@ export type IdeId = (typeof IDE_IDS)[number];
  * file       — we own the whole file; local edits conflict on update.
  * block      — we own a marked region of a Markdown file.
  * seed       — we write it once if absent, then never touch it again. For files
- *              the USER is expected to edit (ei.config.json is how enforcement is
+ *              the USER is expected to edit (gw.config.json is how enforcement is
  *              turned on), so editing it must not raise a doctor warning or block
  *              the next update.
  * json-merge — we own only specific keys inside a JSON file the user also owns

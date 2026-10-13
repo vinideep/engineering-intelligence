@@ -40,7 +40,7 @@ The ongoing learning engine activates under these conditions:
    - A convention violation is found in new code (drift vs intentional change)
    - Business logic encountered that has no corresponding documentation
 
-2. **Log uncertainty event** — Write to `.engineering-intelligence/events/uncertainty-log.md`:
+2. **Log uncertainty event** — Write to `.graphward/events/uncertainty-log.md`:
 
    ```markdown
    ## <timestamp> — Uncertainty Event
@@ -145,8 +145,8 @@ The ongoing learning engine activates under these conditions:
 
 | File | Purpose |
 |---|---|
-| `.engineering-intelligence/events/uncertainty-log.md` | Append-only log of all uncertainty events |
-| `.engineering-intelligence/reports/FRESHNESS-report.md` | Current freshness scores per module (shared with `staleness-detector`) |
+| `.graphward/events/uncertainty-log.md` | Append-only log of all uncertainty events |
+| `.graphward/reports/FRESHNESS-report.md` | Current freshness scores per module (shared with `staleness-detector`) |
 | Updated knowledge base documents | Corrected or expanded knowledge |
 | Updated memory documents | New durable patterns and decisions |
 
@@ -167,8 +167,8 @@ The ongoing learning engine activates under these conditions:
 
 - Depends on: `codebase-discovery-engine` (for targeted re-discovery techniques)
 - Uses: `staleness-detector` (for freshness scoring), `incremental-sync-engine` (for knowledge updates)
-- Consumed by: `engineering-intelligence-skill`, `engineering-orchestrator`
-- Feeds into: `.engineering-intelligence/events/uncertainty-log.md`, all knowledge base documents
+- Consumed by: `graphward-skill`, `engineering-orchestrator`
+- Feeds into: `.graphward/events/uncertainty-log.md`, all knowledge base documents
 - Related: `convention-detector` (for convention drift detection)
 
 This capability does not modify product code.

@@ -161,7 +161,7 @@ export async function reconcileGraphifyEvidence(root: string, nativeGraph: Depen
   // Keep both paths in the caller's lexical namespace. On macOS `/var` may
   // resolve to `/private/var`; resolving only one side would make a valid
   // provider-mirror path look external and reject all of its evidence.
-  const providerWorkspace = path.resolve(root, ".engineering-intelligence", "providers", "workspace");
+  const providerWorkspace = path.resolve(root, ".graphward", "providers", "workspace");
   const rawNodes = Array.isArray(raw.nodes) ? raw.nodes.filter((value): value is RawGraphifyNode => Boolean(value) && typeof value === "object") : [];
   const rawEdgesValue = Array.isArray(raw.edges) ? raw.edges : Array.isArray(raw.links) ? raw.links : [];
   const rawEdges = rawEdgesValue.filter((value): value is RawGraphifyEdge => Boolean(value) && typeof value === "object");
@@ -253,7 +253,7 @@ export async function reconcileGraphifyEvidence(root: string, nativeGraph: Depen
     const existing = edgeByKey.get(key);
     if (existing) {
       existing.evidence = unique([...existing.evidence, ...evidence]);
-      // Only agreement with an EI-native edge is corroboration. A duplicate
+      // Only agreement with an GraphWard-native edge is corroboration. A duplicate
       // Graphify row must never upgrade its own contested/unverifiable edge.
       if (nativeEdgeKeys.has(key)) {
         existing.metadata = mergeProviderMetadata(existing.metadata, metadata);

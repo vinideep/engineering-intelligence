@@ -5,7 +5,7 @@ description: Coordinates initialized engineering work by routing analysis, chang
 
 # Engineering Orchestrator
 
-The central coordinator for all engineering intelligence work. Routes requests to the appropriate skills and agents, ensures proper sequencing, and verifies completeness.
+The central coordinator for all GraphWard work. Routes requests to the appropriate skills and agents, ensures proper sequencing, and verifies completeness.
 
 ## Request Classification
 
@@ -42,12 +42,12 @@ When receiving a request, classify it immediately:
 
 ## Context routing contract
 
-For non-trivial work, call `get_engineering_context` before direct file exploration. EI's knowledge, claims, ADRs, memory, and normalized graph remain canonical; Graphify supplies structural evidence and CCE supplies scoped current code spans. Route through consolidated EI tools by default. Report provider health/fallback and use raw provider tools only after explicit expert enablement.
+For non-trivial work, call `get_engineering_context` before direct file exploration. GraphWard's knowledge, claims, ADRs, memory, and normalized graph remain canonical; Graphify supplies structural evidence and CCE supplies scoped current code spans. Route through consolidated GraphWard tools by default. Report provider health/fallback and use raw provider tools only after explicit expert enablement.
 
 ### Initialization Pipeline
 
-1. Run `engineering-intelligence initialize . --providers auto --yes` → installs/verifies providers, applies file policy, creates and reconciles structural evidence, indexes CCE scope, and derives claims
-2. Run `initialize-intelligence-skill` from the generated evidence brief → generates EI-owned knowledge base, memory, context, events, and remaining graphs
+1. Run `graphward initialize . --providers auto --yes` → installs/verifies providers, applies file policy, creates and reconciles structural evidence, indexes CCE scope, and derives claims
+2. Run `initialize-intelligence-skill` from the generated evidence brief → generates GraphWard-owned knowledge base, memory, context, events, and remaining graphs
 3. Delegates to: `deep-project-knowledge-extractor`, `knowledge-base-validator`, `graph-engine`, `change-history-engine`
 4. Publish only after strict knowledge/claim/citation/scope health passes; does **not** modify product code
 
@@ -68,7 +68,7 @@ For non-trivial work, call `get_engineering_context` before direct file explorat
 
 ### Backlog Decomposition Pipeline
 
-1. Run `backlog-decomposition-engine` → decompose the initiative into Epic → Feature → Ticket artifacts under `.engineering-intelligence/aidlc/agile/backlog/` with stable IDs, dependencies, and execution order
+1. Run `backlog-decomposition-engine` → decompose the initiative into Epic → Feature → Ticket artifacts under `.graphward/aidlc/agile/backlog/` with stable IDs, dependencies, and execution order
 2. Set every feature to `Approval: pending` — this pipeline plans only
 3. Optionally run `issue-tracker-sync-engine` to mirror the backlog to GitHub Issues
 4. Does **not** modify product code; hands off to the Backlog Delivery Pipeline
@@ -77,7 +77,7 @@ For non-trivial work, call `get_engineering_context` before direct file explorat
 
 1. Select the next ready feature from `backlog/dependency-graph.md` honoring dependencies and priority
 2. **Approval gate (mandatory)**: present the feature and require a human to record `Approval: approved` before any implementation; on `changes-requested`, route back to decomposition
-3. For each ticket in dependency order, run the Implementation Pipeline via `engineering-intelligence-skill`
+3. For each ticket in dependency order, run the Implementation Pipeline via `graphward-skill`
 4. Roll up ticket → feature → epic status in `backlog-index.md`; optionally re-sync the tracker
 5. Re-enter the approval gate for every subsequent feature
 
@@ -88,7 +88,7 @@ For non-trivial work, call `get_engineering_context` before direct file explorat
 3. **Impact**: Run `impact-analysis-engine` → write impact report
 4. **AI-DLC + Agile Plan**: Run `aidlc-lifecycle-engine` → select delivery mode, update backlog, acceptance criteria, state, and unit plan.
 5. **Adaptive Interface Exploration**: If introducing new public APIs, exported types, or schema contracts, invoke `interface-design-explorer` to benchmark 3 proposals before writing code.
-6. **Implement**: Execute `engineering-intelligence-skill` → code changes + tests. When in TDD mode or implementing critical business logic, enforce `vertical-tdd-engine`.
+6. **Implement**: Execute `graphward-skill` → code changes + tests. When in TDD mode or implementing critical business logic, enforce `vertical-tdd-engine`.
 7. **Validate**: Run `environmental-backpressure-engine` → tests, type checks, lints, scans — record results honestly
 8. **Govern**: Run `nfr-adr-governor`, `mcp-security-governor`, or `operations-readiness-engine` when triggered by risk
 9. **Sync & Continuity**: Call `sync_engineering_knowledge`, update affected canonical intelligence only, then call `validate_change`. If session bounds or pauses occur, serialize state via `session-handoff-engine`.
@@ -114,7 +114,7 @@ These workflows analyze without modifying product code:
 |---|---|---|
 | `map-architecture` | `graph-engine` | Graph JSON + architecture-map.md |
 | `analyze-impact` | `change-detection-engine`, `impact-analysis-engine`, `graph-engine` | Impact report |
-| `sync-engineering-intelligence` | `change-detection-engine`, `impact-analysis-engine`, `incremental-sync-engine` | Updated intelligence |
+| `sync-graphward` | `change-detection-engine`, `impact-analysis-engine`, `incremental-sync-engine` | Updated intelligence |
 | `review-engineering-change` | `change-detection-engine`, `engineering-change-review` | Review report |
 | `discover-codebase` | `codebase-discovery-engine`, `convention-detector`, `graph-engine` | Discovery report + conventions |
 | `create-project` | `greenfield-architect`, `initialize-intelligence-skill` | Scaffolded project + intelligence |
@@ -135,7 +135,7 @@ These workflows analyze without modifying product code:
 
 ## Skill Reference
 
-Use these specialized capabilities when available: `initialize-intelligence-skill`, `engineering-intelligence-skill`, `backlog-decomposition-engine`, `issue-tracker-sync-engine`, `aidlc-lifecycle-engine`, `environmental-backpressure-engine`, `nfr-adr-governor`, `mcp-security-governor`, `operations-readiness-engine`, `graph-engine`, `change-detection-engine`, `impact-analysis-engine`, `testing-intelligence-engine`, `incremental-sync-engine`, `engineering-change-review`, `change-history-engine`, `architecture-review-engine`, `refactoring-planner`, `deep-project-knowledge-extractor`, `knowledge-base-validator`, `codebase-discovery-engine`, `convention-detector`, `ongoing-learning-engine`, `greenfield-architect`, `git-intelligence-engine`, `pr-intelligence-engine`, `staleness-detector`, `security-audit-engine`, `performance-analysis-engine`, `debugging-engine`.
+Use these specialized capabilities when available: `initialize-intelligence-skill`, `graphward-skill`, `backlog-decomposition-engine`, `issue-tracker-sync-engine`, `aidlc-lifecycle-engine`, `environmental-backpressure-engine`, `nfr-adr-governor`, `mcp-security-governor`, `operations-readiness-engine`, `graph-engine`, `change-detection-engine`, `impact-analysis-engine`, `testing-intelligence-engine`, `incremental-sync-engine`, `engineering-change-review`, `change-history-engine`, `architecture-review-engine`, `refactoring-planner`, `deep-project-knowledge-extractor`, `knowledge-base-validator`, `codebase-discovery-engine`, `convention-detector`, `ongoing-learning-engine`, `greenfield-architect`, `git-intelligence-engine`, `pr-intelligence-engine`, `staleness-detector`, `security-audit-engine`, `performance-analysis-engine`, `debugging-engine`.
 
 ## Rules
 
@@ -144,4 +144,4 @@ Use these specialized capabilities when available: `initialize-intelligence-skil
 - Always validate honestly — never claim success without execution
 - Route read-only workflows correctly — they must not modify product code
 - For high-risk changes, the review gate is mandatory, not optional
-- Do not let provider output bypass EI's authority hierarchy, file policy, freshness checks, or deterministic gates
+- Do not let provider output bypass GraphWard's authority hierarchy, file policy, freshness checks, or deterministic gates

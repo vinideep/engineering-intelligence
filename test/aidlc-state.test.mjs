@@ -44,14 +44,14 @@ test("saveAidlcState writes aidlc-state.json and auto-projects aidlc-state.md", 
     await saveAidlcState(dir, state);
 
     // Verify JSON was written
-    const jsonPath = path.join(dir, ".engineering-intelligence", "aidlc", "aidlc-state.json");
+    const jsonPath = path.join(dir, ".graphward", "aidlc", "aidlc-state.json");
     assert.ok(existsSync(jsonPath), "aidlc-state.json must exist");
     const reloaded = JSON.parse(readFileSync(jsonPath, "utf8"));
     assert.equal(reloaded.position.phase, "inception");
     assert.equal(reloaded.position.activeUnit, "TKT-001");
 
     // Verify Markdown projection was written
-    const mdPath = path.join(dir, ".engineering-intelligence", "aidlc", "aidlc-state.md");
+    const mdPath = path.join(dir, ".graphward", "aidlc", "aidlc-state.md");
     assert.ok(existsSync(mdPath), "aidlc-state.md must exist as projection");
     const mdContent = readFileSync(mdPath, "utf8");
     assert.ok(mdContent.includes("| Phase | inception |"));
@@ -65,7 +65,7 @@ test("saveAidlcState writes aidlc-state.json and auto-projects aidlc-state.md", 
 test("gate blindness fix: gate recognizes blocking questions in markdown table format", async () => {
   const dir = setupWorkspace();
   try {
-    const aidlcDir = path.join(dir, ".engineering-intelligence", "aidlc");
+    const aidlcDir = path.join(dir, ".graphward", "aidlc");
     const inceptionDir = path.join(aidlcDir, "inception");
     const agileDir = path.join(aidlcDir, "agile");
     mkdirSync(inceptionDir, { recursive: true });
@@ -114,7 +114,7 @@ test("freezeRequirements writes requirements.json and updates requirements.md", 
 
     assert.ok(existsSync(reqPath));
 
-    const jsonPath = path.join(dir, ".engineering-intelligence", "aidlc", "inception", "requirements.json");
+    const jsonPath = path.join(dir, ".graphward", "aidlc", "inception", "requirements.json");
     assert.ok(existsSync(jsonPath), "requirements.json must be saved");
 
     const reqs = await loadRequirements(dir);

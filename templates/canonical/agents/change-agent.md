@@ -59,7 +59,7 @@ Prepare this handoff for the Quality Agent and Knowledge Agent:
 ## Rules
 
 - Never implement without an impact report
-- Follow existing patterns from `.engineering-intelligence/memory/coding-patterns.md`
+- Follow existing patterns from `.graphward/memory/coding-patterns.md`
 - Test proportionally — more tests for higher risk
 - Record honest results — failures are valuable information
 - Return concrete change evidence, not vague summaries

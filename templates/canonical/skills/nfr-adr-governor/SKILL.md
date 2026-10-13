@@ -10,7 +10,7 @@ Use this skill for performance, reliability, security, privacy, compliance, scal
 
 ## NFR Requirements
 
-Write `.engineering-intelligence/aidlc/construction/<unit>/nfr-requirements.md`:
+Write `.graphward/aidlc/construction/<unit>/nfr-requirements.md`:
 
 ```markdown
 # NFR Requirements: <unit>
@@ -27,7 +27,7 @@ Write `.engineering-intelligence/aidlc/construction/<unit>/nfr-requirements.md`:
 
 ## NFR Design
 
-Write `.engineering-intelligence/aidlc/construction/<unit>/nfr-design/design.md` with concrete patterns. Examples: circuit breaker with exponential backoff, idempotency keys, bulkheads, rate limits, schema expansion/contraction, cache invalidation, trace correlation, policy-based authorization.
+Write `.graphward/aidlc/construction/<unit>/nfr-design/design.md` with concrete patterns. Examples: circuit breaker with exponential backoff, idempotency keys, bulkheads, rate limits, schema expansion/contraction, cache invalidation, trace correlation, policy-based authorization.
 
 ## ADR Lifecycle
 
@@ -44,7 +44,7 @@ Accepted ADRs are immutable. To change one, create a new `Proposed` ADR and mark
 ADR path:
 
 ```text
-.engineering-intelligence/aidlc/construction/<unit>/nfr-design/decision-records/ADR-NNNN-<slug>.md
+.graphward/aidlc/construction/<unit>/nfr-design/decision-records/ADR-NNNN-<slug>.md
 ```
 
 ADR template:

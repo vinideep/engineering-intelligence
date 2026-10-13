@@ -51,7 +51,7 @@ test("summarizeTranscript tolerates malformed lines", () => {
 test("recordFromTranscript appends a row; aggregate splits cohorts", async () => {
   const root = await tmp();
   try {
-    await mkdir(path.join(root, ".engineering-intelligence"), { recursive: true });
+    await mkdir(path.join(root, ".graphward"), { recursive: true });
     const p1 = path.join(root, "t1.jsonl");
     const p2 = path.join(root, "t2.jsonl");
     await writeFile(p1, TRANSCRIPT_WITH_CONTEXT, "utf8");

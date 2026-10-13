@@ -22,7 +22,7 @@ test("V2 canonical templates define graph, report, and read-only workflow contra
   assert.match(graph, /co-change/);
   assert.match(graph, /metadata\.hotness/);
   assert.match(graph, /sensitive data/);
-  const implementation = await readTemplate("workflows", "engineering-intelligence");
+  const implementation = await readTemplate("workflows", "graphward");
   assert.match(implementation, /IMP-XXX/);
   assert.match(implementation, /graph artifacts/);
   assert.match(implementation, /validate/i);
@@ -40,11 +40,11 @@ test("V2 canonical templates define graph, report, and read-only workflow contra
   assert.match(aidlc, /cross-unit-discoveries\.md/);
   assert.match(aidlc, /product-backlog\.md/);
   assert.match(aidlc, /Definition of Ready/);
-  const engineering = await readTemplate("workflows", "engineering-intelligence");
+  const engineering = await readTemplate("workflows", "graphward");
   assert.match(engineering, /standard Agile/);
   assert.match(engineering, /AI-DLC/);
   assert.match(engineering, /acceptance criteria/);
-  const implementationSkill = await readTemplate("skills", "engineering-intelligence-skill");
+  const implementationSkill = await readTemplate("skills", "graphward-skill");
   assert.match(implementationSkill, /Pre-Flight Freshness Gate/);
   assert.match(implementationSkill, /Acceptance Criteria Verification Matrix/);
   assert.match(implementationSkill, /type-safety-engine/);
@@ -61,7 +61,7 @@ test("V2 canonical templates define graph, report, and read-only workflow contra
   assert.match(apiCompatibility, /deprecated/);
   assert.match(apiCompatibility, /breaking/);
   const snapshot = await readTemplate("skills", "api-backward-compatibility-engine");
-  assert.match(snapshot, /\.engineering-intelligence\/snapshots\//);
+  assert.match(snapshot, /\.graphward\/snapshots\//);
   assert.match(snapshot, /replay/);
   const staleness = await readTemplate("skills", "staleness-detector");
   assert.match(staleness, /Pre-Implementation Drift Trigger/);

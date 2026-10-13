@@ -191,7 +191,7 @@ async function evaluateRun(label, task, agyOutput = "") {
     runSync("node", [CLI_PATH, "verify", TARGET_DIR]);
     try {
       const receiptsRaw = await readFile(
-        path.join(TARGET_DIR, ".engineering-intelligence/.verify/receipts.json"),
+        path.join(TARGET_DIR, ".graphward/.verify/receipts.json"),
         "utf8"
       );
       const receipts = JSON.parse(receiptsRaw);
@@ -236,7 +236,7 @@ function renderReport(results, lowScore, highScore, task) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Engineering Intelligence OS — Enterprise Benchmark Report</title>
+  <title>GraphWard — Enterprise Benchmark Report</title>
   <style>
     :root { --bg:#0d1117; --card:#161b22; --border:#30363d; --text:#c9d1d9; --bright:#f0f6fc; --accent:#58a6ff; --ok:#3fb950; --fail:#f85149; --warn:#d29922; }
     * { box-sizing:border-box; margin:0; padding:0; }
@@ -269,7 +269,7 @@ function renderReport(results, lowScore, highScore, task) {
 <body>
 <div class="ctr">
   <header>
-    <h1>Engineering Intelligence OS — Benchmark Suite</h1>
+    <h1>GraphWard — Benchmark Suite</h1>
     <p class="sub">Challenge: ${escapeHtml(task.name)} • Real Antigravity CLI Execution • ${new Date().toISOString().slice(0, 19)}</p>
   </header>
 
@@ -334,7 +334,7 @@ function renderReport(results, lowScore, highScore, task) {
 
 async function main() {
   console.log("================================================================================");
-  console.log("  Engineering Intelligence OS — Enterprise Benchmark Suite");
+  console.log("  GraphWard — Enterprise Benchmark Suite");
   console.log("================================================================================");
   console.log(`  Low Model:  ${LOW_MODEL}`);
   console.log(`  High Model: ${HIGH_MODEL}`);
@@ -344,7 +344,7 @@ async function main() {
   const task = BENCHMARK_TASKS[0];
 
   // 1. Build Core
-  console.log("📦 1. Compiling Engineering Intelligence core...");
+  console.log("📦 1. Compiling GraphWard core...");
   const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
   execFileSync(npmCmd, ["run", "build"], { cwd: REPO_ROOT, stdio: "inherit", shell: process.platform === "win32" });
   console.log("   ✓ Core compiled.\n");
@@ -366,8 +366,8 @@ async function main() {
       const tests = runSync("node", ["--test", "test/orders.test.mjs", "test/payments.test.mjs"]);
       const claims = runSync("node", [CLI_PATH, "claims", "verify", TARGET_DIR, "--json"]);
       const health = runSync("node", [CLI_PATH, "health", TARGET_DIR, "--strict", "--json"]);
-      const graph = JSON.parse(await readFile(path.join(TARGET_DIR, ".engineering-intelligence/graph/dependency-graph.json"), "utf8"));
-      const leakage = graph.nodes.filter((node) => typeof node.path === "string" && /(^|[/\\])(?:dist|benchmark|node_modules|\.engineering-intelligence)(?:[/\\]|$)/.test(node.path));
+      const graph = JSON.parse(await readFile(path.join(TARGET_DIR, ".graphward/graph/dependency-graph.json"), "utf8"));
+      const leakage = graph.nodes.filter((node) => typeof node.path === "string" && /(^|[/\\])(?:dist|benchmark|node_modules|\.graphward)(?:[/\\]|$)/.test(node.path));
       const result = {
         mode: "non-model-dry-run",
         disposableWorkspace: true,
@@ -410,7 +410,7 @@ async function main() {
     const health = runSync("node", [CLI_PATH, "health", TARGET_DIR, "--strict", "--json"]);
 
     const graph = JSON.parse(await readFile(
-      path.join(TARGET_DIR, ".engineering-intelligence/graph/dependency-graph.json"),
+      path.join(TARGET_DIR, ".graphward/graph/dependency-graph.json"),
       "utf8"
     ));
     results.offline = {

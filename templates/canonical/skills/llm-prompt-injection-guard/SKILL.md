@@ -23,7 +23,7 @@ Use this skill for AI-augmented applications, RAG pipelines, agent tools, prompt
 
 ## Output
 
-Write `.engineering-intelligence/reports/LLM-PROMPT-INJECTION-<slug>.md`:
+Write `.graphward/reports/LLM-PROMPT-INJECTION-<slug>.md`:
 
 ```markdown
 # LLM Prompt Injection Review: <summary>

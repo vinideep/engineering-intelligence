@@ -99,7 +99,7 @@ test("unknowns reaches the built graph instead of being structurally empty", asy
   });
   await buildGraph(root);
   const graph = JSON.parse(await readFile(
-    path.join(root, ".engineering-intelligence/graph/dependency-graph.json"), "utf8"));
+    path.join(root, ".graphward/graph/dependency-graph.json"), "utf8"));
   assert.ok(
     graph.unknowns.some((u) => /missing/.test(u)),
     `a graph that cannot resolve an import must say so, got: ${JSON.stringify(graph.unknowns)}`,
@@ -124,7 +124,7 @@ test("every module node path in a built graph exists on disk", async () => {
   });
   await buildGraph(root);
   const graph = JSON.parse(await readFile(
-    path.join(root, ".engineering-intelligence/graph/dependency-graph.json"), "utf8"));
+    path.join(root, ".graphward/graph/dependency-graph.json"), "utf8"));
   const lying = graph.nodes.filter((n) => n.path && !existsSync(path.join(root, n.path)));
   assert.deepEqual(lying.map((n) => `${n.id} -> ${n.path}`), [], "a node must never carry a path that isn't there");
 });

@@ -94,7 +94,7 @@ test("checkInceptionExit blocks when a backlog ticket targets unknown graph node
   try {
     await buildGraph(dir, { write: true });
 
-    const aidlcDir = path.join(dir, ".engineering-intelligence", "aidlc");
+    const aidlcDir = path.join(dir, ".graphward", "aidlc");
     const inceptionDir = path.join(aidlcDir, "inception");
     const ticketsDir = path.join(aidlcDir, "agile", "backlog", "tickets");
     mkdirSync(inceptionDir, { recursive: true });

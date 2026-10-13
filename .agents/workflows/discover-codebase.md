@@ -17,10 +17,10 @@ Finalized codebase understanding captured in intelligence artifacts:
 
 | Category | Path | Content |
 |---|---|---|
-| Knowledge Base | `.engineering-intelligence/knowledge-base/` | Evidence-backed project documentation |
-| Graphs | `.engineering-intelligence/graph/` | Architecture graphs and maps |
-| Context | `.engineering-intelligence/context/` | AI navigation maps |
-| Discovery Report | `.engineering-intelligence/reports/DISCOVERY-*.md` | Findings summary with confidence levels |
+| Knowledge Base | `.graphward/knowledge-base/` | Evidence-backed project documentation |
+| Graphs | `.graphward/graph/` | Architecture graphs and maps |
+| Context | `.graphward/context/` | AI navigation maps |
+| Discovery Report | `.graphward/reports/DISCOVERY-*.md` | Findings summary with confidence levels |
 
 ## Execution Steps
 

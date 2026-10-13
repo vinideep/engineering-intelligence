@@ -10,14 +10,14 @@ Act as a detailed Business Analyst and Technical Architect persona. Analyze the 
 ## Inputs
 
 - User initial request (scope, feature, or bug details)
-- `.engineering-intelligence/knowledge-base/` (existing project domain context)
-- `.engineering-intelligence/graph/` (dependency graphs)
-- `.engineering-intelligence/memory/` (durable architecture/business decisions)
+- `.graphward/knowledge-base/` (existing project domain context)
+- `.graphward/graph/` (dependency graphs)
+- `.graphward/memory/` (durable architecture/business decisions)
 
 ## Procedure
 
 1. **Analyze Current Knowledge** — Consult all intelligence inputs:
-   - Identify domain logic in `.engineering-intelligence/knowledge-base/` matching the request category
+   - Identify domain logic in `.graphward/knowledge-base/` matching the request category
    - Query dependency/service graphs to locate related modules and boundaries
    - Read architecture memory to understand tech constraints and guidelines
    - Scan relevant modules for implicit invariants and dominant implementation constraints before asking questions:
@@ -47,11 +47,11 @@ Act as a detailed Business Analyst and Technical Architect persona. Analyze the 
 
 3. **Iterate with User** — Wait for user responses. Adjust assumptions based on their answers.
 
-4. **Generate Final Requirement Prompt** — Once requirements are clear, output a comprehensive requirements document to `.engineering-intelligence/knowledge-base/19-requirements.md`, update Agile artifacts under `.engineering-intelligence/aidlc/agile/`, and formulate the finalized prompt for the development agent.
+4. **Generate Final Requirement Prompt** — Once requirements are clear, output a comprehensive requirements document to `.graphward/knowledge-base/19-requirements.md`, update Agile artifacts under `.graphward/aidlc/agile/`, and formulate the finalized prompt for the development agent.
 
 ## Output Format
 
-The final requirements document `.engineering-intelligence/knowledge-base/19-requirements.md` must follow this structure:
+The final requirements document `.graphward/knowledge-base/19-requirements.md` must follow this structure:
 
 ```markdown
 # Requirements: <Feature Name>
@@ -82,7 +82,7 @@ The final requirements document `.engineering-intelligence/knowledge-base/19-req
 ## 5. Finalized Implementation Prompt
 Provide the exact prompt to pass to the coding agent to execute this change:
 ```text
-/engineering-intelligence <Fully detailed requirements and file scope here>
+/graphward <Fully detailed requirements and file scope here>
 ```
 ```
 

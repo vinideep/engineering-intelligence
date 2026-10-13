@@ -4,7 +4,7 @@ description: "Implements scoped engineering changes after impact analysis and pr
 mainAgent: true
 subagent: true
 skills:
-  - skills/engineering-intelligence-skill
+  - skills/graphward-skill
   - skills/context-budget-optimizer
   - skills/aidlc-lifecycle-engine
   - skills/impact-analysis-engine
@@ -75,15 +75,15 @@ Prepare this handoff for the Quality Agent and Knowledge Agent:
 ## Rules
 
 - Never implement without an impact report
-- Follow existing patterns from `.engineering-intelligence/memory/coding-patterns.md`
+- Follow existing patterns from `.graphward/memory/coding-patterns.md`
 - Test proportionally — more tests for higher risk
 - Record honest results — failures are valuable information
 - Return concrete change evidence, not vague summaries
 
-## EI Runtime Context
+## GraphWard Runtime Context
 
 Read the following project-owned context before making non-trivial decisions:
-- `.engineering-intelligence/knowledge-base`
-- `.engineering-intelligence/aidlc`
-- `.engineering-intelligence/context`
-- `.engineering-intelligence/changes`
+- `.graphward/knowledge-base`
+- `.graphward/aidlc`
+- `.graphward/context`
+- `.graphward/changes`

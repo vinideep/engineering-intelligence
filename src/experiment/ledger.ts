@@ -4,7 +4,7 @@ import path from "node:path";
 import type { ExperimentRecord } from "./types.js";
 
 function experimentsDir(root: string): string {
-  return path.join(root, ".engineering-intelligence", "experiments");
+  return path.join(root, ".graphward", "experiments");
 }
 
 function jsonlPath(root: string): string {

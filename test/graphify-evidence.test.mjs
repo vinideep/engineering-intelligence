@@ -13,7 +13,7 @@ const digest = (value) => createHash("sha256").update(value).digest("hex");
 
 async function fixture() {
   const root = await mkdtemp(path.join(os.tmpdir(), "ei-graphify-"));
-  const provider = path.join(root, ".engineering-intelligence", "providers");
+  const provider = path.join(root, ".graphward", "providers");
   const workspace = path.join(provider, "workspace");
   const graphify = path.join(provider, "graphify");
   const a = `import { answer } from "./b.js";\nexport const result = answer;\n`;
@@ -21,7 +21,7 @@ async function fixture() {
   await mkdir(path.join(root, "src"), { recursive: true });
   await mkdir(path.join(workspace, "src"), { recursive: true });
   await mkdir(graphify, { recursive: true });
-  const mcp = '{"mcpServers":{"engineering-intelligence":{"command":"npx"}}}\n';
+  const mcp = '{"mcpServers":{"graphward":{"command":"npx"}}}\n';
   await writeFile(path.join(root, "src", "a.ts"), a);
   await writeFile(path.join(root, "src", "b.ts"), b);
   await writeFile(path.join(root, ".mcp.json"), mcp);
@@ -36,13 +36,13 @@ async function fixture() {
     workspaceHash: digest(JSON.stringify(sourceHashes)),
     sourceHashes,
     command: ["graphify", "extract"],
-    graphPath: ".engineering-intelligence/providers/graphify/graph.json",
+    graphPath: ".graphward/providers/graphify/graph.json",
   };
   await writeFile(path.join(graphify, "run.json"), JSON.stringify(run));
   return { root, workspace, graphify, a, b };
 }
 
-test("Graphify agreement corroborates the EI-native relationship", async () => {
+test("Graphify agreement corroborates the GraphWard-native relationship", async () => {
   const fx = await fixture();
   await writeFile(path.join(fx.graphify, "graph.json"), JSON.stringify({
     nodes: [
@@ -76,7 +76,7 @@ test("stale Graphify evidence is excluded instead of presented as current", asyn
   const result = await reconcileGraphifyEvidence(fx.root, native.graph);
   assert.ok(result.staleEvidence > 0);
   const edge = result.graph.edges.find((candidate) => candidate.from === "module:src/a" && candidate.to === "module:src/b" && candidate.relation === "imports");
-  assert.ok(edge, "native EI edge remains available");
+  assert.ok(edge, "native GraphWard edge remains available");
   assert.equal(edge.metadata.corroborated, undefined, "stale provider evidence must not decorate the native edge");
   assert.ok(result.graph.unknowns.some((item) => item.includes("excluded as stale")));
 });
@@ -119,18 +119,18 @@ test("incremental builds replace provider-only evidence instead of duplicating i
   const fx = await fixture();
   t.after(async () => rm(fx.root, { recursive: true, force: true }));
   await writeFile(path.join(fx.graphify, "graph.json"), JSON.stringify({
-    nodes: [{ id: "mcp", label: "engineering-intelligence", source_file: ".mcp.json", confidence: "EXTRACTED" }],
+    nodes: [{ id: "mcp", label: "graphward", source_file: ".mcp.json", confidence: "EXTRACTED" }],
     edges: [],
   }));
 
   await buildGraph(fx.root);
-  const full = await loadExistingGraph(path.join(fx.root, ".engineering-intelligence", "graph", "dependency-graph.json"));
+  const full = await loadExistingGraph(path.join(fx.root, ".graphward", "graph", "dependency-graph.json"));
   const providerOnly = (graph) => graph.nodes.filter((node) => node.metadata?.provider === "graphify" && !node.metadata?.providers?.includes("native"));
   assert.equal(providerOnly(full).length, 1);
 
   const incremental = await buildGraph(fx.root, { update: true, files: ["src/a.ts"] });
   assert.equal(incremental.wasIncremental, true);
-  const incrementalGraph = await loadExistingGraph(path.join(fx.root, ".engineering-intelligence", "graph", "dependency-graph.json"));
+  const incrementalGraph = await loadExistingGraph(path.join(fx.root, ".graphward", "graph", "dependency-graph.json"));
   assert.equal(providerOnly(incrementalGraph).length, 1, "provider-only nodes must be replaced, not appended");
   assert.equal(incrementalGraph.nodes.filter((node) => node.id.startsWith("graphify:mcp:")).length, 0, "provider-only node IDs must not accumulate suffixes");
 });

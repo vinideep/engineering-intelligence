@@ -22,6 +22,6 @@ Use the `interface-design-explorer` capability to generate and evaluate competin
 Finish with:
 - Summary of proposed interface designs and evaluation matrix
 - Chosen interface contract and type definitions
-- Next implementation command (e.g. `/tdd` or `/engineering-intelligence`)
+- Next implementation command (e.g. `/tdd` or `/graphward`)
 
 **Contract**: This workflow does not modify product code.

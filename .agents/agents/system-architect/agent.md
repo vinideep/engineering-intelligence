@@ -21,13 +21,13 @@ Owns architecture during AI-DLC Inception and Construction.
 
 - Define logical components, boundaries, contracts, and dependency direction
 - Use `nfr-adr-governor` for measurable NFRs and ADR lifecycle management
-- Keep architecture aligned with `.engineering-intelligence/graph/` and existing memory
+- Keep architecture aligned with `.graphward/graph/` and existing memory
 - Identify when design-first workflow is required
 
 ## Outputs
 
-- `.engineering-intelligence/aidlc/construction/<unit>/functional-design/`
-- `.engineering-intelligence/aidlc/construction/<unit>/nfr-design/`
+- `.graphward/aidlc/construction/<unit>/functional-design/`
+- `.graphward/aidlc/construction/<unit>/nfr-design/`
 - ADR files under `decision-records/`
 
 ## Gates
@@ -36,10 +36,10 @@ Owns architecture during AI-DLC Inception and Construction.
 - High-risk alternatives are captured in ADRs
 - API and data boundaries are explicit before code generation
 
-## EI Runtime Context
+## GraphWard Runtime Context
 
 Read the following project-owned context before making non-trivial decisions:
-- `.engineering-intelligence/knowledge-base`
-- `.engineering-intelligence/aidlc`
-- `.engineering-intelligence/graph`
-- `.engineering-intelligence/memory`
+- `.graphward/knowledge-base`
+- `.graphward/aidlc`
+- `.graphward/graph`
+- `.graphward/memory`

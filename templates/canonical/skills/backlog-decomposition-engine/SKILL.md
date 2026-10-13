@@ -5,36 +5,36 @@ description: Autonomously decomposes a high-level initiative into a durable Epic
 
 # Backlog Decomposition Engine
 
-Turn a single high-level initiative, product brief, or large request into a complete, durable, hierarchical backlog. This skill plans and structures work; it does **not** modify product code. Implementation happens later through `deliver-backlog` and `engineering-intelligence-skill`.
+Turn a single high-level initiative, product brief, or large request into a complete, durable, hierarchical backlog. This skill plans and structures work; it does **not** modify product code. Implementation happens later through `deliver-backlog` and `graphward-skill`.
 
 The hierarchy is three levels:
 
 ```text
 Epic  (a business outcome / initiative)
  └─ Feature  (a shippable slice of the epic; the approval unit)
-     └─ Ticket  (an implementable unit of work; maps to one /engineering-intelligence run)
+     └─ Ticket  (an implementable unit of work; maps to one /graphward run)
 ```
 
 ## Inputs
 
 - The user's high-level initiative or request
-- `.engineering-intelligence/knowledge-base/` (domain context)
-- `.engineering-intelligence/graph/` (dependency, service, runtime, business-flow graphs)
-- `.engineering-intelligence/memory/` (durable architecture and business decisions)
-- `.engineering-intelligence/aidlc/discovery/vision.md` and `agile/product-backlog.md` when present
+- `.graphward/knowledge-base/` (domain context)
+- `.graphward/graph/` (dependency, service, runtime, business-flow graphs)
+- `.graphward/memory/` (durable architecture and business decisions)
+- `.graphward/aidlc/discovery/vision.md` and `agile/product-backlog.md` when present
 
 ## Runtime Artifacts
 
-Write the backlog under `.engineering-intelligence/aidlc/agile/backlog/`:
+Write the backlog under `.graphward/aidlc/agile/backlog/`:
 
 | Path | Purpose |
 |---|---|
-| `.engineering-intelligence/aidlc/agile/backlog/backlog-index.md` | Master index, ID counters, and status rollup for every epic, feature, and ticket |
-| `.engineering-intelligence/aidlc/agile/backlog/epics/EPIC-XXX-<slug>.md` | One epic: outcome, success metrics, child features |
-| `.engineering-intelligence/aidlc/agile/backlog/features/FEAT-XXX-<slug>.md` | One feature: user story, acceptance criteria, child tickets, approval state |
-| `.engineering-intelligence/aidlc/agile/backlog/tickets/TKT-XXX-<slug>.md` | One ticket: executable acceptance criteria, affected files, Ready/Done gates, implementation command |
-| `.engineering-intelligence/aidlc/agile/backlog/dependency-graph.md` | Feature and ticket dependency graph plus the derived execution order |
-| `.engineering-intelligence/aidlc/agile/backlog/sync/tracker-sync-map.md` | Local ID to external tracker (e.g. GitHub issue) mapping, written only by `issue-tracker-sync-engine` |
+| `.graphward/aidlc/agile/backlog/backlog-index.md` | Master index, ID counters, and status rollup for every epic, feature, and ticket |
+| `.graphward/aidlc/agile/backlog/epics/EPIC-XXX-<slug>.md` | One epic: outcome, success metrics, child features |
+| `.graphward/aidlc/agile/backlog/features/FEAT-XXX-<slug>.md` | One feature: user story, acceptance criteria, child tickets, approval state |
+| `.graphward/aidlc/agile/backlog/tickets/TKT-XXX-<slug>.md` | One ticket: executable acceptance criteria, affected files, Ready/Done gates, implementation command |
+| `.graphward/aidlc/agile/backlog/dependency-graph.md` | Feature and ticket dependency graph plus the derived execution order |
+| `.graphward/aidlc/agile/backlog/sync/tracker-sync-map.md` | Local ID to external tracker (e.g. GitHub issue) mapping, written only by `issue-tracker-sync-engine` |
 
 This backlog is the structured expansion of `agile/product-backlog.md`; keep the high-level epic list in `product-backlog.md` consistent with `backlog-index.md`.
 
@@ -53,7 +53,7 @@ This backlog is the structured expansion of `agile/product-backlog.md`; keep the
 
 3. **Slice Features** — Decompose each epic into the smallest set of independently shippable features. Each feature is the **approval unit**: it carries a user story, acceptance criteria, priority, dependencies, and an `Approval` state that starts at `pending`.
 
-4. **Cut Tickets** — Decompose each feature into implementable tickets sized for a single `/engineering-intelligence` run (roughly half a day to two days of work). Use graph intelligence to predict affected files and to keep tickets cohesive. Each ticket carries executable acceptance criteria, a type, an estimate, a risk level, Definition of Ready, Definition of Done, and a ready-to-run implementation command.
+4. **Cut Tickets** — Decompose each feature into implementable tickets sized for a single `/graphward` run (roughly half a day to two days of work). Use graph intelligence to predict affected files and to keep tickets cohesive. Each ticket carries executable acceptance criteria, a type, an estimate, a risk level, Definition of Ready, Definition of Done, and a ready-to-run implementation command.
 
 5. **Map Dependencies** — Build `dependency-graph.md`. Record feature-to-feature and ticket-to-ticket dependencies, mark which can run in parallel (no dependency edge and no overlapping owned files), and emit a topologically ordered execution sequence. Flag conflict risk where owned files overlap.
 
@@ -169,7 +169,7 @@ Implementation of this feature's tickets must not begin until a human records
 
 ## Implementation Command
 ```text
-/engineering-intelligence Implement TKT-001: <fully scoped request with file paths and constraints>
+/graphward Implement TKT-001: <fully scoped request with file paths and constraints>
 ```
 ```
 
@@ -203,5 +203,5 @@ Implementation of this feature's tickets must not begin until a human records
 - Depends on: `get_engineering_context` (graph inputs), `aidlc-lifecycle-engine` (phase model)
 - Triggers: `deliver-backlog` (per-feature approval + implementation), `issue-tracker-sync-engine` (optional tracker sync)
 - Pre-flight: `socratic-clarification-gate` (when initiative has 3+ ambiguities before decomposition)
-- Used by: `engineering-intelligence-skill` (when epic-sized work is detected)
+- Used by: `graphward-skill` (when epic-sized work is detected)
 

@@ -3,7 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { InstallManifest } from "../types.js";
 
-export const MANIFEST_PATH = ".engineering-intelligence/install-manifest.json";
+export const MANIFEST_PATH = ".graphward/install-manifest.json";
 export const TEMPLATE_VERSION = "4.1.0";
 
 export function hashContent(content: string): string {

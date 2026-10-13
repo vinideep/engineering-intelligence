@@ -66,7 +66,7 @@ export interface ClaimStore {
   claims: Claim[];
 }
 
-const CLAIMS_PATH = ".engineering-intelligence/claims/claims.json";
+const CLAIMS_PATH = ".graphward/claims/claims.json";
 
 export function claimsPath(root: string): string {
   return path.join(root, CLAIMS_PATH);
@@ -79,7 +79,9 @@ export function claimsPath(root: string): string {
 function normalizeSpan(text: string): string {
   // Trailing-whitespace and final-newline insensitive so cosmetic edits do not
   // flip a claim stale, but any substantive change to the cited lines does.
-  return text.replace(/[ \t]+$/gm, "").replace(/\n+$/,"");
+  // CRLF-insensitive too: a Windows checkout (core.autocrlf) must not mark every
+  // claim recorded on another platform stale.
+  return text.replace(/\r\n?/g, "\n").replace(/[ \t]+$/gm, "").replace(/\n+$/, "");
 }
 
 function hashText(text: string): string {
@@ -342,7 +344,7 @@ export function renderVerifyReport(report: VerifyClaimsReport): string {
     lines.push(`  ${ICON[r.status]} ${r.id} ${r.statement} — ${why}`);
   }
   if (report.total === 0) {
-    lines.push("  No claims recorded yet. Run `engineering-intelligence claims derive` to compute the baseline.");
+    lines.push("  No claims recorded yet. Run `graphward claims derive` to compute the baseline.");
   } else if (report.refuted === 0 && report.stale === 0 && report.missing === 0) {
     lines.push("  ✅ Every derived fact still holds against the current source.");
   }

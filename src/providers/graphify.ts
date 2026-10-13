@@ -56,7 +56,7 @@ async function writeAtomic(location: string, value: unknown): Promise<void> {
   await rename(temporary, location);
 }
 
-/** Run Graphify only against EI's policy-filtered mirror in deterministic code-only mode. */
+/** Run Graphify only against GraphWard's policy-filtered mirror in deterministic code-only mode. */
 export async function runGraphifyExtraction(
   root: string,
   options: { runner?: ProcessRunner; providerHome?: string; onProgress?: (message: string) => void } = {},
@@ -64,7 +64,7 @@ export async function runGraphifyExtraction(
   const runner = options.runner ?? runProcess;
   const status = await providerStatus("graphify", { runner, providerHome: options.providerHome });
   if (status.health !== "healthy" || !status.executable) {
-    return { ok: false, degraded: true, status, message: `${status.message} Native EI graph extraction remains active.` };
+    return { ok: false, degraded: true, status, message: `${status.message} Native GraphWard graph extraction remains active.` };
   }
 
   options.onProgress?.("Syncing provider workspace for Graphify...");
@@ -86,7 +86,7 @@ export async function runGraphifyExtraction(
       degraded: true,
       status: { ...status, health: "error", message: `Graphify extraction failed: ${(execution.stderr || execution.error || "unknown error").trim().slice(-1000)}` },
       workspaceHash: workspace.workspaceHash,
-      message: "Graphify evidence was not refreshed; native EI graph extraction remains active.",
+      message: "Graphify evidence was not refreshed; native GraphWard graph extraction remains active.",
     };
   }
 
@@ -99,7 +99,7 @@ export async function runGraphifyExtraction(
       degraded: true,
       status: { ...status, health: "error", message: `Graphify completed without producing ${GRAPHIFY_GRAPH_PATH}.` },
       workspaceHash: workspace.workspaceHash,
-      message: "Graphify output was malformed or incomplete; native EI graph extraction remains active.",
+      message: "Graphify output was malformed or incomplete; native GraphWard graph extraction remains active.",
     };
   }
   let rawGraph: unknown;
@@ -109,12 +109,12 @@ export async function runGraphifyExtraction(
       degraded: true,
       status: { ...status, health: "error", message: "Graphify produced invalid JSON." },
       workspaceHash: workspace.workspaceHash,
-      message: "Graphify evidence was rejected; native EI graph extraction remains active.",
+      message: "Graphify evidence was rejected; native GraphWard graph extraction remains active.",
     };
   }
 
   // Graphify 0.9.x writes <out>/graphify-out/graph.json while older/fake
-  // adapters write <out>/graph.json. Normalize both into EI's stable ignored
+  // adapters write <out>/graph.json. Normalize both into GraphWard's stable ignored
   // provider path so reconciliation never depends on an upstream layout quirk.
   if (producedGraph !== graphAbsolute) await writeAtomic(graphAbsolute, rawGraph);
 
@@ -151,7 +151,7 @@ export async function runGraphifyExtraction(
     reportPath,
     runManifestPath: GRAPHIFY_RUN_PATH,
     workspaceHash: workspace.workspaceHash,
-    message: "Graphify code-only structural evidence is current and ready for EI normalization.",
+    message: "Graphify code-only structural evidence is current and ready for GraphWard normalization.",
   };
 }
 

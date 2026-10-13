@@ -8,9 +8,9 @@ version: 4.0.0
 
 Build and maintain structured, evidence-backed architecture graphs that enable impact analysis, dependency tracing, and architectural understanding.
 
-**Build the real graph first:** `npx engineering-intelligence map . [--update --files a,b]` produces the computed, schema-validated `dependency-graph.json` from source imports. It resolves specifiers against disk and records anything it cannot resolve in `unknowns` rather than guessing. Use the steps below to derive the service, runtime, and business-flow graphs the CLI does not compute.
+**Build the real graph first:** `npx graphward map . [--update --files a,b]` produces the computed, schema-validated `dependency-graph.json` from source imports. It resolves specifiers against disk and records anything it cannot resolve in `unknowns` rather than guessing. Use the steps below to derive the service, runtime, and business-flow graphs the CLI does not compute.
 
-EI's normalized graph is canonical. Graphify is an optional code-only extractor behind the provider adapter: fresh agreement with native EI extraction is corroborated evidence; Graphify-only edges remain provider-extracted/unverifiable; conflicts are `contested`; stale or out-of-scope evidence is excluded. Every provider relationship must retain provider/version, commit, source hash/span, extraction class, confidence, freshness, and trust state. Never copy raw Graphify output over EI's graph or treat CCE's internal graph as a second authority.
+GraphWard's normalized graph is canonical. Graphify is an optional code-only extractor behind the provider adapter: fresh agreement with native GraphWard extraction is corroborated evidence; Graphify-only edges remain provider-extracted/unverifiable; conflicts are `contested`; stale or out-of-scope evidence is excluded. Every provider relationship must retain provider/version, commit, source hash/span, extraction class, confidence, freshness, and trust state. Never copy raw Graphify output over GraphWard's graph or treat CCE's internal graph as a second authority.
 
 ## Inputs
 
@@ -20,7 +20,7 @@ EI's normalized graph is canonical. Graphify is an optional code-only extractor 
 
 ## Graph Artifacts
 
-All graphs are stored in `.engineering-intelligence/graph/`.
+All graphs are stored in `.graphward/graph/`.
 
 ### Graph JSON Schema
 

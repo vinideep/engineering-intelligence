@@ -21,7 +21,7 @@ For medium-and-above risk changes, use the rollback planning section even when t
 
 ## Outputs
 
-Write `.engineering-intelligence/aidlc/operations/operations-readiness.md`:
+Write `.graphward/aidlc/operations/operations-readiness.md`:
 
 ```markdown
 # Operations Readiness

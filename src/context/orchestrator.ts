@@ -110,14 +110,25 @@ function words(value: string): string[] {
   return [...new Set(value.toLowerCase().match(/[a-z0-9_]+/g) ?? [])].filter((word) => word.length > 2);
 }
 
-function classify(task: string, files: string[]): TaskClassification {
-  const text = `${task} ${files.join(" ")}`.toLowerCase();
-  const security = /auth|security|credential|secret|token|encrypt|permission|rate.?limit|vulnerab/.test(text);
-  const database = /database|migration|schema|sql|table|column|index/.test(text);
-  const api = /\bapi\b|endpoint|route|controller|contract|graphql|openapi/.test(text);
-  const architecture = /architecture|cross.?service|new service|replatform|redesign|monorepo/.test(text);
-  const bug = /\bbug\b|\bfix\b|broken|failure|incorrect|regression|exception/.test(text);
-  const simple = /typo|spelling|comment|rename label/.test(text) && files.length <= 1;
+/**
+ * Classify from the task's WORDS plus specific path signals. Matching substrings
+ * of `task + files` misrouted ordinary work: any `src/index.ts` matched "index"
+ * (database change, migration gates), `token-optimizer.ts` matched "token"
+ * (critical security change), "author" matched "auth", "stable" matched "table".
+ */
+export function classifyTask(task: string, files: string[]): TaskClassification {
+  const text = task.toLowerCase();
+  const paths = files.map((file) => file.replace(/\\/g, "/").toLowerCase());
+  const anyPath = (re: RegExp) => paths.some((file) => re.test(file));
+  const security = /\b(?:o?auth(?:entication|enticate|orization|orize|n|z)?|login|password|security|credentials?|secrets?|encrypt\w*|decrypt\w*|permissions?|rbac|rate.?limit\w*|vulnerab\w*|jwt|csrf|xss|access.?tokens?|api.?keys?|session.?tokens?)\b/.test(text)
+    || anyPath(/(^|\/)(auth|security|permissions?)(\/|\.)/);
+  const database = /\b(?:database|db|migrations?|schemas?|sql|tables?|columns?|indexes|indices)\b/.test(text)
+    || anyPath(/(^|\/)(migrations?|db)\/|\.sql$|(^|\/)schema\.(prisma|sql|rb)$/);
+  const api = /\b(?:api|endpoints?|routes?|controllers?|contracts?|graphql|openapi|rest)\b/.test(text)
+    || anyPath(/(^|\/)(routes?|controllers?|api)\/|(^|\/)(openapi|swagger)[^/]*\.(ya?ml|json)$|\.(graphql|proto)$/);
+  const architecture = /\b(?:architecture|cross.?service|new service|replatform|redesign|monorepo)\b/.test(text);
+  const bug = /\b(?:bugs?|fix(?:es|ed)?|broken|failures?|failing|incorrect|regressions?|exceptions?|crash\w*)\b/.test(text);
+  const simple = /\b(?:typos?|spelling|comments?|rename label)\b/.test(text) && files.length <= 1;
   const kind: TaskKind = security ? "security-change" : database ? "database-change" : api ? "api-change" : architecture ? "architecture-change" : simple ? "simple" : bug ? "bug" : "feature";
   const risk: RiskLevel = security ? "critical" : database || api || architecture ? "high" : simple ? "low" : "medium";
   const domains = [security && "security", database && "database", api && "api", architecture && "architecture"].filter((value): value is string => Boolean(value));
@@ -165,7 +176,7 @@ function excerpt(markdown: string, maxLines = 28): string {
 
 async function loadKnowledge(root: string, task: string) {
   const [verification, evidence] = await Promise.all([verifyKnowledge(root), checkEvidenceHashes(root)]);
-  const files = await walkMarkdown(path.join(root, ".engineering-intelligence", "knowledge-base"));
+  const files = await walkMarkdown(path.join(root, ".graphward", "knowledge-base"));
   const taskWords = words(task);
   const brokenDocs = new Set(verification.details.map((detail) => detail.file.replace(/\\/g, "/")));
   const documents: KnowledgeContextItem[] = [];
@@ -187,8 +198,8 @@ async function loadKnowledge(root: string, task: string) {
     documents.push(...ranked.slice(0, 5).map(({ score: _score, ...item }) => item));
   }
   const decisionFiles = [
-    ...(await walkMarkdown(path.join(root, ".engineering-intelligence", "aidlc", "decisions"))),
-    ...(await walkMarkdown(path.join(root, ".engineering-intelligence", "knowledge-base", "decisions"))),
+    ...(await walkMarkdown(path.join(root, ".graphward", "aidlc", "decisions"))),
+    ...(await walkMarkdown(path.join(root, ".graphward", "knowledge-base", "decisions"))),
   ];
   const decisions: KnowledgeContextItem[] = [];
   for (const absolute of decisionFiles.slice(0, 10)) {
@@ -236,7 +247,7 @@ interface ArchitectureNeighborhoodResult {
 
 async function architectureNeighborhood(root: string, task: string, requestedFiles: string[]): Promise<ArchitectureNeighborhoodResult> {
   await ensureFreshGraph(root);
-  const graph = await loadExistingGraph(path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json"));
+  const graph = await loadExistingGraph(path.join(root, ".graphward", "graph", "dependency-graph.json"));
   if (!graph) return { seeds: [], nodes: [], edges: [], approvedScope: [], graph: null as DependencyGraph | null };
   const seeds = selectSeeds(graph, root, task, requestedFiles);
   const selected = new Set(seeds);
@@ -333,9 +344,9 @@ function trimArchitecture(
 }
 
 function renderMarkdown(pack: Omit<ContextPackV2, "markdown">): string {
-  const lines = [`# Engineering context: ${pack.task}`, "", `Route: ${pack.classification.kind}; risk ${pack.classification.risk}; confidence ${pack.overallConfidence.toFixed(2)}.`, `Knowledge trust: ${pack.knowledge.trust}. Retrieval: ${pack.providers.cce.fallback ? "EI native fallback" : "CCE"}.`, ""];
+  const lines = [`# Engineering context: ${pack.task}`, "", `Route: ${pack.classification.kind}; risk ${pack.classification.risk}; confidence ${pack.overallConfidence.toFixed(2)}.`, `Knowledge trust: ${pack.knowledge.trust}. Retrieval: ${pack.providers.cce.fallback ? "GraphWard native fallback" : "CCE"}.`, ""];
   if (pack.knowledge.documents.length > 0) {
-    lines.push("## Verified EI knowledge");
+    lines.push("## Verified GraphWard knowledge");
     for (const item of pack.knowledge.documents) lines.push(`- ${item.title} (${item.path})`);
     lines.push("");
   }
@@ -375,7 +386,7 @@ export async function getEngineeringContext(
 ): Promise<ContextPackV2> {
   if (!request.task.trim()) throw new Error("task is required");
   const requestedFiles = request.files ?? [];
-  const classification = classify(request.task, requestedFiles);
+  const classification = classifyTask(request.task, requestedFiles);
   const budget = request.budget && request.budget > 0 ? request.budget : dynamicBudget(classification);
   // Establish one current structural snapshot before claims and neighborhood
   // reads begin; otherwise concurrent derivation can race a graph refresh.
@@ -421,8 +432,8 @@ export async function getEngineeringContext(
   ];
   const graphUnknowns = architecture.graph?.unknowns ?? [];
   const unknowns = [
-    ...(knowledge.trust === "degraded" ? [`EI knowledge has ${knowledge.citationDrift} missing reference(s) and ${knowledge.staleEvidence} stale citation(s); affected prose was not loaded.`] : []),
-    ...(knowledge.trust === "unverifiable" ? ["EI knowledge has no recorded citation snapshot; prose was not promoted as verified context."] : []),
+    ...(knowledge.trust === "degraded" ? [`GraphWard knowledge has ${knowledge.citationDrift} missing reference(s) and ${knowledge.staleEvidence} stale citation(s); affected prose was not loaded.`] : []),
+    ...(knowledge.trust === "unverifiable" ? ["GraphWard knowledge has no recorded citation snapshot; prose was not promoted as verified context."] : []),
     ...graphUnknowns.slice(0, 20),
     ...(retrieval.staleRejected > 0 ? [`CCE returned ${retrieval.staleRejected} stale span(s), which were rejected.`] : []),
     ...(retrieval.scopeRejected > 0 ? [`CCE returned ${retrieval.scopeRejected} out-of-scope span(s), which were rejected.`] : []),

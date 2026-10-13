@@ -1,12 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, open, readFile, rename, rm, stat, unlink, writeFile } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
-import { loadEiConfig, type ProviderPolicy } from "../config/index.js";
+import { loadGwConfig, type ProviderPolicy } from "../config/index.js";
 import { runProcess, type ProcessRunner } from "../process/index.js";
 import { PROVIDER_COMPATIBILITY } from "./compatibility.js";
 import { ensureProviderCacheIgnored, PROVIDER_DIR } from "./workspace.js";
 import { PROVIDER_NAMES, type PrepareProvidersOptions, type PrepareProvidersResult, type ProjectProviderManifest, type ProviderName, type ProviderStatus } from "./types.js";
+import { defaultProviderHomeDir } from "../config/legacy.js";
 
 export const PROVIDER_MANIFEST_PATH = `${PROVIDER_DIR}/manifest.json`;
 const LOCK_STALE_MS = 15 * 60 * 1000;
@@ -16,9 +16,7 @@ function platformKey(): string {
 }
 
 export function defaultProviderHome(): string {
-  return process.env.EI_PROVIDER_HOME
-    ? path.resolve(process.env.EI_PROVIDER_HOME)
-    : path.join(os.homedir(), ".engineering-intelligence", "providers");
+  return defaultProviderHomeDir();
 }
 
 export function managedProviderPaths(name: ProviderName, providerHome = defaultProviderHome()) {
@@ -84,8 +82,8 @@ async function probeExecutable(name: ProviderName, executable: string, source: "
     executable,
     source,
     fingerprint: source === "managed" ? await fingerprint(executable) : undefined,
-    message: compatible ? `${provider.displayName} ${detectedVersion} is ready.` : `${provider.displayName} version ${detectedVersion ?? "unknown"} does not match EI's tested ${provider.version}.`,
-    remediation: compatible ? undefined : [`Run engineering-intelligence providers install ${name} to install the tested managed version.`],
+    message: compatible ? `${provider.displayName} ${detectedVersion} is ready.` : `${provider.displayName} version ${detectedVersion ?? "unknown"} does not match GraphWard's tested ${provider.version}.`,
+    remediation: compatible ? undefined : [`Run graphward providers install ${name} to install the tested managed version.`],
     checkedAt: new Date().toISOString(),
   };
 }
@@ -99,12 +97,12 @@ export async function providerStatus(name: ProviderName, options: { providerHome
   const providerHome = options.providerHome ?? defaultProviderHome();
   const current = await currentProviderRelease(name, providerHome);
   if (current && !current.executable) {
-    return { name, displayName: provider.displayName, purpose: provider.purpose, health: "error", requiredVersion: provider.version, message: "The managed provider activation record points outside EI's provider directory and was rejected.", remediation: [`Run engineering-intelligence providers repair ${name}.`], checkedAt: new Date().toISOString() };
+    return { name, displayName: provider.displayName, purpose: provider.purpose, health: "error", requiredVersion: provider.version, message: "The managed provider activation record points outside GraphWard's provider directory and was rejected.", remediation: [`Run graphward providers repair ${name}.`], checkedAt: new Date().toISOString() };
   }
   if (current?.executable) {
     const actualFingerprint = await fingerprint(current.executable);
     if (current.fingerprint && actualFingerprint !== current.fingerprint) {
-      return { name, displayName: provider.displayName, purpose: provider.purpose, health: "error", requiredVersion: provider.version, executable: current.executable, source: "managed", fingerprint: actualFingerprint, message: "The managed provider executable fingerprint changed after activation and was rejected.", remediation: [`Run engineering-intelligence providers repair ${name}.`], checkedAt: new Date().toISOString() };
+      return { name, displayName: provider.displayName, purpose: provider.purpose, health: "error", requiredVersion: provider.version, executable: current.executable, source: "managed", fingerprint: actualFingerprint, message: "The managed provider executable fingerprint changed after activation and was rejected.", remediation: [`Run graphward providers repair ${name}.`], checkedAt: new Date().toISOString() };
     }
     const activeStatus = await probeExecutable(name, current.executable, "managed", runner);
     if (activeStatus) return activeStatus;
@@ -121,7 +119,7 @@ export async function providerStatus(name: ProviderName, options: { providerHome
     health: "missing",
     requiredVersion: provider.version,
     message: `${provider.displayName} is not installed or did not pass its version handshake.`,
-    remediation: ["Install uv from https://docs.astral.sh/uv/.", `Run engineering-intelligence providers install ${name}.`],
+    remediation: ["Install uv from https://docs.astral.sh/uv/.", `Run graphward providers install ${name}.`],
     checkedAt: new Date().toISOString(),
   };
 }
@@ -169,7 +167,7 @@ async function withLock<T>(providerHome: string, work: () => Promise<T>, timeout
       break;
     } catch {
       if (Date.now() - startTime > timeoutMs) {
-        throw new Error(`Another EI provider operation holds ${lockPath}. Retry after it finishes.`);
+        throw new Error(`Another GraphWard provider operation holds ${lockPath}. Retry after it finishes.`);
       }
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
@@ -254,10 +252,10 @@ export async function installProvider(name: ProviderName, options: InstallProvid
         purpose: provider.purpose,
         health: "unsupported",
         requiredVersion: provider.version,
-        message: "uv is required and was not found; EI requires uv to manage Graphify and CCE tools.",
+        message: "uv is required and was not found; GraphWard requires uv to manage Graphify and CCE tools.",
         remediation: [
           "Install uv with: curl -LsSf https://astral.sh/uv/install.sh | sh (macOS/Linux) or brew install uv",
-          `Then run: engineering-intelligence providers install ${name}`,
+          `Then run: graphward providers install ${name}`,
         ],
         checkedAt: new Date().toISOString(),
       };
@@ -338,7 +336,7 @@ export async function readProviderManifest(root: string): Promise<ProjectProvide
 
 export async function prepareProviders(root: string, options: PrepareProvidersOptions & { runner?: ProcessRunner } = {}): Promise<PrepareProvidersResult> {
   if (!options.dryRun) await ensureProviderCacheIgnored(root);
-  const config = await loadEiConfig(root);
+  const config = await loadGwConfig(root);
   const policy: ProviderPolicy = options.policy ?? config.providers.policy ?? "auto";
   const offline = options.offline ?? config.providers.offline ?? false;
   const requireProviders = options.requireProviders ?? config.providers.requireProviders ?? false;

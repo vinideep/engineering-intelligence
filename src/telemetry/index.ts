@@ -26,7 +26,7 @@ export interface SessionSample {
   contextUsed: boolean;   // did the agent call get_context this session?
 }
 
-const DIR = ".engineering-intelligence/telemetry";
+const DIR = ".graphward/telemetry";
 const LOG = `${DIR}/sessions.jsonl`;
 
 function num(v: unknown): number {
@@ -78,7 +78,7 @@ export async function recordFromTranscript(root: string, transcriptPath: string,
 }
 
 async function ensureGitignored(root: string): Promise<void> {
-  const p = path.join(root, ".engineering-intelligence", ".gitignore");
+  const p = path.join(root, ".graphward", ".gitignore");
   let existing = "";
   try { existing = await readFile(p, "utf8"); } catch { /* new */ }
   if (!existing.includes("telemetry/")) {

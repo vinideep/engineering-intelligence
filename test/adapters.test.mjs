@@ -8,10 +8,10 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   const ides = ["antigravity", "antigravity-cli", "codex", "claude-code", "cursor", "github-copilot", "gemini-cli", "commandcode", "generic"];
   const files = await renderAdapters(ides);
   const paths = new Set(files.map((item) => item.path));
-  assert.ok(paths.has(".agents/workflows/initialize-engineering-intelligence.md"));
+  assert.ok(paths.has(".agents/workflows/initialize-graphward.md"));
   assert.ok(paths.has(".agents/workflows/map-architecture.md"));
   assert.ok(paths.has(".agents/workflows/analyze-impact.md"));
-  assert.ok(paths.has(".agents/workflows/sync-engineering-intelligence.md"));
+  assert.ok(paths.has(".agents/workflows/sync-graphward.md"));
   assert.ok(paths.has(".agents/workflows/scope-requirement.md"));
   assert.ok(paths.has(".agents/workflows/discover-codebase.md"));
   assert.ok(paths.has(".agents/workflows/create-project.md"));
@@ -27,25 +27,25 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.ok(paths.has(".agents/agents/security-officer/agent.md"));
   assert.ok(paths.has(".agents/agents/site-reliability-engineer/agent.md"));
   assert.ok(paths.has("AGENTS.md"));
-  assert.ok(paths.has(".claude/commands/engineering-intelligence.md"));
+  assert.ok(paths.has(".claude/commands/graphward.md"));
   assert.ok(paths.has(".claude/commands/map-architecture.md"));
   assert.ok(paths.has(".claude/commands/grill-me.md"));
   assert.ok(paths.has(".claude/commands/tdd.md"));
   assert.ok(paths.has(".cursor/commands/scope-requirement.md"));
-  assert.ok(paths.has(".cursor/commands/initialize-engineering-intelligence.md"));
+  assert.ok(paths.has(".cursor/commands/initialize-graphward.md"));
   assert.ok(paths.has(".cursor/commands/analyze-impact.md"));
   assert.ok(paths.has(".cursor/commands/handoff.md"));
   assert.ok(paths.has(".cursor/commands/design-an-interface.md"));
-  assert.ok(paths.has(".github/prompts/engineering-intelligence.prompt.md"));
+  assert.ok(paths.has(".github/prompts/graphward.prompt.md"));
   assert.ok(paths.has(".github/prompts/review-engineering-change.prompt.md"));
   assert.ok(paths.has(".github/prompts/tdd.prompt.md"));
-  assert.ok(paths.has(".gemini/commands/initialize-engineering-intelligence.toml"));
-  assert.ok(paths.has(".gemini/commands/sync-engineering-intelligence.toml"));
+  assert.ok(paths.has(".gemini/commands/initialize-graphward.toml"));
+  assert.ok(paths.has(".gemini/commands/sync-graphward.toml"));
   assert.ok(paths.has(".gemini/commands/scope-requirement.toml"));
   assert.ok(paths.has(".gemini/commands/grill-me.toml"));
-  assert.ok(paths.has(".agents/skills/sync-engineering-intelligence/SKILL.md"));
-  assert.ok(paths.has(".agents/workflows/sync-engineering-intelligence.md"));
-  assert.ok(paths.has(".commandcode/skills/engineering-intelligence-skill/SKILL.md"));
+  assert.ok(paths.has(".agents/skills/sync-graphward/SKILL.md"));
+  assert.ok(paths.has(".agents/workflows/sync-graphward.md"));
+  assert.ok(paths.has(".commandcode/skills/graphward-skill/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/aidlc-lifecycle-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/type-safety-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/database-migration-safety-engine/SKILL.md"));
@@ -54,8 +54,8 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.ok(paths.has(".commandcode/skills/environment-variable-auditor/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/llm-prompt-injection-guard/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/context-budget-optimizer/SKILL.md"));
-  assert.ok(paths.has(".commandcode/commands/initialize-engineering-intelligence.md"));
-  assert.ok(paths.has(".commandcode/commands/engineering-intelligence.md"));
+  assert.ok(paths.has(".commandcode/commands/initialize-graphward.md"));
+  assert.ok(paths.has(".commandcode/commands/graphward.md"));
   assert.ok(paths.has(".commandcode/commands/scope-requirement.md"));
   assert.match(files.find((item) => item.path === "AGENTS.md").content, /map-architecture/);
   // Modern Antigravity agents are Markdown files with frontmatter. The old
@@ -69,7 +69,7 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
   assert.match(orchestrator, /mainAgent: true/);
   assert.match(orchestrator, /subagent: true/);
   assert.match(orchestrator, /skills:\n  - skills\/session-handoff-engine/);
-  assert.match(orchestrator, /\.engineering-intelligence\/knowledge-base/);
+  assert.match(orchestrator, /\.graphward\/knowledge-base/);
   assert.match(orchestrator, /product-analyst/);
   const analyst = files.find((item) => item.path === ".agents/agents/product-analyst/agent.md").content;
   assert.match(analyst, /skills\/requirement-scoper/);
@@ -86,7 +86,7 @@ test("all V2 IDE adapters render internally valid native destinations and workfl
 test("CommandCode adapter writes native project skills and commands", async () => {
   const files = await renderAdapters(["commandcode"]);
   const paths = new Set(files.map((item) => item.path));
-  assert.ok(paths.has(".commandcode/skills/engineering-intelligence-skill/SKILL.md"));
+  assert.ok(paths.has(".commandcode/skills/graphward-skill/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/requirement-scoper/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/nfr-adr-governor/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/type-safety-engine/SKILL.md"));
@@ -94,10 +94,10 @@ test("CommandCode adapter writes native project skills and commands", async () =
   assert.ok(paths.has(".commandcode/skills/api-backward-compatibility-engine/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/contract-test-generator/SKILL.md"));
   assert.ok(paths.has(".commandcode/skills/dead-code-detector/SKILL.md"));
-  assert.ok(paths.has(".commandcode/commands/engineering-intelligence.md"));
+  assert.ok(paths.has(".commandcode/commands/graphward.md"));
   assert.ok(paths.has(".commandcode/commands/analyze-impact.md"));
   assert.ok(paths.has(".commandcode/commands/map-architecture.md"));
-  const implementation = files.find((item) => item.path === ".commandcode/commands/engineering-intelligence.md").content;
+  const implementation = files.find((item) => item.path === ".commandcode/commands/graphward.md").content;
   const mapping = files.find((item) => item.path === ".commandcode/commands/map-architecture.md").content;
   assert.match(implementation, /\$ARGUMENTS/);
   assert.doesNotMatch(mapping, /\$ARGUMENTS/);
@@ -107,12 +107,12 @@ test("CommandCode adapter writes native project skills and commands", async () =
 test("Gemini commands pass arguments only to input-driven workflows", async () => {
   const files = await renderAdapters(["gemini-cli"]);
   const get = (name) => files.find((item) => item.path.endsWith(`/${name}.toml`)).content;
-  assert.doesNotMatch(get("initialize-engineering-intelligence"), /\{\{args\}\}/);
+  assert.doesNotMatch(get("initialize-graphward"), /\{\{args\}\}/);
   assert.doesNotMatch(get("map-architecture"), /\{\{args\}\}/);
   assert.doesNotMatch(get("discover-codebase"), /\{\{args\}\}/);
-  assert.match(get("engineering-intelligence"), /\{\{args\}\}/);
+  assert.match(get("graphward"), /\{\{args\}\}/);
   assert.match(get("analyze-impact"), /\{\{args\}\}/);
-  assert.match(get("sync-engineering-intelligence"), /\{\{args\}\}/);
+  assert.match(get("sync-graphward"), /\{\{args\}\}/);
   assert.match(get("review-engineering-change"), /\{\{args\}\}/);
   assert.match(get("scope-requirement"), /\{\{args\}\}/);
   assert.match(get("create-project"), /\{\{args\}\}/);
@@ -124,12 +124,12 @@ test("Claude Code commands pass $ARGUMENTS and argument-hint only to input-drive
     files.find((item) => item.path === `.claude/commands/${name}.md`).content;
 
   // Request-driven workflows must forward the user's input and advertise a hint.
-  const implementation = get("engineering-intelligence");
+  const implementation = get("graphward");
   assert.match(implementation, /\$ARGUMENTS/);
   assert.match(implementation, /argument-hint: <implementation request>/);
   for (const name of [
     "analyze-impact",
-    "sync-engineering-intelligence",
+    "sync-graphward",
     "review-engineering-change",
     "scope-requirement",
     "create-project",
@@ -140,7 +140,7 @@ test("Claude Code commands pass $ARGUMENTS and argument-hint only to input-drive
   }
 
   // Non-input workflows stay verbatim with no placeholder injected.
-  for (const name of ["initialize-engineering-intelligence", "map-architecture", "discover-codebase"]) {
+  for (const name of ["initialize-graphward", "map-architecture", "discover-codebase"]) {
     assert.doesNotMatch(get(name), /\$ARGUMENTS/, `${name} should not inject arguments`);
     assert.doesNotMatch(get(name), /argument-hint:/, `${name} should not declare an argument hint`);
   }
@@ -163,12 +163,12 @@ test("Claude Code adapter generates skills index and workflow routing table with
 
   // Skills index covers all skills with one row each.
   assert.match(index, /backlog-decomposition-engine/);
-  assert.match(index, /engineering-intelligence-skill/);
+  assert.match(index, /graphward-skill/);
   assert.match(index, /\| Skill \| Purpose \|/);
 
   // Routing table maps every workflow to primary skills.
-  assert.match(routing, /engineering-intelligence/);
-  assert.match(routing, /engineering-intelligence-skill/);
+  assert.match(routing, /graphward/);
+  assert.match(routing, /graphward-skill/);
   assert.match(routing, /decompose-backlog/);
   assert.match(routing, /backlog-decomposition-engine/);
   assert.match(routing, /Primary Skills/);
@@ -179,11 +179,11 @@ test("Claude Code adapter generates skills index and workflow routing table with
 
   // Commands and skills carry literal runtime paths — aliases were removed because
   // they broke frontmatter parsing and produced glued tokens like `$EIknowledge-base/`.
-  const engCmd = files.find((item) => item.path === ".claude/commands/engineering-intelligence.md").content;
-  assert.match(engCmd, /\.engineering-intelligence\//, "command files must use literal runtime paths");
+  const engCmd = files.find((item) => item.path === ".claude/commands/graphward.md").content;
+  assert.match(engCmd, /\.graphward\//, "command files must use literal runtime paths");
 
   const skill = files.find((item) => item.path === ".claude/skills/aidlc-lifecycle-engine/SKILL.md").content;
-  assert.match(skill, /\.engineering-intelligence\/aidlc\//, "skill files must use literal runtime paths");
+  assert.match(skill, /\.graphward\/aidlc\//, "skill files must use literal runtime paths");
 
   // CLAUDE.md managed block directs AI to use the index and routing table.
   const claudeMd = files.find((item) => item.path === "CLAUDE.md").content;
@@ -227,7 +227,7 @@ test("rendered files contain no path-alias tokens", async () => {
 
 test("Claude Code commands keep argument-hint inside frontmatter", async () => {
   const files = await renderAdapters(["claude-code"]);
-  const cmd = files.find((item) => item.path === ".claude/commands/engineering-intelligence.md").content;
+  const cmd = files.find((item) => item.path === ".claude/commands/graphward.md").content;
   assert.ok(cmd.startsWith("---\n"), "command must open with frontmatter");
   const fm = cmd.match(/^---\n([\s\S]*?)\n---\n/)[1];
   assert.match(fm, /argument-hint:/, "argument-hint must live inside the frontmatter block");
@@ -243,11 +243,10 @@ test("CLAUDE.md skill count is derived from SKILL_NAMES, not hardcoded", async (
     new RegExp(`description of all ${SKILL_NAMES.length} skills`),
     `CLAUDE.md must report the real skill count (${SKILL_NAMES.length})`,
   );
-  // Guard against the count drifting out of sync with the template payload again.
-  assert.ok(
-    !/description of all 44 skills/.test(claudeMd),
-    "CLAUDE.md must not carry a stale hardcoded '44 skills' count",
-  );
+  // Guard against ANY other count appearing (46 shipped stale for a release).
+  for (const match of claudeMd.matchAll(/description of all (\d+) skills/g)) {
+    assert.equal(Number(match[1]), SKILL_NAMES.length, "every skill count in CLAUDE.md is the real one");
+  }
 });
 
 test("backlog decomposition and delivery ship as skills and commands for Claude Code", async () => {
@@ -294,7 +293,7 @@ test("Claude Code adapter generates SKILL-BRIEF.md for every skill, substantiall
   const paths = new Set(files.map((item) => item.path));
 
   // Every skill must have both a brief and a full skill file.
-  const skillNames = ["engineering-intelligence-skill", "change-detection-engine", "impact-analysis-engine", "context-budget-optimizer", "backlog-decomposition-engine"];
+  const skillNames = ["graphward-skill", "change-detection-engine", "impact-analysis-engine", "context-budget-optimizer", "backlog-decomposition-engine"];
   for (const name of skillNames) {
     assert.ok(paths.has(`.claude/skills/${name}/SKILL-BRIEF.md`), `${name}/SKILL-BRIEF.md must exist`);
     assert.ok(paths.has(`.claude/skills/${name}/SKILL.md`), `${name}/SKILL.md must exist`);
@@ -311,7 +310,7 @@ test("Claude Code adapter generates SKILL-BRIEF.md for every skill, substantiall
   }
 
   // Briefs contain the loading notice enforcing tier-3 retrieval.
-  const brief = files.find((item) => item.path === ".claude/skills/engineering-intelligence-skill/SKILL-BRIEF.md").content;
+  const brief = files.find((item) => item.path === ".claude/skills/graphward-skill/SKILL-BRIEF.md").content;
   assert.match(brief, /Load `SKILL\.md` from this directory before executing/);
 
   // Briefs contain the overview paragraph (not just frontmatter).
@@ -333,12 +332,12 @@ test("SmartCrusher strips version from frontmatter and preserves semantic conten
   }
 
   // Semantic content must be preserved: description is still in frontmatter.
-  const skill = files.find((item) => item.path === ".claude/skills/engineering-intelligence-skill/SKILL.md");
+  const skill = files.find((item) => item.path === ".claude/skills/graphward-skill/SKILL.md");
   assert.match(skill.content, /description:/, "description field must survive SmartCrush");
   assert.match(skill.content, /name:/, "name field must survive SmartCrush");
 
   // Workflows (commands) also must not have version: (they never had it, but no regression).
-  const cmd = files.find((item) => item.path === ".claude/commands/engineering-intelligence.md");
+  const cmd = files.find((item) => item.path === ".claude/commands/graphward.md");
   assert.doesNotMatch(cmd.content, /^version:/m, "commands must not contain version: key");
 });
 
@@ -378,11 +377,11 @@ test("question-file-engine skill ships for Claude Code with correct content and 
   const routing = files.find((item) => item.path === ".claude/WORKFLOW-ROUTING.md").content;
   assert.match(routing, /question-file-engine/, "question-file-engine must appear in WORKFLOW-ROUTING.md");
 
-  // Depth level and never-vibe-code are in engineering-intelligence-skill.
-  const eiSkill = files.find((item) => item.path === ".claude/skills/engineering-intelligence-skill/SKILL.md").content;
-  assert.match(eiSkill, /Minimal/i, "engineering-intelligence-skill must define Minimal depth level");
-  assert.match(eiSkill, /Comprehensive/i, "engineering-intelligence-skill must define Comprehensive depth level");
-  assert.match(eiSkill, /vibe.?code/i, "engineering-intelligence-skill must include never-vibe-code principle");
+  // Depth level and never-vibe-code are in graphward-skill.
+  const eiSkill = files.find((item) => item.path === ".claude/skills/graphward-skill/SKILL.md").content;
+  assert.match(eiSkill, /Minimal/i, "graphward-skill must define Minimal depth level");
+  assert.match(eiSkill, /Comprehensive/i, "graphward-skill must define Comprehensive depth level");
+  assert.match(eiSkill, /vibe.?code/i, "graphward-skill must include never-vibe-code principle");
 
   // scope-requirement and decompose-backlog commands reference question-file-engine.
   const scopeCmd = files.find((item) => item.path === ".claude/commands/scope-requirement.md").content;
@@ -399,8 +398,8 @@ test("antigravity-cli adapter writes modern Markdown agents to .agents/ (plural)
   assert.ok(paths.has(".agents/agents/engineering-orchestrator/agent.md"));
   assert.ok(paths.has(".agents/agents/change-agent/agent.md"));
   assert.ok(paths.has(".agents/agents/product-analyst/agent.md"));
-  assert.ok(paths.has(".agents/skills/engineering-intelligence-skill/SKILL.md"));
-  assert.ok(paths.has(".agents/workflows/engineering-intelligence.md"));
+  assert.ok(paths.has(".agents/skills/graphward-skill/SKILL.md"));
+  assert.ok(paths.has(".agents/workflows/graphward.md"));
   assert.ok(!paths.has(".agents/agents/engineering-orchestrator/agent.json"));
   assert.ok(!paths.has(".agents/agents/engineering-orchestrator/prompt.md"));
   assert.ok(!paths.has(".agent/agents/engineering-orchestrator/agent.md"), "CLI must not write agents to .agent/ (singular)");
@@ -413,16 +412,16 @@ test("Cursor adapter renders .cursor/hooks.json wired to the cursor host", async
   assert.ok(hooks, "cursor must ship .cursor/hooks.json");
   const parsed = JSON.parse(hooks.content);
   assert.equal(parsed.version, 1);
-  assert.match(parsed.hooks.stop[0].command, /engineering-intelligence hook stop --host cursor/);
+  assert.match(parsed.hooks.stop[0].command, /graphward@[^ ]+ hook stop --host cursor/);
   // Shared config seeded for cursor too.
-  assert.ok(files.some((f) => f.path === ".engineering-intelligence/ei.config.json"), "cursor must seed ei.config.json");
+  assert.ok(files.some((f) => f.path === ".graphward/gw.config.json"), "cursor must seed gw.config.json");
   assert.deepEqual(await validateRender(["cursor"]), []);
 });
 
-test("Installing claude-code + cursor together dedups ei.config.json without conflict", async () => {
+test("Installing claude-code + cursor together dedups gw.config.json without conflict", async () => {
   const files = await renderAdapters(["claude-code", "cursor"]);
-  const configs = files.filter((f) => f.path === ".engineering-intelligence/ei.config.json");
-  assert.equal(configs.length, 1, "ei.config.json must be merged to a single entry");
+  const configs = files.filter((f) => f.path === ".graphward/gw.config.json");
+  assert.equal(configs.length, 1, "gw.config.json must be merged to a single entry");
   assert.deepEqual([...configs[0].owners].sort(), ["claude-code", "cursor"]);
   // Both IDE-specific hook files coexist.
   assert.ok(files.some((f) => f.path === ".claude/settings.json"));

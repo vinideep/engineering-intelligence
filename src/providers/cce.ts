@@ -83,7 +83,7 @@ async function sourceHashes(manifestPath: string): Promise<Record<string, string
 }
 
 /**
- * Initialize and index CCE in an EI-owned disposable project. `cce init` is
+ * Initialize and index CCE in an GraphWard-owned disposable project. `cce init` is
  * intentionally never run in the user's repository because upstream may add
  * hooks, MCP configuration, or agent instructions.
  */
@@ -94,7 +94,7 @@ export async function runCceIndex(
   const runner = options.runner ?? runProcess;
   const status = await providerStatus("cce", { runner, providerHome: options.providerHome });
   if (status.health !== "healthy" || !status.executable) {
-    return { ok: false, degraded: true, status, message: `${status.message} EI native scoped retrieval remains active.` };
+    return { ok: false, degraded: true, status, message: `${status.message} GraphWard native scoped retrieval remains active.` };
   }
   const canonicalRoot = toCanonicalPath(root);
   options.onProgress?.("Syncing provider workspace for CCE...");
@@ -124,8 +124,8 @@ export async function runCceIndex(
     CCE_FASTEMBED_CACHE_PATH: modelCache,
   };
   // Do not call `cce init`: upstream initialization installs its own hooks,
-  // instructions, and MCP registration. EI needs only the local index, so it
-  // invokes the indexer directly against a nested EI-owned mirror.
+  // instructions, and MCP registration. GraphWard needs only the local index, so it
+  // invokes the indexer directly against a nested GraphWard-owned mirror.
   options.onProgress?.("Building Code Context Engine local vector index (this may take a moment)...");
   const startTime = Date.now();
   let lastProgress = Date.now();
@@ -166,7 +166,7 @@ export async function runCceIndex(
     clearInterval(ticker);
   }
   if (index.exitCode !== 0) {
-    return { ok: false, degraded: true, status: { ...status, health: "error", message: `CCE indexing failed: ${(index.stderr || index.error || "unknown error").trim().slice(-1000)}` }, workspaceHash: workspace.workspaceHash, message: "CCE index was not refreshed; EI native scoped retrieval remains active." };
+    return { ok: false, degraded: true, status: { ...status, health: "error", message: `CCE indexing failed: ${(index.stderr || index.error || "unknown error").trim().slice(-1000)}` }, workspaceHash: workspace.workspaceHash, message: "CCE index was not refreshed; GraphWard native scoped retrieval remains active." };
   }
   await writeAtomic(path.join(root, CCE_INITIALIZED), { providerVersion: PROVIDER_COMPATIBILITY.cce.version, initializedAt: new Date().toISOString(), mode: "index-only" });
   const manifest: CceRunManifest = {
@@ -180,7 +180,7 @@ export async function runCceIndex(
     storagePath,
   };
   await writeAtomic(path.join(root, CCE_RUN_PATH), manifest);
-  return { ok: true, degraded: false, status, workspaceHash: workspace.workspaceHash, manifestPath: CCE_RUN_PATH, message: "CCE local retrieval index is current for EI's approved source universe." };
+  return { ok: true, degraded: false, status, workspaceHash: workspace.workspaceHash, manifestPath: CCE_RUN_PATH, message: "CCE local retrieval index is current for GraphWard's approved source universe." };
 }
 
 function normalizeCandidatePath(root: string, workspace: string, cceProject: string, raw: string): string | undefined {
@@ -190,7 +190,7 @@ function normalizeCandidatePath(root: string, workspace: string, cceProject: str
     if (value.startsWith("../workspace/")) return value.slice("../workspace/".length);
     if (value.startsWith("workspace/")) return value.slice("workspace/".length);
     // CCE reports ordinary hits relative to the indexed directory, even though
-    // its process cwd is the isolated EI provider project.
+    // its process cwd is the isolated GraphWard provider project.
     if (!value.startsWith("../")) return value;
   }
   let absolute: string;
@@ -345,5 +345,5 @@ export async function searchCodeContext(
     const fallback = await nativeScopedSearch(root, query, approvedPaths, topK);
     return { chunks: fallback, provider: "native", providerHealth: status.health, fallbackUsed: true, staleRejected, scopeRejected, message: "CCE returned no current in-scope spans; native scoped retrieval used." };
   }
-  return { chunks, provider: "cce", providerHealth: status.health, fallbackUsed: false, staleRejected, scopeRejected, message: `CCE returned ${chunks.length} current source span(s) inside the EI-approved scope.` };
+  return { chunks, provider: "cce", providerHealth: status.health, fallbackUsed: false, staleRejected, scopeRejected, message: `CCE returned ${chunks.length} current source span(s) inside the GraphWard-approved scope.` };
 }

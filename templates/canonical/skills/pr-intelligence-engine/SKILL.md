@@ -10,11 +10,11 @@ Produce evidence-backed PR artifacts that accelerate review cycles and improve c
 
 ## Inputs
 
-- Change records from `.engineering-intelligence/changes/CHG-XXX-*.md`
+- Change records from `.graphward/changes/CHG-XXX-*.md`
 - Git diff or commit range for the PR
-- Ownership mapping from `git-intelligence-engine` (`.engineering-intelligence/reports/GIT-intelligence.md`)
+- Ownership mapping from `git-intelligence-engine` (`.graphward/reports/GIT-intelligence.md`)
 - Impact report from `impact-analysis-engine` (when available)
-- Architecture decisions from `.engineering-intelligence/knowledge-base/`
+- Architecture decisions from `.graphward/knowledge-base/`
 
 ## Procedure
 
@@ -78,8 +78,8 @@ Produce evidence-backed PR artifacts that accelerate review cycles and improve c
    - Suggest merge order if dependencies exist between splits
 
 6. **Check Architecture Compliance** — Compare changes against:
-   - `.engineering-intelligence/knowledge-base/05-architecture-decisions.md` (ADRs)
-   - `.engineering-intelligence/knowledge-base/06-conventions-and-standards.md`
+   - `.graphward/knowledge-base/05-architecture-decisions.md` (ADRs)
+   - `.graphward/knowledge-base/06-conventions-and-standards.md`
    - Module boundary rules from `dependency-graph.json`
 
    Flag violations with evidence:
@@ -121,7 +121,7 @@ Generate the following artifacts (do not write to the repository — present to 
 ## Cross-References
 
 - Depends on: `git-intelligence-engine` (ownership mapping), `impact-analysis-engine` (impact reports), `change-detection-engine` (change records)
-- Used by: `engineering-intelligence-skill`
+- Used by: `graphward-skill`
 - Consumed by: `engineering-change-review`
 
 This capability is analytical only. It must not modify product code.

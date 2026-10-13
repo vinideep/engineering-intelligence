@@ -16,11 +16,11 @@ export function toCanonicalPath(p: string): string {
   return path.resolve(p);
 }
 
-export const PROVIDER_DIR = ".engineering-intelligence/providers";
+export const PROVIDER_DIR = ".graphward/providers";
 export const PROVIDER_WORKSPACE = `${PROVIDER_DIR}/workspace`;
 
 export async function ensureProviderCacheIgnored(root: string): Promise<void> {
-  const ignorePath = path.join(root, ".engineering-intelligence", ".gitignore");
+  const ignorePath = path.join(root, ".graphward", ".gitignore");
   let current = "";
   try { current = await readFile(ignorePath, "utf8"); } catch { /* create below */ }
   const lines = current.split("\n").map((line) => line.trim());
@@ -98,7 +98,7 @@ export interface ProviderWorkspaceResult {
 }
 
 /**
- * Mirror only policy-approved text/code files into an EI-owned provider scope.
+ * Mirror only policy-approved text/code files into an GraphWard-owned provider scope.
  * Third-party tools can mutate this mirror without touching the user's source,
  * hooks, MCP configuration, or agent instructions.
  */
@@ -107,7 +107,7 @@ export async function syncProviderWorkspace(root: string, workspaceRelative = PR
   await ensureProviderCacheIgnored(canonicalRoot);
   const normalizedRelative = workspaceRelative.replace(/\\/g, "/").replace(/^\.\//, "");
   if (normalizedRelative !== PROVIDER_DIR && !normalizedRelative.startsWith(`${PROVIDER_DIR}/`)) {
-    throw new Error("Provider workspaces must remain inside EI's ignored provider directory.");
+    throw new Error("Provider workspaces must remain inside GraphWard's ignored provider directory.");
   }
   const workspace = toCanonicalPath(path.join(canonicalRoot, normalizedRelative));
   const manifestPath = path.join(workspace, ".ei-source-manifest.json");

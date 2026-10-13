@@ -18,7 +18,7 @@ import { resolvePendingCalls, buildGlobalSymbolTable } from "../dist/graph/parse
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
-const GRAPH_PATH = path.join(REPO_ROOT, ".engineering-intelligence", "graph", "dependency-graph.json");
+const GRAPH_PATH = path.join(REPO_ROOT, ".graphward", "graph", "dependency-graph.json");
 
 // Clean up any existing graph before tests
 if (existsSync(GRAPH_PATH)) {

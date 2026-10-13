@@ -1,12 +1,12 @@
 /**
- * Engineering Intelligence OS — Benchmark Tasks Catalog
+ * GraphWard — Benchmark Tasks Catalog
  */
 
 export const BENCHMARK_TASKS = [
   {
     id: "task_01_refund_orchestrator",
     name: "Distributed Idempotent Refund Orchestration",
-    prompt: `/engineering-intelligence implement idempotent order refund orchestration in src/orders/refund.ts and comprehensive tests in test/refunds.test.mjs.
+    prompt: `/graphward implement idempotent order refund orchestration in src/orders/refund.ts and comprehensive tests in test/refunds.test.mjs.
 
 Repository Signatures:
 - db.getOrder(orderId: string): Order | undefined

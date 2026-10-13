@@ -12,7 +12,7 @@ export async function generateExperimentCandidates(
   root: string,
   options: CandidateOptions = {},
 ): Promise<CandidateOpportunity[]> {
-  const graphPath = path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json");
+  const graphPath = path.join(root, ".graphward", "graph", "dependency-graph.json");
   let graph = await loadExistingGraph(graphPath);
 
   if (!graph) {

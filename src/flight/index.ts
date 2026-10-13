@@ -3,6 +3,8 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { analyzeImpact } from "../graph/index.js";
 import { runProcessSync } from "../process/index.js";
+import { gitStatusPathsSync, parseNameOnly } from "../process/git-paths.js";
+import { SOURCE_EXT_RE } from "../graph/source-exts.js";
 
 // ---------------------------------------------------------------------------
 // The Agent Flight Recorder — accountability for AI code changes.
@@ -50,22 +52,14 @@ export interface FlightRecord {
   snapshots?: Record<string, FlightFileSnapshot>;
 }
 
-const SOURCE_EXT_RE = /\.(ts|tsx|js|mjs|cjs|py|go|rs|rb|java|kt)$/;
 
 function flightDir(root: string): string {
-  return path.join(root, ".engineering-intelligence", "flight");
+  return path.join(root, ".graphward", "flight");
 }
 
 function git(root: string, args: string[]): string | null {
   const result = runProcessSync({ command: "git", args, cwd: root, timeoutMs: 15_000 });
   return result.exitCode === 0 ? result.stdout.trim() : null;
-}
-
-// Raw (untrimmed) git output — required for `status --porcelain`, whose fixed
-// 2-char status column would be corrupted by trimming the leading space.
-function gitRaw(root: string, args: string[]): string | null {
-  const result = runProcessSync({ command: "git", args, cwd: root, timeoutMs: 15_000 });
-  return result.exitCode === 0 ? result.stdout : null;
 }
 
 function head(root: string): string | null {
@@ -74,16 +68,7 @@ function head(root: string): string | null {
 
 // Files with uncommitted (working tree + staged) modifications, source only.
 function dirtyFiles(root: string): string[] {
-  const porcelain = gitRaw(root, ["status", "--porcelain", "-uall"]);
-  if (porcelain === null) return [];
-  const out: string[] = [];
-  for (const line of porcelain.split("\n")) {
-    const raw = line.slice(3).trim();
-    if (!raw) continue;
-    const f = raw.includes(" -> ") ? raw.split(" -> ")[1] : raw;
-    if (SOURCE_EXT_RE.test(f)) out.push(f);
-  }
-  return out;
+  return (gitStatusPathsSync(root) ?? []).filter((f) => SOURCE_EXT_RE.test(f));
 }
 
 function norm(p: string): string {
@@ -245,11 +230,12 @@ function actualChangesSince(root: string, record: FlightRecord): string[] {
 
   const current = head(root);
   if (record.baselineCommit && current && current !== record.baselineCommit) {
-    const diff = git(root, ["diff", "--name-only", record.baselineCommit, current]);
+    // `--relative`: paths relative to (and scoped to) the analysed root, not the
+    // repository top level. `--no-renames`: a moved file reports both paths.
+    const diff = git(root, ["diff", "--name-only", "--relative", "--no-renames", record.baselineCommit, current]);
     if (diff) {
-      for (const f of diff.split("\n")) {
-        const t = f.trim();
-        if (t && SOURCE_EXT_RE.test(t)) changed.add(norm(t));
+      for (const f of parseNameOnly(diff)) {
+        if (SOURCE_EXT_RE.test(f)) changed.add(norm(f));
       }
     }
   }

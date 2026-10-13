@@ -1,7 +1,9 @@
 import { readFile, stat } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import type { GraphNode, GraphEdge } from "../schema.js";
 import { LITERAL_TOKEN, lineOf, literalAt, maskSource } from "./scan.js";
+import { JS_FAMILY_EXTS } from "../source-exts.js";
 
 export interface ImportResult {
   nodes: GraphNode[];
@@ -40,20 +42,6 @@ async function resolveRelative(specifier: string, fromFile: string, root: string
   return null;
 }
 
-// Resolve a JS/TS specifier to a stable node id
-function resolveSpecifier(specifier: string, sourceFile: string, root: string): { id: string; kind: "module" | "package" | "external"; label: string; filePath?: string } {
-  if (specifier.startsWith(".")) {
-    // Internal module — resolve relative to source file
-    const resolved = path.relative(root, path.resolve(path.dirname(sourceFile), specifier)).replace(/\\/g, "/");
-    // Normalise: strip extensions for stability
-    const base = resolved.replace(/\.(ts|tsx|js|mjs|cjs)$/, "");
-    return { id: `module:${base}`, kind: "module", label: path.basename(base), filePath: resolved };
-  }
-  // External package: strip subpath (lodash/merge → lodash; @scope/pkg/sub → @scope/pkg)
-  const parts = specifier.startsWith("@") ? specifier.split("/").slice(0, 2).join("/") : specifier.split("/")[0];
-  return { id: `pkg:${parts}`, kind: "package", label: parts };
-}
-
 /**
  * A node for a file we are actually reading. The id stays extension-stripped so
  * it is stable across `./x` and `./x.js` references, but `path` carries the REAL
@@ -76,15 +64,18 @@ function moduleNodeFor(sourceFile: string, root: string): GraphNode {
 
 /**
  * Import/export/require/dynamic-import forms, matched against MASKED source so
- * comments and string bodies cannot contribute edges. `[\s\S]*?` spans newlines,
- * which is what makes multi-line imports visible.
+ * comments and string bodies cannot contribute edges. The clause spans newlines
+ * (multi-line imports) but never crosses `;` or another `import`/`export`
+ * keyword: otherwise `export type A = 1;\nexport { b } from "./b"` matched from
+ * the FIRST `export`, and the `export type` in that span made `./b` type-only.
  */
+const CLAUSE = String.raw`((?:(?!\bimport\b|\bexport\b)[^;])*?)`;
 const JS_PATTERN_SOURCES: { source: string; kind: "static" | "reexport" | "require" | "dynamic" }[] = [
   // import ... from "x"  /  import "x"
-  { source: String.raw`\bimport\b([\s\S]*?)\bfrom\s*${LITERAL_TOKEN}`, kind: "static" },
+  { source: String.raw`\bimport\b${CLAUSE}\bfrom\s*${LITERAL_TOKEN}`, kind: "static" },
   { source: String.raw`\bimport\s*${LITERAL_TOKEN}`, kind: "static" },
   // export ... from "x"
-  { source: String.raw`\bexport\b([\s\S]*?)\bfrom\s*${LITERAL_TOKEN}`, kind: "reexport" },
+  { source: String.raw`\bexport\b${CLAUSE}\bfrom\s*${LITERAL_TOKEN}`, kind: "reexport" },
   // require("x")
   { source: String.raw`\brequire\s*\(\s*${LITERAL_TOKEN}\s*\)`, kind: "require" },
   // import("x")
@@ -119,7 +110,7 @@ function collectJSMatches(source: ReturnType<typeof maskSource>): RawMatch[] {
       if (!specifier || specifier.startsWith("node:")) continue;
       out.push({
         specifier,
-        typeOnly: /^\s*type\b/.test(clause) || /\bexport\s+type\b/.test(match[0]),
+        typeOnly: /^\s*type\b/.test(clause),
         line: lineOf(source.masked, match.index),
         kind,
       });
@@ -219,6 +210,18 @@ async function extractJSImports(filePath: string, root: string): Promise<ImportR
   return { nodes, edges, unknowns };
 }
 
+/**
+ * A Python module path names either `<p>.py` or a package `<p>/__init__.py`; the
+ * package's own node id is `module:<p>/__init__`, so an edge to bare `<p>` would
+ * point at nothing.
+ */
+function resolvePythonModule(root: string, modPath: string): string {
+  if (!modPath) return "__init__";
+  if (existsSync(path.join(root, `${modPath}.py`))) return modPath;
+  if (existsSync(path.join(root, modPath, "__init__.py"))) return `${modPath}/__init__`;
+  return modPath;
+}
+
 async function extractPythonImports(filePath: string, root: string): Promise<ImportResult> {
   let content: string;
   try {
@@ -252,11 +255,11 @@ async function extractPythonImports(filePath: string, root: string): Promise<Imp
     if (relativeMatch) {
       const dots = relativeMatch[1];
       const mod = relativeMatch[2];
-      // relative import — treat as internal module
+      // relative import — treat as internal module. `rel` is always `/`-separated.
       const levels = dots.length;
-      const parts = rel.split(path.sep);
+      const parts = rel.split("/");
       const base = parts.slice(0, Math.max(0, parts.length - levels)).join("/");
-      targetName = mod ? `${base}/${mod.replace(/\./g, "/")}` : base;
+      targetName = resolvePythonModule(root, mod ? [base, mod.replace(/\./g, "/")].filter(Boolean).join("/") : base);
       internal = true;
     }
 
@@ -271,7 +274,7 @@ async function extractPythonImports(filePath: string, root: string): Promise<Imp
       const importMatch = line.match(/^import\s+([\w., ]+)/);
       if (importMatch) {
         for (const part of importMatch[1].split(",")) {
-          const name = part.trim().split(".")[0];
+          const name = part.trim().replace(/\s+as\s+\w+$/, "").split(".")[0];
           if (name) {
             const id = `pkg:${name}`;
             nodes.push({ id, kind: "package", label: name, confidence: "verified", metadata: {}, evidence: [] });
@@ -345,6 +348,41 @@ async function extractGoImports(filePath: string, root: string): Promise<ImportR
   return { nodes, edges };
 }
 
+/** Directory that holds the children of the module defined by `rel` (no ext). */
+function rustModuleDir(rel: string): string {
+  const base = path.posix.basename(rel);
+  const dir = path.posix.dirname(rel) === "." ? "" : path.posix.dirname(rel);
+  return base === "mod" || base === "lib" || base === "main" ? dir : (dir ? `${dir}/${base}` : base);
+}
+
+/**
+ * Where a `use crate::` / `super::` / `self::` path is anchored. `crate::` is the
+ * crate root (nearest ancestor directory holding `lib.rs` or `main.rs`), not the
+ * importing file's directory.
+ */
+function rustAnchorDir(root: string, rel: string, anchor: "crate" | "super" | "self"): string {
+  const own = rustModuleDir(rel);
+  if (anchor === "self") return own;
+  if (anchor === "super") {
+    const parent = path.posix.dirname(own);
+    return parent === "." ? "" : parent;
+  }
+  let dir = path.posix.dirname(rel) === "." ? "" : path.posix.dirname(rel);
+  for (;;) {
+    if (existsSync(path.join(root, dir, "lib.rs")) || existsSync(path.join(root, dir, "main.rs"))) return dir;
+    if (!dir) return path.posix.dirname(rel) === "." ? "" : path.posix.dirname(rel);
+    const up = path.posix.dirname(dir);
+    dir = up === "." ? "" : up;
+  }
+}
+
+/** `<p>.rs` or `<p>/mod.rs` — the id must match the defining file's node. */
+function resolveRustModule(root: string, modPath: string): string {
+  if (existsSync(path.join(root, `${modPath}.rs`))) return modPath;
+  if (existsSync(path.join(root, modPath, "mod.rs"))) return `${modPath}/mod`;
+  return modPath;
+}
+
 async function extractRustImports(filePath: string, root: string): Promise<ImportResult> {
   let content: string;
   try {
@@ -389,11 +427,11 @@ async function extractRustImports(filePath: string, root: string): Promise<Impor
       const root_ = useStmt[1];
       if (RUST_INTERNAL.has(root_)) {
         // Internal module — extract path after crate:: / super:: / self::
-        const internalPath = line.match(/^(?:pub\s+)?use\s+(?:crate|super|self)::([\w:]+)/);
+        const internalPath = line.match(/^(?:pub\s+)?use\s+(crate|super|self)::([\w:]+)/);
         if (internalPath) {
-          const modPath = internalPath[1].split("::")[0];
-          const dir = rel.split("/").slice(0, -1).join("/");
-          const id = dir ? `module:${dir}/${modPath}` : `module:${modPath}`;
+          const modPath = internalPath[2].split("::")[0];
+          const base = rustAnchorDir(root, rel, internalPath[1] as "crate" | "super" | "self");
+          const id = `module:${resolveRustModule(root, base ? `${base}/${modPath}` : modPath)}`;
           nodes.push({ id, kind: "module", label: modPath, confidence: "verified", metadata: {}, evidence: [] });
           edges.push({ from: sourceId, to: id, relation: "imports", confidence: "verified", metadata: {}, evidence: [`${path.relative(root, filePath)}:${i + 1}`] });
         }
@@ -499,7 +537,7 @@ async function extractJavaImports(filePath: string, root: string): Promise<Impor
 
 export async function extractImports(filePath: string, root: string): Promise<ImportResult> {
   const ext = path.extname(filePath).toLowerCase();
-  if ([".ts", ".tsx", ".js", ".mjs", ".cjs"].includes(ext)) {
+  if (JS_FAMILY_EXTS.has(ext)) {
     return extractJSImports(filePath, root);
   }
   if (ext === ".py") {

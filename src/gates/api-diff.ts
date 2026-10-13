@@ -8,6 +8,7 @@
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { LITERAL_TOKEN, literalAt, maskSource } from "../graph/parsers/scan.js";
 import {
   gitAvailable,
   gitChangedFiles,
@@ -42,13 +43,21 @@ function isOpenApiFile(rel: string): boolean {
   return /(^|\/)(openapi|swagger)[^/]*\.(ya?ml|json)$/i.test(rel);
 }
 function isCodeFile(rel: string): boolean {
-  return /\.(tsx?|jsx?|mjs|cjs)$/.test(rel);
+  return /\.(tsx?|jsx?|mts|cts|mjs|cjs)$/.test(rel);
 }
 
+/**
+ * Source with comments removed and string literals intact. Uses the shared
+ * scanner rather than regexes: a regex comment-stripper read the `/*` in a
+ * wildcard route (`app.get("/*", h)`) as a block comment and deleted every
+ * route up to the next `*\/`, reporting them all as removed.
+ */
 function withoutComments(content: string): string {
-  return content
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/(^|[^:])\/\/[^\n\r]*/gm, "$1");
+  const source = maskSource(content);
+  return source.masked.replace(new RegExp(LITERAL_TOKEN, "g"), (_m, index: string) => {
+    const literal = (literalAt(source, index) ?? "").replace(/['"`\n]/g, "");
+    return `'${literal}'`;
+  });
 }
 
 /** Extract a normalized set of `METHOD path` endpoints from one file's contents. */

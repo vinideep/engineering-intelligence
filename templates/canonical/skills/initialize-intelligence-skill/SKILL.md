@@ -1,30 +1,30 @@
 ---
 name: initialize-intelligence-skill
-description: Initializes project engineering intelligence by analyzing repository evidence and generating knowledge, context, memory, event guidance, architecture graphs, and an initialization change record. Invoke when onboarding a repository or when asked to initialize engineering intelligence.
+description: Initializes project GraphWard by analyzing repository evidence and generating knowledge, context, memory, event guidance, architecture graphs, and an initialization change record. Invoke when onboarding a repository or when asked to initialize GraphWard.
 version: 4.0.0
 ---
 
-# Initialize Engineering Intelligence
+# Initialize GraphWard
 
 Create a trustworthy, evidence-backed project intelligence baseline. Analyze only artifacts present in source code, configuration, tests, infrastructure, and existing documentation. Mark unknowns and uncertainties explicitly — never invent architecture, APIs, schemas, or business rules.
 
-## EI-owned initialization protocol
+## GraphWard-owned initialization protocol
 
-Start with `npx engineering-intelligence initialize . --providers auto --yes`. This deterministic bootstrap applies the shared project file policy, verifies or installs EI's pinned local providers, runs Graphify in code-only mode against an isolated mirror, reconciles that evidence with EI's native graph, indexes the approved source universe in CCE, derives claims, and writes `.engineering-intelligence/context/KNOWLEDGE-GENERATION-BRIEF.md`.
+Start with `npx graphward initialize . --providers auto --yes`. This deterministic bootstrap applies the shared project file policy, verifies or installs GraphWard's pinned local providers, runs Graphify in code-only mode against an isolated mirror, reconciles that evidence with GraphWard's native graph, indexes the approved source universe in CCE, derives claims, and writes `.graphward/context/KNOWLEDGE-GENERATION-BRIEF.md`.
 
 Authority never transfers to a provider:
 
 1. Current repository source, tests, manifests, and Git are ground truth.
-2. EI's knowledge base, claims, ADRs, memory, and normalized graph are canonical engineering intelligence.
+2. GraphWard's knowledge base, claims, ADRs, memory, and normalized graph are canonical GraphWard.
 3. Graphify supplies structural extraction evidence only.
 4. CCE supplies current code spans only.
 5. Model synthesis must preserve provenance, confidence, freshness, conflicts, and unknowns.
 
-Read the generation brief and `initialization-evidence.json` before direct exploration. Use `get_engineering_context` for evidence packs; do not call raw provider tools unless the user enabled expert mode. A missing or failed provider is an explicit degraded state with native EI fallback. Use `--require-providers` only when the user wants provider absence to be a hard failure.
+Read the generation brief and `initialization-evidence.json` before direct exploration. Use `get_engineering_context` for evidence packs; do not call raw provider tools unless the user enabled expert mode. A missing or failed provider is an explicit degraded state with native GraphWard fallback. Use `--require-providers` only when the user wants provider absence to be a hard failure.
 
-**Compute the derived-fact baseline first:** `npx engineering-intelligence claims derive .` extracts module imports, package dependencies and HTTP routes from source and records them as *derived* claims. Their statements are generated from the extracted descriptor, so `claims verify` can RE-COMPUTE them and genuinely prove whether each still holds — that is the only kind of claim allowed to be called a fact.
+**Compute the derived-fact baseline first:** `npx graphward claims derive .` extracts module imports, package dependencies and HTTP routes from source and records them as *derived* claims. Their statements are generated from the extracted descriptor, so `claims verify` can RE-COMPUTE them and genuinely prove whether each still holds — that is the only kind of claim allowed to be called a fact.
 
-For durable statements the derivation cannot express, record an *asserted* claim: `npx engineering-intelligence claims add --statement "<fact>" --evidence "<path>:<start>-<end>" --author "<who>"`. Be clear about what this does and does not buy you: the evidence span is hash-pinned, so edits to the cited lines are detected, but nothing checks that your sentence is TRUE of that code. Asserted claims report `unverified` and `get_context` serves them under an explicit unverified heading. Never write an asserted claim to make something look confirmed.
+For durable statements the derivation cannot express, record an *asserted* claim: `npx graphward claims add --statement "<fact>" --evidence "<path>:<start>-<end>" --author "<who>"`. Be clear about what this does and does not buy you: the evidence span is hash-pinned, so edits to the cited lines are detected, but nothing checks that your sentence is TRUE of that code. Asserted claims report `unverified` and `get_context` serves them under an explicit unverified heading. Never write an asserted claim to make something look confirmed.
 
 ## Inputs
 
@@ -35,7 +35,7 @@ For durable statements the derivation cannot express, record an *asserted* claim
 
 Generate the following artifacts in order:
 
-### Knowledge Base (`.engineering-intelligence/knowledge-base/`)
+### Knowledge Base (`.graphward/knowledge-base/`)
 
 | Document | Purpose |
 |---|---|
@@ -56,7 +56,7 @@ Generate the following artifacts in order:
 | `14-glossary.md` | Domain terms, abbreviations, naming conventions |
 | `15-validation-report.md` | Evidence audit of all claims made above |
 
-### Durable Memory (`.engineering-intelligence/memory/`)
+### Durable Memory (`.graphward/memory/`)
 
 | Document | Content |
 |---|---|
@@ -66,7 +66,7 @@ Generate the following artifacts in order:
 | `project-constraints.md` | Performance budgets, compatibility, regulatory |
 | `technology-decisions.md` | Stack choices, version policies, deprecation plans |
 
-### Navigation Context (`.engineering-intelligence/context/`)
+### Navigation Context (`.graphward/context/`)
 
 | Document | Content |
 |---|---|
@@ -77,7 +77,7 @@ Generate the following artifacts in order:
 | `dangerous-areas.md` | Fragile code, missing tests, race conditions |
 | `dependency-map.md` | External deps → internal consumers → risk |
 
-### Event Guidance (`.engineering-intelligence/events/`)
+### Event Guidance (`.graphward/events/`)
 
 | Document | Trigger |
 |---|---|
@@ -87,7 +87,7 @@ Generate the following artifacts in order:
 | `feature-added.md` | When new user-facing features are introduced |
 | `infrastructure-changed.md` | When CI, deployment, or infra config changes |
 
-### Architecture Graphs (`.engineering-intelligence/graph/`)
+### Architecture Graphs (`.graphward/graph/`)
 
 | Artifact | Content |
 |---|---|
@@ -101,16 +101,16 @@ Generate the following artifacts in order:
 
 | Artifact | Content |
 |---|---|
-| `.engineering-intelligence/changes/CHG-000-initialization.md` | Record of this initialization run |
+| `.graphward/changes/CHG-000-initialization.md` | Record of this initialization run |
 
 ## Procedure
 
 0. **Seed User Intelligence Profile (zero tokens)** — Before any discovery:
 
    ```bash
-   npx engineering-intelligence user-profile .
-   npx engineering-intelligence freshness .
-   npx engineering-intelligence git-analysis .
+   npx graphward user-profile .
+   npx graphward freshness .
+   npx graphward git-analysis .
    ```
 
    These three commands auto-populate:
@@ -118,7 +118,7 @@ Generate the following artifacts in order:
    - Freshness scores for any pre-existing intelligence documents
    - Hotspots, ownership, and coupling for the repository
 
-   Read the generated profile at `.engineering-intelligence/memory/users/<slug>/user-intelligence.md` and apply Active Predictions for the rest of this session. Skip if CI environment is detected.
+   Read the generated profile at `.graphward/memory/users/<slug>/user-intelligence.md` and apply Active Predictions for the rest of this session. Skip if CI environment is detected.
 
 1. **Discover** — Begin from the policy-filtered initialization evidence and ContextPackV2. Scan source only for unresolved sections: package manifests, workspace configs, runtimes (`package.json`, `go.mod`, `Cargo.toml`, `pyproject.toml`, etc.), build systems, entrypoints, CI configs, Dockerfiles, deployment manifests, environment examples, database schemas/migrations, API definitions, auth configs, test suites. Never treat `dist/`, provider caches, vendored code, secrets, or benchmark fixtures as production architecture.
 
@@ -138,7 +138,7 @@ Generate the following artifacts in order:
 6. **Generate Context** — Create concise, navigational maps. Each map should fit in ~100 lines. Optimize for an AI agent quickly finding the right file, not for human reading.
 
 7. **Build Graphs** — Two sub-steps:
-   a. Run `engineering-intelligence map .` (or `npx engineering-intelligence map .` if not globally installed) to generate the real computed `dependency-graph.json` from source code. The CLI output (node count, edge count, graph path) serves as evidence. This graph is fully validated against the schema.
+   a. Run `graphward map .` (or `npx graphward map .` if not globally installed) to generate the real computed `dependency-graph.json` from source code. The CLI output (node count, edge count, graph path) serves as evidence. This graph is fully validated against the schema.
    b. Invoke `graph-engine` to produce the remaining three JSON graphs (`service-graph.json`, `runtime-graph.json`, `business-flow-graph.json`) and `architecture-map.md`. Every node and edge must have `evidence` and `confidence` fields.
 
 8. **Generate Events** — Write change-event guidance documents that describe what to check and update when specific types of changes occur.
@@ -166,6 +166,6 @@ Generate the following artifacts in order:
 ## Cross-References
 
 - Uses: `deep-project-knowledge-extractor`, `knowledge-base-validator`, `graph-engine`, `change-history-engine`
-- Consumed by: `engineering-intelligence-skill`, all sync engines, `impact-analysis-engine`
+- Consumed by: `graphward-skill`, all sync engines, `impact-analysis-engine`
 
 This initialization documents and validates the project. It does not implement product changes.

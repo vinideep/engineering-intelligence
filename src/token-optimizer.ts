@@ -14,6 +14,7 @@
  */
 
 import { WORKFLOW_NAMES, readTemplate } from "./templates.js";
+import { cliInvocation } from "./version.js";
 
 // --- Rendered-file preparation ------------------------------------------------
 
@@ -36,7 +37,16 @@ import { WORKFLOW_NAMES, readTemplate } from "./templates.js";
  * frontmatter-at-byte-0 invariant has one owner.
  */
 export function prepareRendered(content: string): string {
-  return smartCrush(content);
+  return pinCliInvocations(smartCrush(content));
+}
+
+/**
+ * Templates say `npx graphward <cmd>`; installed files must name the version
+ * that installed them. Unpinned, `npx` resolves npm's `latest`, which can be a
+ * different release (or codebase) than the one whose skills the agent follows.
+ */
+export function pinCliInvocations(content: string, invocation = cliInvocation()): string {
+  return content.replace(/\bnpx (?:-y |--yes )?graphward(?![@\w-])/g, invocation);
 }
 
 // --- Workflow → skill routing table ------------------------------------------
@@ -54,9 +64,9 @@ export const WORKFLOW_SKILL_ROUTING: Record<
   (typeof WORKFLOW_NAMES)[number],
   { primary: string[]; optional: string[] }
 > = {
-  "engineering-intelligence": {
+  "graphward": {
     primary: [
-      "engineering-intelligence-skill",
+      "graphward-skill",
       "socratic-clarification-gate",
       "aidlc-lifecycle-engine",
       "impact-analysis-engine",
@@ -79,7 +89,7 @@ export const WORKFLOW_SKILL_ROUTING: Record<
       "debugging-engine",
     ],
   },
-  "initialize-engineering-intelligence": {
+  "initialize-graphward": {
     primary: ["initialize-intelligence-skill"],
     optional: [
       "deep-project-knowledge-extractor",
@@ -93,7 +103,7 @@ export const WORKFLOW_SKILL_ROUTING: Record<
     optional: ["issue-tracker-sync-engine", "aidlc-lifecycle-engine", "question-file-engine"],
   },
   "deliver-backlog": {
-    primary: ["aidlc-lifecycle-engine", "engineering-intelligence-skill"],
+    primary: ["aidlc-lifecycle-engine", "graphward-skill"],
     optional: [
       "backlog-decomposition-engine",
       "issue-tracker-sync-engine",
@@ -108,7 +118,7 @@ export const WORKFLOW_SKILL_ROUTING: Record<
     primary: ["change-detection-engine", "impact-analysis-engine"],
     optional: ["graph-engine"],
   },
-  "sync-engineering-intelligence": {
+  "sync-graphward": {
     primary: ["change-detection-engine", "incremental-sync-engine"],
     optional: [
       "staleness-detector",
@@ -154,7 +164,12 @@ export const WORKFLOW_SKILL_ROUTING: Record<
 export const SKILLS_INDEX_FILENAME = "SKILLS-INDEX.md";
 export const WORKFLOW_ROUTING_FILENAME = "WORKFLOW-ROUTING.md";
 
-export function generateWorkflowRouting(skillsDir = ".claude/skills"): string {
+/**
+ * `emitBriefs` must match whether the adapter actually writes `SKILL-BRIEF.md`
+ * files: telling an agent to load a file that was never written makes it search
+ * for it (or conclude the install is broken) before every skill.
+ */
+export function generateWorkflowRouting(skillsDir = ".claude/skills", emitBriefs = true): string {
   const rows = (Object.entries(WORKFLOW_SKILL_ROUTING) as [string, { primary: string[]; optional: string[] }][])
     .map(([cmd, r]) => {
       const primary = r.primary.map((s) => `\`${s}\``).join(", ");
@@ -166,9 +181,13 @@ export function generateWorkflowRouting(skillsDir = ".claude/skills"): string {
     "# Workflow Routing Table",
     "",
     "> **Read this before loading any skill files.**",
-    "> For each primary skill: load `SKILL-BRIEF.md` to understand it (~150t), then `SKILL.md` to execute.",
+    emitBriefs
+      ? "> For each primary skill: load `SKILL-BRIEF.md` to understand it (~150t), then `SKILL.md` to execute."
+      : "> For each primary skill: load its `SKILL.md` immediately before executing it.",
     "> Load **optional** skills only when the request explicitly requires that capability.",
-    `> Skill files are in \`${skillsDir}/<name>/\` (SKILL-BRIEF.md and SKILL.md).`,
+    emitBriefs
+      ? `> Skill files are in \`${skillsDir}/<name>/\` (SKILL-BRIEF.md and SKILL.md).`
+      : `> Skill files are in \`${skillsDir}/<name>/SKILL.md\`.`,
     "",
     "| Command | Primary Skills — load first | Optional Skills — load if needed |",
     "|---|---|---|",
@@ -192,6 +211,7 @@ function parseFrontmatterDescription(content: string): string {
 export async function generateSkillsIndex(
   skillNames: ReadonlyArray<string>,
   skillsDir = ".claude/skills",
+  emitBriefs = true,
 ): Promise<string> {
   const rows = await Promise.all(
     skillNames.map(async (name) => {
@@ -207,8 +227,12 @@ export async function generateSkillsIndex(
     "",
     "> **Token-saving routing layer.** Read this index first.",
     "> Identify the 1-3 skills relevant to the request.",
-    "> Tiered loading: `SKILL-BRIEF.md` (~150t) → understand the skill. `SKILL.md` → execute the procedure.",
-    `> Both files live at \`${skillsDir}/<name>/\`.`,
+    ...(emitBriefs
+      ? [
+          "> Tiered loading: `SKILL-BRIEF.md` (~150t) → understand the skill. `SKILL.md` → execute the procedure.",
+          `> Both files live at \`${skillsDir}/<name>/\`.`,
+        ]
+      : [`> Load \`${skillsDir}/<name>/SKILL.md\` for each identified skill before executing it.`]),
     "",
     "| Skill | Purpose |",
     "|---|---|",
@@ -300,13 +324,60 @@ export async function generateAllSkillBriefs(
  * - Collapse repeated boilerplate sections across files into a single shared definition
  */
 export function smartCrush(content: string): string {
-  return content
+  const normalized = content
     .replace(/\r\n/g, "\n")
-    .replace(/^(---\n(?:(?!---)[^\n]*\n)*)version:[^\n]*\n/m, "$1")
-    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/^(---\n(?:(?!---)[^\n]*\n)*)version:[^\n]*\n/m, "$1");
+  return stripProseComments(normalized)
     .replace(/[ \t]+$/gm, "")
     .replace(/\n{3,}/g, "\n\n")
     .trimEnd() + "\n";
+}
+
+/**
+ * Remove HTML comments from Markdown PROSE only. Comments inside fenced code
+ * blocks or inline code are content: several skills instruct the agent to write
+ * exact `<!-- freshness: ... -->` / `<!-- generated: ... -->` markers, and
+ * stripping them left instructions like "If a `` comment already exists".
+ */
+function stripProseComments(markdown: string): string {
+  const out: string[] = [];
+  let fence: string | null = null;
+  let inComment = false;
+  for (const line of markdown.split("\n")) {
+    const fenceMatch = line.match(/^\s*(`{3,}|~{3,})/);
+    if (!inComment && fenceMatch) {
+      if (fence === null) fence = fenceMatch[1][0].repeat(fenceMatch[1].length);
+      else if (line.trim().startsWith(fence)) fence = null;
+      out.push(line);
+      continue;
+    }
+    if (fence !== null) { out.push(line); continue; }
+    // Split on inline code spans; only strip comments outside them.
+    let result = "";
+    const parts = line.split(/(`[^`]*`)/);
+    for (const part of parts) {
+      if (part.startsWith("`") && part.endsWith("`") && part.length >= 2 && !inComment) { result += part; continue; }
+      let rest = part;
+      while (rest.length > 0) {
+        if (inComment) {
+          const close = rest.indexOf("-->");
+          if (close === -1) { rest = ""; break; }
+          rest = rest.slice(close + 3);
+          inComment = false;
+        } else {
+          const open = rest.indexOf("<!--");
+          if (open === -1) { result += rest; break; }
+          result += rest.slice(0, open);
+          rest = rest.slice(open + 4);
+          inComment = true;
+        }
+      }
+    }
+    // A line that held only a comment disappears rather than leaving a blank.
+    if (result.trim() === "" && line.trim() !== "") continue;
+    out.push(result);
+  }
+  return out.join("\n");
 }
 
 // --- Token savings estimator (used in tests) ---------------------------------

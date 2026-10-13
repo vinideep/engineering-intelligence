@@ -11,7 +11,7 @@ Use the `session-handoff-engine` capability to package the current execution sta
 
 1. **Scan In-Flight Changes** — Inspect working tree status, modified files, and active task progress.
 2. **Classify Claims** — Separate machine-verified repository facts (`[VERIFIED: path#lines]`) from unverified assumptions (`[ASSUMPTION]`).
-3. **Write Handoff Artifact** — Generate `.engineering-intelligence/handoffs/HO-YYYYMMDD-<task-slug>.md` with task summary, ground truth, modified files, and next immediate steps.
+3. **Write Handoff Artifact** — Generate `.graphward/handoffs/HO-YYYYMMDD-<task-slug>.md` with task summary, ground truth, modified files, and next immediate steps.
 4. **Output Continuity Instructions** — Provide the exact command for a new session or agent to resume without context loss.
 
 ## Completion Report

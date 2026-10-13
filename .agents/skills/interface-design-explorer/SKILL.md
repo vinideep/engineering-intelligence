@@ -12,7 +12,7 @@ Explore, draft, and benchmark alternative interface designs and type contracts u
 - Problem statement or API specification
 - Domain boundaries and schema constraints
 - Target language idioms and typing rules
-- Downstream consumer needs from `.engineering-intelligence/graph/`
+- Downstream consumer needs from `.graphward/graph/`
 
 ## Procedure
 
@@ -34,4 +34,4 @@ Explore, draft, and benchmark alternative interface designs and type contracts u
 
 4. **Select & Finalize Contract**:
    - Align with the user on the chosen design option.
-   - Codify the approved type definitions in the target module or `.engineering-intelligence/context/` before starting implementation.
+   - Codify the approved type definitions in the target module or `.graphward/context/` before starting implementation.

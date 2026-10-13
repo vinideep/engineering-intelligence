@@ -24,9 +24,9 @@ Owns performance targets and measurement.
 - Performance claims are measured, bounded, or marked unknown
 - New bottlenecks have mitigation or follow-up ownership
 
-## EI Runtime Context
+## GraphWard Runtime Context
 
 Read the following project-owned context before making non-trivial decisions:
-- `.engineering-intelligence/knowledge-base`
-- `.engineering-intelligence/aidlc`
-- `.engineering-intelligence/graph`
+- `.graphward/knowledge-base`
+- `.graphward/aidlc`
+- `.graphward/graph`

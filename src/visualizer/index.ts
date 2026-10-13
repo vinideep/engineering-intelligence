@@ -38,7 +38,7 @@ const SKILL_CATEGORIES: Record<string, SkillInfo["category"]> = {
   "debugging-engine": "analysis",
   "deep-project-knowledge-extractor": "initialization",
   "engineering-change-review": "review",
-  "engineering-intelligence-skill": "implementation",
+  "graphward-skill": "implementation",
   "environment-variable-auditor": "operations",
   "environmental-backpressure-engine": "implementation",
   "git-intelligence-engine": "analysis",
@@ -152,7 +152,7 @@ interface WorkflowInfo {
 
 const WORKFLOW_CATALOG: WorkflowInfo[] = [
   {
-    name: "initialize-engineering-intelligence",
+    name: "initialize-graphward",
     type: "read-write",
     description: "Initialize project intelligence baseline",
     steps: [
@@ -164,13 +164,13 @@ const WORKFLOW_CATALOG: WorkflowInfo[] = [
     ],
   },
   {
-    name: "engineering-intelligence",
+    name: "graphward",
     type: "read-write",
     description: "Full implementation lifecycle",
     steps: [
       { name: "Detect Change", skill: "change-detection-engine" },
       { name: "Analyze Impact", skill: "impact-analysis-engine" },
-      { name: "Implement", skill: "engineering-intelligence-skill" },
+      { name: "Implement", skill: "graphward-skill" },
       { name: "Test", skill: "testing-intelligence-engine" },
       { name: "Sync", skill: "incremental-sync-engine" },
       { name: "Record", skill: "change-history-engine" },
@@ -192,7 +192,7 @@ const WORKFLOW_CATALOG: WorkflowInfo[] = [
     ],
   },
   {
-    name: "sync-engineering-intelligence",
+    name: "sync-graphward",
     type: "read-only",
     description: "Sync affected intelligence",
     steps: [
@@ -276,7 +276,7 @@ async function scanWorkspaceFiles(dir: string, baseDir: string): Promise<Record<
 
 async function readWorkspaceIntelligence(projectRoot: string): Promise<Record<string, string>> {
   const files: Record<string, string> = {};
-  for (const sub of [".engineering-intelligence"]) {
+  for (const sub of [".graphward"]) {
     const dir = path.join(projectRoot, sub);
     const scanned = await scanWorkspaceFiles(dir, projectRoot);
     Object.assign(files, scanned);
@@ -321,9 +321,9 @@ export async function generateDashboardHTML(projectRoot: string): Promise<string
     }
   }
   try {
-    templates["rules/engineering-intelligence"] = await readTemplate("rules", "engineering-intelligence");
+    templates["rules/graphward"] = await readTemplate("rules", "graphward");
   } catch {
-    templates["rules/engineering-intelligence"] = "";
+    templates["rules/graphward"] = "";
   }
 
   // Read workspace intelligence files
@@ -393,7 +393,7 @@ export async function generateDashboardHTML(projectRoot: string): Promise<string
 
   const agentCards = [
     { name: "Engineering Orchestrator", role: "Classifies requests, routes work, coordinates agents", id: "engineering-orchestrator", skills: "All skills", color: "#818cf8" },
-    { name: "Change Agent", role: "Implements code changes, adds tests, collects evidence", id: "change-agent", skills: "engineering-intelligence-skill, testing-intelligence-engine", color: "#34d399" },
+    { name: "Change Agent", role: "Implements code changes, adds tests, collects evidence", id: "change-agent", skills: "graphward-skill, testing-intelligence-engine", color: "#34d399" },
     { name: "Quality Agent", role: "Validates correctness, runs tests, reviews architecture", id: "quality-agent", skills: "engineering-change-review, testing-intelligence-engine", color: "#f87171" },
     { name: "Knowledge Agent", role: "Maintains all intelligence artifacts", id: "knowledge-agent", skills: "All sync engines, graph-engine, change-history-engine", color: "#22d3ee" },
     { name: "Product Analyst", role: "Scopes requirements, asks clarifying questions, generates prompts", id: "product-analyst", skills: "requirement-scoper, deep-project-knowledge-extractor", color: "#c084fc" },
@@ -418,7 +418,7 @@ export async function generateDashboardHTML(projectRoot: string): Promise<string
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Engineering Intelligence — Dashboard</title>
+<title>GraphWard — Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
@@ -1207,7 +1207,7 @@ body::before {
   <div class="topbar-inner">
     <div class="brand">
       <div class="brand-mark"></div>
-      <div>Engineering Intelligence<small>${vaultName}</small></div>
+      <div>GraphWard<small>${vaultName}</small></div>
     </div>
     <button class="search-trigger" onclick="openPalette()">
       <span>Search skills, workflows, files…</span>
@@ -1226,9 +1226,9 @@ body::before {
 <div class="container">
   <div class="hero">
     <h1>Intelligence Dashboard</h1>
-    <p>Graph-backed engineering intelligence — explore the skill web, workflow pipelines, and your project's knowledge vault as an interactive graph, right in the browser.</p>
+    <p>Graph-backed GraphWard — explore the skill web, workflow pipelines, and your project's knowledge vault as an interactive graph, right in the browser.</p>
     <div class="hero-actions">
-      <button class="btn btn-primary" onclick="viewTemplate('rules/engineering-intelligence', 'Engineering Intelligence Rules')">View Rules Template</button>
+      <button class="btn btn-primary" onclick="viewTemplate('rules/graphward', 'GraphWard Rules')">View Rules Template</button>
       <button class="btn" id="ws-rules-btn" style="display:none;" onclick="viewRulesInWorkspace()">Workspace Rules</button>
       <button class="btn btn-graph" onclick="switchTab('graph')"><span class="dot"></span>Open Graph View</button>
     </div>
@@ -1297,7 +1297,7 @@ body::before {
         </div>
         <div class="graph-empty" id="graphEmpty">
           <div style="font-size:2.2rem;opacity:0.5;">◇</div>
-          <div>No graph data for this mode yet.<br>Run <code style="font-family:var(--mono);color:#a5b4fc;">/initialize-engineering-intelligence</code> to generate the knowledge vault and architecture graphs.</div>
+          <div>No graph data for this mode yet.<br>Run <code style="font-family:var(--mono);color:#a5b4fc;">/initialize-graphward</code> to generate the knowledge vault and architecture graphs.</div>
         </div>
         <div class="node-drawer" id="nodeDrawer">
           <div class="drawer-head">
@@ -1487,7 +1487,7 @@ function findWorkspaceWorkflowPath(wfName) {
 }
 function findWorkspaceRulesPath() {
   for (const filePath of Object.keys(WORKSPACE_FILES)) {
-    if (filePath.includes('engineering-intelligence.md') && filePath.includes('/rules')) return filePath;
+    if (filePath.includes('graphward.md') && filePath.includes('/rules')) return filePath;
   }
   return null;
 }
@@ -1537,7 +1537,7 @@ function renderFileList() {
   const filesCount = Object.keys(WORKSPACE_FILES).length;
   document.getElementById('workspace-files-count').innerText = filesCount;
   if (filesCount === 0) {
-    fileListContainer.innerHTML = '<div style="color:var(--text-faint);font-size:0.8rem;text-align:center;padding:1rem;">No workspace files detected. Run /initialize-engineering-intelligence first.</div>';
+    fileListContainer.innerHTML = '<div style="color:var(--text-faint);font-size:0.8rem;text-align:center;padding:1rem;">No workspace files detected. Run /initialize-graphward first.</div>';
     return;
   }
   const groups = {};
@@ -1689,7 +1689,7 @@ function buildSkillsGraph() {
   return { nodes: nodes, links: links };
 }
 
-// Architecture: real nodes/edges from .engineering-intelligence/graph/*.json
+// Architecture: real nodes/edges from .graphward/graph/*.json
 function buildArchGraph() {
   const nodes = [];
   const links = [];

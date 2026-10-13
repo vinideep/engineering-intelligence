@@ -46,7 +46,7 @@ export function factKey(fact: DerivedFact): string {
  */
 export function renderFact(fact: DerivedFact): string {
   switch (fact.type) {
-    case "source-file":        return `Source module \`${fact.path}\` is in EI's approved project scope.`;
+    case "source-file":        return `Source module \`${fact.path}\` is in GraphWard's approved project scope.`;
     case "module-imports":     return `Module \`${fact.from}\` imports \`${fact.to}\`.`;
     case "package-dependency": return `\`${fact.name}\` is a declared package dependency.`;
     case "http-route":         return `HTTP route \`${fact.method} ${fact.route}\` is defined in \`${fact.file}\`.`;
@@ -85,7 +85,7 @@ export async function deriveFacts(root: string): Promise<DerivedFact[]> {
       // Provider-only and contested relationships are useful exploration
       // evidence, but they are not canonical facts. Only native relationships
       // (which have no provider trust marker) or source-corroborated fresh
-      // relationships may be promoted into EI's derived claim registry.
+      // relationships may be promoted into GraphWard's derived claim registry.
       const trustState = edge.metadata?.trustState;
       if (trustState && trustState !== "fresh") continue;
       if (edge.metadata?.provider === "graphify" && edge.metadata?.corroborated !== true) continue;

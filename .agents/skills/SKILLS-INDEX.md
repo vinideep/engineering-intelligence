@@ -2,13 +2,12 @@
 
 > **Token-saving routing layer.** Read this index first.
 > Identify the 1-3 skills relevant to the request.
-> Tiered loading: `SKILL-BRIEF.md` (~150t) → understand the skill. `SKILL.md` → execute the procedure.
-> Both files live at `.agents/skills/<name>/`.
+> Load `.agents/skills/<name>/SKILL.md` for each identified skill before executing it.
 
 | Skill | Purpose |
 |---|---|
-| `initialize-intelligence-skill` | Initializes project engineering intelligence by analyzing repository evidence and generating knowledge, con… |
-| `engineering-intelligence-skill` | Executes engineering changes with impact analysis, implementation, tests, validation, and incremental synch… |
+| `initialize-intelligence-skill` | Initializes project GraphWard by analyzing repository evidence and generating knowledge, context, memory, e… |
+| `graphward-skill` | Executes engineering changes with impact analysis, implementation, tests, validation, and incremental synch… |
 | `deep-project-knowledge-extractor` | Analyzes an existing software repository and produces evidence-based architecture, runtime, API, infrastruc… |
 | `knowledge-base-validator` | Validates project knowledge documentation against source and configuration evidence, identifying stale, uns… |
 | `impact-analysis-engine` | Determines direct and indirect impact of a proposed or implemented change across modules, APIs, schemas, ru… |
@@ -27,7 +26,7 @@
 | `greenfield-architect` | Interview-based skill for new greenfield projects. Conducts a structured requirements interview (7-12 quest… |
 | `git-intelligence-engine` | Extracts structural intelligence from git history — hotspot analysis, ownership mapping, change coupling, v… |
 | `pr-intelligence-engine` | Generates intelligent PR descriptions, reviewer suggestions, impact summaries, and split recommendations fr… |
-| `question-file-engine` | Writes structured MCQ clarification files to .engineering-intelligence/aidlc/open-questions/ instead of ask… |
+| `question-file-engine` | Writes structured MCQ clarification files to .graphward/aidlc/open-questions/ instead of asking questions i… |
 | `staleness-detector` | Compares knowledge-base document timestamps against related source file modification times, scores each doc… |
 | `security-audit-engine` | Performs evidence-based security audits covering dependency vulnerabilities, auth/authz patterns, secrets d… |
 | `performance-analysis-engine` | Identifies performance issues through static analysis of database query patterns, frontend bundle size, ren… |
@@ -53,5 +52,5 @@
 | `session-handoff-engine` | Serializes in-flight tasks, verified facts, unverified assumptions, and next steps into a durable handoff a… |
 | `vertical-tdd-engine` | Enforces a strict vertical-slice Red-Green-Refactor loop targeting public API surfaces. Tests first, minima… |
 | `interface-design-explorer` | Explores and compares alternative interface contracts and TypeScript type definitions across multiple desig… |
-| `graph-guided-autoresearch` | Autonomous metric-driven code optimization and regression prevention loop guided by dependency and call graph intelligence. |
-| `socratic-clarification-gate` | Mandatory pre-flight alignment gate that assesses prompt clarity, poses concrete multiple-choice trade-offs, and freezes requirements before coding. |
+| `socratic-clarification-gate` | Mandatory pre-flight alignment gate that assesses prompt clarity, identifies underspecified architectural c… |
+| `graph-guided-autoresearch` | Autonomous, metric-driven code optimization and regression prevention loop guided by dependency and call gr… |

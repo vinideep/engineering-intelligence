@@ -175,5 +175,5 @@ export async function freezeRequirements(
   }
 
   await saveRequirements(root, reqs);
-  return path.join(root, ".engineering-intelligence", "aidlc", "inception", "requirements.md");
+  return path.join(root, ".graphward", "aidlc", "inception", "requirements.md");
 }

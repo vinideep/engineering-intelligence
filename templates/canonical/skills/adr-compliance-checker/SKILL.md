@@ -10,7 +10,7 @@ Use this skill when a change touches architecture boundaries, service communicat
 
 ## Procedure
 
-1. Read accepted ADRs from `.engineering-intelligence/aidlc/construction/**/decision-records/` and `.engineering-intelligence/memory/architecture-decisions.md`.
+1. Read accepted ADRs from `.graphward/aidlc/construction/**/decision-records/` and `.graphward/memory/architecture-decisions.md`.
 2. Extract binding rules, such as dependency direction, allowed protocols, persistence ownership, eventing patterns, or security controls.
 3. Compare the implementation diff against each applicable rule.
 4. Produce findings using the same severity model as `engineering-change-review`.
@@ -18,7 +18,7 @@ Use this skill when a change touches architecture boundaries, service communicat
 
 ## Output
 
-Write `.engineering-intelligence/reports/ADR-COMPLIANCE-<slug>.md`:
+Write `.graphward/reports/ADR-COMPLIANCE-<slug>.md`:
 
 ```markdown
 # ADR Compliance: <summary>

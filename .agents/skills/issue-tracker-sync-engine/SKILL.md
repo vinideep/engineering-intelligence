@@ -5,7 +5,7 @@ description: Mirrors the local Epic to Feature to Ticket backlog to an external 
 
 # Issue Tracker Sync Engine
 
-Synchronize the local backlog under `.engineering-intelligence/aidlc/agile/backlog/` to an external issue tracker. The **local markdown backlog is always the source of truth**; the tracker is a mirror. This skill does not modify product code.
+Synchronize the local backlog under `.graphward/aidlc/agile/backlog/` to an external issue tracker. The **local markdown backlog is always the source of truth**; the tracker is a mirror. This skill does not modify product code.
 
 ## When To Run
 

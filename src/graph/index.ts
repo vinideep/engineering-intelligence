@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { runProcessSync } from "../process/index.js";
+import { gitStatusPathsSync, parseNameOnly } from "../process/git-paths.js";
+import { SOURCE_EXT_RE } from "./source-exts.js";
 import { collectProjectFiles, ProjectFilePolicy } from "../project-files/index.js";
 import { validateGraph, type DependencyGraph, type GraphNode } from "./schema.js";
 import { buildDependencyGraph, loadExistingGraph, mergeIncrementalUpdate } from "./builders/dependency.js";
@@ -10,7 +12,6 @@ import { reconcileGraphifyEvidence } from "./provider-evidence.js";
 export type { DependencyGraph, GraphNode, GraphEdge, Confidence } from "./schema.js";
 export { validateGraph, SchemaValidationError } from "./schema.js";
 
-const SOURCE_EXT_RE = /\.(ts|tsx|js|mjs|cjs|py|go|rs|rb|java|kt)$/;
 
 export interface BuildGraphOptions {
   update?: boolean;
@@ -47,7 +48,7 @@ async function graphWorkspaceHash(root: string): Promise<string> {
 }
 
 export async function buildGraph(root: string, options: BuildGraphOptions = {}): Promise<BuildGraphResult> {
-  const graphDir = path.join(root, ".engineering-intelligence", "graph");
+  const graphDir = path.join(root, ".graphward", "graph");
   const graphPath = path.join(graphDir, "dependency-graph.json");
 
   let result: Awaited<ReturnType<typeof buildDependencyGraph>>;
@@ -72,7 +73,7 @@ export async function buildGraph(root: string, options: BuildGraphOptions = {}):
   if (head) result.graph.commit = head;
   result.graph.workspaceHash = await graphWorkspaceHash(root);
 
-  // EI remains canonical. Fresh Graphify output can corroborate or enrich the
+  // GraphWard remains canonical. Fresh Graphify output can corroborate or enrich the
   // native graph, while stale/out-of-scope provider evidence is rejected.
   if (options.providerEvidence !== false) {
     const reconciliation = await reconcileGraphifyEvidence(root, result.graph);
@@ -117,7 +118,7 @@ export interface FreshnessResult {
 }
 
 function graphFilePath(root: string): string {
-  return path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json");
+  return path.join(root, ".graphward", "graph", "dependency-graph.json");
 }
 
 // Files changed between the graph's stamped commit and HEAD, plus uncommitted
@@ -128,19 +129,19 @@ function changedSinceStamp(root: string, stampCommit: string | undefined): strin
   if (stampCommit) {
     const head = gitHead(root);
     if (head && head !== stampCommit) {
-      const diff = runProcessSync({ command: "git", args: ["diff", "--name-only", stampCommit, head], cwd: root, timeoutMs: 15_000 });
+      // `--relative` maps paths to the analysed root (which may be a monorepo
+      // package, not the git top level); `--no-renames` reports BOTH sides of a
+      // move so the old module is evicted instead of lingering as a ghost.
+      const diff = runProcessSync({ command: "git", args: ["diff", "--name-only", "--relative", "--no-renames", stampCommit, head], cwd: root, timeoutMs: 15_000 });
       if (diff.exitCode !== 0) return null;
-      for (const file of diff.stdout.split("\n")) if (file.trim()) files.add(file.trim());
+      for (const file of parseNameOnly(diff.stdout)) files.add(file);
     }
   }
-  // `--untracked-files=all` prevents Git from collapsing an untracked source
-  // directory into one `?? dir/` row that would fail the extension filter.
-  const status = runProcessSync({ command: "git", args: ["status", "--porcelain", "--untracked-files=all"], cwd: root, timeoutMs: 15_000 });
-  if (status.exitCode !== 0) return null;
-  for (const line of status.stdout.split("\n")) {
-    const file = line.slice(3).trim();
-    if (file) files.add(file.includes(" -> ") ? file.split(" -> ")[1] : file);
-  }
+  // Uncommitted changes, including both sides of staged renames and untracked
+  // files (never collapsed to a directory row), mapped to the analysed root.
+  const status = gitStatusPathsSync(root);
+  if (status === null) return null;
+  for (const file of status) files.add(file);
   return [...files].filter((file) => SOURCE_EXT_RE.test(file));
 }
 

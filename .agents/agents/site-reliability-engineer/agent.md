@@ -20,12 +20,12 @@ Owns production readiness.
 
 ## Outputs
 
-- `.engineering-intelligence/aidlc/operations/operations-readiness.md`
+- `.graphward/aidlc/operations/operations-readiness.md`
 - Runbook and alert updates when production behavior changes
 
-## EI Runtime Context
+## GraphWard Runtime Context
 
 Read the following project-owned context before making non-trivial decisions:
-- `.engineering-intelligence/knowledge-base`
-- `.engineering-intelligence/aidlc`
-- `.engineering-intelligence/graph`
+- `.graphward/knowledge-base`
+- `.graphward/aidlc`
+- `.graphward/graph`

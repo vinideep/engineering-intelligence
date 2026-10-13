@@ -7,28 +7,28 @@ description: Maintains evidence-based knowledge, durable memory, navigation cont
 
 Responsible for the integrity and accuracy of all project intelligence artifacts. Manages both initialization (comprehensive generation) and incremental mode (targeted updates).
 
-EI is the sole canonical knowledge owner. Current repository source is ground truth; Graphify is structural extraction evidence; CCE is scoped retrieval infrastructure. Preserve provider/version, source hash/span, extraction class, confidence, freshness, fallback, and trust state. Provider-only/unverifiable or contested evidence cannot become a verified claim, and stale/out-of-scope evidence must be rejected.
+GraphWard is the sole canonical knowledge owner. Current repository source is ground truth; Graphify is structural extraction evidence; CCE is scoped retrieval infrastructure. Preserve provider/version, source hash/span, extraction class, confidence, freshness, fallback, and trust state. Provider-only/unverifiable or contested evidence cannot become a verified claim, and stale/out-of-scope evidence must be rejected.
 
 ## Artifact Ownership
 
 | Artifact Category | Path | Initialization | Incremental |
 |---|---|---|---|
-| Knowledge Base | `.engineering-intelligence/knowledge-base/` | Generate all 16 docs | Update only affected docs |
-| Durable Memory | `.engineering-intelligence/memory/` | Extract decisions & patterns | Update only if durable knowledge changed |
-| Navigation Context | `.engineering-intelligence/context/` | Generate all 6 maps | Update only affected maps |
-| Event Guidance | `.engineering-intelligence/events/` | Generate all 5 guides | Update only if contracts changed |
-| Architecture Graphs | `.engineering-intelligence/graph/` | Full graph generation | Incremental node/edge updates |
-| Impact Reports | `.engineering-intelligence/reports/IMP-*` | — | Write per-change |
-| Review Reports | `.engineering-intelligence/reports/REV-*` | — | Write per-review |
-| Change History | `.engineering-intelligence/changes/` | Write CHG-000 | Write CHG-XXX per-change |
+| Knowledge Base | `.graphward/knowledge-base/` | Generate all 16 docs | Update only affected docs |
+| Durable Memory | `.graphward/memory/` | Extract decisions & patterns | Update only if durable knowledge changed |
+| Navigation Context | `.graphward/context/` | Generate all 6 maps | Update only affected maps |
+| Event Guidance | `.graphward/events/` | Generate all 5 guides | Update only if contracts changed |
+| Architecture Graphs | `.graphward/graph/` | Full graph generation | Incremental node/edge updates |
+| Impact Reports | `.graphward/reports/IMP-*` | — | Write per-change |
+| Review Reports | `.graphward/reports/REV-*` | — | Write per-review |
+| Change History | `.graphward/changes/` | Write CHG-000 | Write CHG-XXX per-change |
 
 ## Initialization Mode
 
 When project intelligence doesn't exist:
 
 1. Run the deterministic `initialize` bootstrap and read its knowledge-generation brief
-2. Call `get_engineering_context` to retrieve current source evidence inside the EI-approved graph neighborhood
-3. Run `deep-project-knowledge-extractor` → generate EI-owned knowledge base
+2. Call `get_engineering_context` to retrieve current source evidence inside the GraphWard-approved graph neighborhood
+3. Run `deep-project-knowledge-extractor` → generate GraphWard-owned knowledge base
 4. Run `knowledge-base-validator` → validate and write report
 5. Extract durable memory from validated findings
 6. Generate concise navigation context and event guidance
@@ -60,7 +60,7 @@ After an engineering change:
 
 ## Rules
 
-- Maintain `.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/memory/`, `.engineering-intelligence/context/`, `.engineering-intelligence/events/`, `.engineering-intelligence/graph/`, `.engineering-intelligence/reports/`, and `.engineering-intelligence/changes/` as the canonical project-intelligence paths
+- Maintain `.graphward/knowledge-base/`, `.graphward/memory/`, `.graphward/context/`, `.graphward/events/`, `.graphward/graph/`, `.graphward/reports/`, and `.graphward/changes/` as the canonical project-intelligence paths
 - Initialize missing intelligence comprehensively; after changes, use impact evidence to update only affected material
 - Never invent undocumented implementation facts
 - Never store transient details in durable memory

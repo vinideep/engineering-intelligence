@@ -12,7 +12,7 @@ Use this skill for TypeScript, Python, Go, Rust, Java, Kotlin, C#, or any projec
 
 - Changed files from the impact report or current diff
 - Project manifests and type-check configuration
-- Existing graph artifacts under `.engineering-intelligence/graph/`
+- Existing graph artifacts under `.graphward/graph/`
 
 ## Procedure
 
@@ -26,7 +26,7 @@ Use this skill for TypeScript, Python, Go, Rust, Java, Kotlin, C#, or any projec
 2. **Trace Type Dependencies**
    - TypeScript: run or recommend `tsc --listFilesOnly` and use the TypeScript compiler API when available to identify interface, type alias, enum, generic, declaration, and ambient type dependencies.
    - Python: run or recommend `mypy --show-column-numbers` or `pyright` and trace annotation/import relationships.
-   - Add high-confidence `imports-type` edges to `.engineering-intelligence/graph/dependency-graph.json` for type-only dependencies, with evidence paths.
+   - Add high-confidence `imports-type` edges to `.graphward/graph/dependency-graph.json` for type-only dependencies, with evidence paths.
 
 3. **Run Type Check**
    - Use the project’s existing command first (`npm run typecheck`, `pnpm typecheck`, `mypy`, `pyright`, `go test`, `cargo check`, etc.).
@@ -48,7 +48,7 @@ Use this skill for TypeScript, Python, Go, Rust, Java, Kotlin, C#, or any projec
 
 ## Output
 
-Write or update `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/type-safety-summary.md`:
+Write or update `.graphward/aidlc/construction/<unit>/build-and-test/type-safety-summary.md`:
 
 ```markdown
 # Type Safety Summary: <unit>

@@ -1,0 +1,92 @@
+# GraphWard — PR impact comment
+#
+# Computes the blast radius of a pull request from a real dependency + call
+# graph and posts (or updates) a sticky comment: which modules/functions the
+# change affects, which tests to run, and any high-churn risk notes.
+#
+# Copy this file to .github/workflows/ in your repository. No secrets beyond the
+# default GITHUB_TOKEN are required.
+
+name: GraphWard Impact
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  # Pin the CLI so the graph format matches the version that installed your
+  # skills and hooks. Keep in step with `graphward --version`.
+  GRAPHWARD_VERSION: "6.0.0"
+
+jobs:
+  impact:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history for diff)
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Build dependency graph
+        run: npx --yes "graphward@${GRAPHWARD_VERSION}" map .
+
+      - name: Compute changed files and impact
+        id: impact
+        run: |
+          BASE="origin/${{ github.base_ref }}"
+          # No --depth: a shallow fetch after a full checkout can truncate the
+          # base history and break the BASE...HEAD merge-base.
+          git fetch origin "${{ github.base_ref }}" || true
+          # Deleted files have no dependents left to report (--diff-filter=d);
+          # paths are passed as separate, quoted arguments (spaces are safe).
+          mapfile -t CHANGED < <(git diff --name-only --diff-filter=d "$BASE"...HEAD)
+          echo "Changed files: ${CHANGED[*]}"
+          if [ "${#CHANGED[@]}" -eq 0 ]; then
+            echo '{"direct":[],"indirect":[],"testsToRun":[],"riskNotes":[]}' > impact.json
+          else
+            npx --yes "graphward@${GRAPHWARD_VERSION}" impact "${CHANGED[@]}" --json > impact.json || echo '{"direct":[],"indirect":[],"testsToRun":[],"riskNotes":[]}' > impact.json
+          fi
+          cat impact.json
+
+      - name: Post or update PR comment
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const impact = JSON.parse(fs.readFileSync('impact.json', 'utf8'));
+            const marker = '<!-- graphward-impact -->';
+            const direct = impact.direct || [];
+            const indirect = impact.indirect || [];
+            const tests = impact.testsToRun || [];
+            const risks = impact.riskNotes || [];
+            const list = (arr, n) => arr.length ? arr.slice(0, n).map(x => `\`${x}\``).join(', ') + (arr.length > n ? ` … (+${arr.length - n})` : '') : '_none_';
+            const body = [
+              marker,
+              '### 🧮 GraphWard — Impact',
+              '',
+              `**Direct dependents (${direct.length}):** ${list(direct, 15)}`,
+              `**Indirect dependents (${indirect.length}):** ${list(indirect, 15)}`,
+              `**Tests to run (${tests.length}):** ${list(tests, 20)}`,
+              risks.length ? '\n**⚠ Risk notes:**\n' + risks.map(r => `- ${r}`).join('\n') : '',
+              '',
+              '<sub>Computed from a deterministic dependency + call graph — not an LLM guess.</sub>',
+            ].join('\n');
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const existing = comments.data.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }

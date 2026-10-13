@@ -14,7 +14,7 @@ async function fixture() {
   return root;
 }
 
-test("one initialization pipeline produces EI-owned graph, claims, CCE index metadata, and synthesis brief", async () => {
+test("one initialization pipeline produces GraphWard-owned graph, claims, CCE index metadata, and synthesis brief", async () => {
   const root = await fixture();
   const calls = [];
   const runner = async (request) => {
@@ -52,17 +52,17 @@ test("one initialization pipeline produces EI-owned graph, claims, CCE index met
   assert.ok(result.evidence.graph.graphifyCorroboratedEdges > 0);
   assert.ok(result.evidence.source.approvedFiles > 0);
   assert.ok(!Object.keys(result.evidence.source.languages).includes("generated"));
-  const graph = JSON.parse(await readFile(path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json"), "utf8"));
+  const graph = JSON.parse(await readFile(path.join(root, ".graphward", "graph", "dependency-graph.json"), "utf8"));
   assert.ok(graph.edges.some((edge) => edge.metadata.corroborated === true));
-  assert.match(await readFile(path.join(root, ".engineering-intelligence", "providers", "graphify", "GRAPH_REPORT.md"), "utf8"), /Raw Graphify report/);
-  const claims = JSON.parse(await readFile(path.join(root, ".engineering-intelligence", "claims", "claims.json"), "utf8"));
+  assert.match(await readFile(path.join(root, ".graphward", "providers", "graphify", "GRAPH_REPORT.md"), "utf8"), /Raw Graphify report/);
+  const claims = JSON.parse(await readFile(path.join(root, ".graphward", "claims", "claims.json"), "utf8"));
   assert.ok(claims.claims.length > 0);
-  assert.match(await readFile(path.join(root, ".engineering-intelligence", "context", "KNOWLEDGE-GENERATION-BRIEF.md"), "utf8"), /EI owns the canonical knowledge base/);
-  assert.match(await readFile(path.join(root, ".engineering-intelligence", "knowledge-base", "00-project-overview.md"), "utf8"), /EI owns canonical knowledge/);
-  const evidenceHashes = JSON.parse(await readFile(path.join(root, ".engineering-intelligence", "knowledge-base", ".evidence-hashes.json"), "utf8"));
+  assert.match(await readFile(path.join(root, ".graphward", "context", "KNOWLEDGE-GENERATION-BRIEF.md"), "utf8"), /GraphWard owns the canonical knowledge base/);
+  assert.match(await readFile(path.join(root, ".graphward", "knowledge-base", "00-project-overview.md"), "utf8"), /GraphWard owns canonical knowledge/);
+  const evidenceHashes = JSON.parse(await readFile(path.join(root, ".graphward", "knowledge-base", ".evidence-hashes.json"), "utf8"));
   assert.ok(evidenceHashes.hashes.length > 0);
-  assert.match(await readFile(path.join(root, ".engineering-intelligence", ".gitignore"), "utf8"), /^providers\/$/m);
-  const config = JSON.parse(await readFile(path.join(root, ".engineering-intelligence", "ei.config.json"), "utf8"));
+  assert.match(await readFile(path.join(root, ".graphward", ".gitignore"), "utf8"), /^providers\/$/m);
+  const config = JSON.parse(await readFile(path.join(root, ".graphward", "gw.config.json"), "utf8"));
   assert.equal(config.providers.policy, "full");
   const cceIndex = calls.find((call) => call.command === "cce" && call.args?.[0] === "index");
   assert.ok(cceIndex);
@@ -80,7 +80,7 @@ test("native-only initialization is explicit and does not pretend provider evide
   assert.equal(result.cce.ok, false);
   assert.ok(result.evidence.graph.nodes > 0);
   assert.ok(result.evidence.claims.total > 0);
-  const config = JSON.parse(await readFile(path.join(root, ".engineering-intelligence", "ei.config.json"), "utf8"));
+  const config = JSON.parse(await readFile(path.join(root, ".graphward", "gw.config.json"), "utf8"));
   assert.equal(config.providers.policy, "native");
 });
 
@@ -98,7 +98,7 @@ test("omitting provider policy keeps providers optional and preserves native fal
   assert.equal(result.degraded, true, "the provider fallback must remain visible");
   assert.equal(result.providers.policy, "auto");
   assert.equal(result.providers.statuses.every((status) => status.health === "unsupported"), true);
-  const config = JSON.parse(await readFile(path.join(root, ".engineering-intelligence", "ei.config.json"), "utf8"));
+  const config = JSON.parse(await readFile(path.join(root, ".graphward", "gw.config.json"), "utf8"));
   assert.equal(config.providers.policy, "auto");
   assert.equal(config.providers.requireProviders, false);
 });

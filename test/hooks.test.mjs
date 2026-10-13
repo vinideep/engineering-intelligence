@@ -32,10 +32,10 @@ import { runVerification } from "../dist/verify/index.js";
 
 async function tmpRoot(config) {
   const root = await mkdtemp(path.join(tmpdir(), "ei-hooks-"));
-  await mkdir(path.join(root, ".engineering-intelligence"), { recursive: true });
+  await mkdir(path.join(root, ".graphward"), { recursive: true });
   if (config) {
     await writeFile(
-      path.join(root, ".engineering-intelligence", "ei.config.json"),
+      path.join(root, ".graphward", "gw.config.json"),
       JSON.stringify({ hooks: config }),
       "utf8",
     );
@@ -60,7 +60,7 @@ async function gitRoot(config) {
 
 async function readState(root, sid) {
   const raw = await readFile(
-    path.join(root, ".engineering-intelligence", ".hooks-state", `${sid}.json`),
+    path.join(root, ".graphward", ".hooks-state", `${sid}.json`),
     "utf8",
   );
   return JSON.parse(raw);
@@ -70,7 +70,7 @@ test("isSourceFile classifies product code but excludes intelligence/config/vend
   assert.equal(isSourceFile("src/app.ts"), true);
   assert.equal(isSourceFile("lib/handler.py"), true);
   assert.equal(isSourceFile("README.md"), false);
-  assert.equal(isSourceFile(".engineering-intelligence/knowledge-base/00.md"), false);
+  assert.equal(isSourceFile(".graphward/knowledge-base/00.md"), false);
   assert.equal(isSourceFile(".claude/settings.json"), false);
   assert.equal(isSourceFile("node_modules/x/index.js"), false);
   assert.equal(isSourceFile("dist/app.js"), false);
@@ -184,7 +184,7 @@ test("SessionStart resets session state and injects context", async () => {
   assert.equal(result.exitCode, 0);
   const out = JSON.parse(result.stdout);
   assert.equal(out.hookSpecificOutput.hookEventName, "SessionStart");
-  assert.match(out.hookSpecificOutput.additionalContext, /Engineering Intelligence/);
+  assert.match(out.hookSpecificOutput.additionalContext, /GraphWard/);
   assert.deepEqual((await readState(root, sid)).changedFiles, [], "session state reset on start");
 });
 
@@ -207,7 +207,7 @@ test("rendered Claude settings and default config are valid JSON with hook wirin
   const settings = JSON.parse(claudeCodeHookSettings());
   assert.ok(settings.hooks.SessionStart, "SessionStart wired");
   assert.ok(settings.hooks.Stop, "Stop wired");
-  assert.match(settings.hooks.PreToolUse[0].hooks[0].command, /engineering-intelligence hook pre-tool-use/);
+  assert.match(settings.hooks.PreToolUse[0].hooks[0].command, /graphward@[^ ]+ hook pre-tool-use/);
 
   const config = JSON.parse(defaultConfigFile());
   assert.equal(config.hooks.blockStaleEdits, false);

@@ -19,7 +19,7 @@ Execute hypothesis-driven, metric-focused optimization loops using graph intelli
 5. **Verdict Handling**:
    - `KEEP`: Improvement confirmed. Optionally auto-commits (`commitOnKeep: true`).
    - `REVERT`: Regression or gate failure. Target file is safely restored to baseline commit without touching other files (`autoRollback: true` by default).
-   - The tool automatically logs the trial to `.engineering-intelligence/experiments/ledger.jsonl`.
+   - The tool automatically logs the trial to `.graphward/experiments/ledger.jsonl`.
 
 ## Tool Parameter Schema
 
@@ -71,10 +71,10 @@ Execute hypothesis-driven, metric-focused optimization loops using graph intelli
 - `generate_experiment_candidates`: Ranked optimization targets from call and dependency graphs.
 - `evaluate_experiment_step`: Automated 3-tier verification, metric comparison, keep/revert decision, and rollback.
 - `get_experiment_history`: Query past experiments and outcomes for a target file or symbol.
-- CLI equivalent: `npx engineering-intelligence experiment candidates|history [path]`.
+- CLI equivalent: `npx graphward@6.0.0 experiment candidates|history [path]`.
 
 ## Cross-References
 
 - Depends on: `graph-engine` (dependency/call graph for candidate ranking), `environmental-backpressure-engine` (metric command execution)
-- Used by: `engineering-orchestrator` (optimization route), `engineering-intelligence` (optional autoresearch trigger)
+- Used by: `engineering-orchestrator` (optimization route), `graphward` (optional autoresearch trigger)
 - Related: `impact-analysis-engine` (blast radius of kept mutations)

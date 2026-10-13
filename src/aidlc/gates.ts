@@ -8,7 +8,7 @@ import { validateAllBacklogTickets } from "./backlog-graph.js";
 import type { Phase, GateCheckResult } from "./types.js";
 
 function aidlcDir(root: string): string {
-  return path.join(root, ".engineering-intelligence", "aidlc");
+  return path.join(root, ".graphward", "aidlc");
 }
 
 async function getBlockingOpenQuestions(root: string): Promise<string[]> {

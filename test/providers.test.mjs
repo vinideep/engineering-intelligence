@@ -121,7 +121,7 @@ test("managed provider activation rejects path escape and executable fingerprint
   await writeFile(currentPath, JSON.stringify({ executable: "/tmp/not-owned-by-ei", fingerprint: "bad" }));
   let status = await providerStatus("graphify", { providerHome: home, runner: fail });
   assert.equal(status.health, "error");
-  assert.match(status.message, /outside EI/);
+  assert.match(status.message, /outside GraphWard/);
 
   const executable = path.join(home, "graphify", "0.9.29", "darwin-arm64", "releases", "abc", "bin", "graphify");
   await mkdir(path.dirname(executable), { recursive: true });
@@ -134,7 +134,7 @@ test("managed provider activation rejects path escape and executable fingerprint
 
 test("project provider run status detects current and stale source snapshots", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "ei-provider-project-state-"));
-  const provider = path.join(root, ".engineering-intelligence", "providers");
+  const provider = path.join(root, ".graphward", "providers");
   const source = "export const ready = true;\n";
   const sourceHash = digest(source);
   const workspaceHash = digest(`src/main.ts:${sourceHash}`);
@@ -146,7 +146,7 @@ test("project provider run status detects current and stale source snapshots", a
   await writeFile(path.join(provider, "graphify", "graph.json"), JSON.stringify({ nodes: [], edges: [] }));
   await writeFile(path.join(provider, "graphify", "run.json"), JSON.stringify({
     schemaVersion: 1, provider: "graphify", providerVersion: "0.9.29", generatedAt: new Date().toISOString(),
-    workspaceHash, sourceHashes: { "src/main.ts": sourceHash }, command: [], graphPath: ".engineering-intelligence/providers/graphify/graph.json",
+    workspaceHash, sourceHashes: { "src/main.ts": sourceHash }, command: [], graphPath: ".graphward/providers/graphify/graph.json",
   }));
   await writeFile(path.join(provider, "cce", "run.json"), JSON.stringify({
     schemaVersion: 1, provider: "cce", providerVersion: "0.4.25", generatedAt: new Date().toISOString(),

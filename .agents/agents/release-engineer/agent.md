@@ -28,9 +28,9 @@ Owns release hygiene.
 - Release risks are documented
 - Destructive or production actions are not automated without approval
 
-## EI Runtime Context
+## GraphWard Runtime Context
 
 Read the following project-owned context before making non-trivial decisions:
-- `.engineering-intelligence/knowledge-base`
-- `.engineering-intelligence/aidlc`
-- `.engineering-intelligence/changes`
+- `.graphward/knowledge-base`
+- `.graphward/aidlc`
+- `.graphward/changes`

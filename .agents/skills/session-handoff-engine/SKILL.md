@@ -11,8 +11,8 @@ Serialize active conversation state, in-flight task progress, verified facts, an
 
 - Active conversation context and task objective
 - List of modified, created, or deleted files in the working tree
-- Active claims from `.engineering-intelligence/claims/`
-- Current state in `.engineering-intelligence/aidlc/aidlc-state.md`
+- Active claims from `.graphward/claims/`
+- Current state in `.graphward/aidlc/aidlc-state.md`
 
 ## Procedure
 
@@ -26,7 +26,7 @@ Serialize active conversation state, in-flight task progress, verified facts, an
    - **Active Blockers / Open Questions**: Decisions waiting on human confirmation or upstream dependencies.
 
 3. **Generate Handoff Packet**:
-   Write `.engineering-intelligence/handoffs/HO-<date>-<task-slug>.md` with the following structure:
+   Write `.graphward/handoffs/HO-<date>-<task-slug>.md` with the following structure:
    - **Task Context**: Objective and current status.
    - **Verified Ground Truth**: Direct repository facts and passing test receipts.
    - **Working Tree Diff Summary**: Modified paths and pending edits.

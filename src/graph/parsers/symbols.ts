@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { GraphNode, GraphEdge } from "../schema.js";
+import { maskSource } from "./scan.js";
+import { JS_FAMILY_EXTS, stripSourceExt } from "../source-exts.js";
 
 export interface PendingCall {
   from: string; // symbol id of the enclosing definition
@@ -14,7 +16,6 @@ export interface SymbolResult {
   pendingCalls: PendingCall[];
 }
 
-const JS_EXTS = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs"]);
 const PY_EXTS = new Set([".py"]);
 
 // Callee names that are language/runtime built-ins or control-flow keywords —
@@ -75,33 +76,13 @@ function lineForIndex(lineStarts: number[], index: number): number {
 // ---------------------------------------------------------------------------
 
 // Find the matching closing brace for the "{" at openIndex. Returns the index
-// just past the "}", or content.length if unbalanced. Skips braces inside
-// strings, template literals, and comments well enough for source heuristics.
+// just past the "}", or content.length if unbalanced. Runs on MASKED source
+// (see scan.ts), where comments, regex literals and string bodies are already
+// gone, so every remaining brace is code.
 function matchBrace(content: string, openIndex: number): number {
   let depth = 0;
-  let i = openIndex;
-  let inString: string | null = null;
-  let inLineComment = false;
-  let inBlockComment = false;
-  for (; i < content.length; i++) {
+  for (let i = openIndex; i < content.length; i++) {
     const ch = content[i];
-    const next = content[i + 1];
-    if (inLineComment) {
-      if (ch === "\n") inLineComment = false;
-      continue;
-    }
-    if (inBlockComment) {
-      if (ch === "*" && next === "/") { inBlockComment = false; i++; }
-      continue;
-    }
-    if (inString) {
-      if (ch === "\\") { i++; continue; }
-      if (ch === inString) inString = null;
-      continue;
-    }
-    if (ch === "/" && next === "/") { inLineComment = true; i++; continue; }
-    if (ch === "/" && next === "*") { inBlockComment = true; i++; continue; }
-    if (ch === '"' || ch === "'" || ch === "`") { inString = ch; continue; }
     if (ch === "{") depth++;
     else if (ch === "}") {
       depth--;
@@ -244,25 +225,25 @@ function pyBody(lines: string[], lineStarts: number[], headerLine: number, heade
 // Shared symbol/edge assembly
 // ---------------------------------------------------------------------------
 
-function stripExt(relPath: string): string {
-  return relPath.replace(/\.(ts|tsx|js|mjs|cjs|py)$/, "");
-}
-
 export async function extractSymbols(filePath: string, root: string): Promise<SymbolResult> {
   const ext = path.extname(filePath).toLowerCase();
-  const isJs = JS_EXTS.has(ext);
+  const isJs = JS_FAMILY_EXTS.has(ext);
   const isPy = PY_EXTS.has(ext);
   if (!isJs && !isPy) return { nodes: [], edges: [], pendingCalls: [] };
 
-  let content: string;
+  let raw: string;
   try {
-    content = await readFile(filePath, "utf8");
+    raw = await readFile(filePath, "utf8");
   } catch {
     return { nodes: [], edges: [], pendingCalls: [] };
   }
+  // JS/TS is analysed on masked source: a `foo(` inside a string, comment or
+  // regex is not a call, and braces/backticks inside them must not shift
+  // definition bodies. Masking preserves line structure, so lines stay exact.
+  const content = isJs ? maskSource(raw).masked : raw;
 
   const relFile = path.relative(root, filePath).replace(/\\/g, "/");
-  const rel = stripExt(relFile);
+  const rel = stripSourceExt(relFile);
   const moduleId = `module:${rel}`;
   const lineStarts = buildLineIndex(content);
   const ignored = isPy ? PY_IGNORED_CALLEES : JS_IGNORED_CALLEES;
@@ -288,7 +269,7 @@ export async function extractSymbols(filePath: string, root: string): Promise<Sy
       id,
       kind: "symbol",
       label: def.name,
-      path: rel,
+      path: relFile, // the real file (with extension), like module nodes
       confidence: "verified",
       metadata: { symbolKind: def.kind, line: def.line },
       evidence: [`${relFile}:${def.line}`],
@@ -318,6 +299,11 @@ export async function extractSymbols(filePath: string, root: string): Promise<Sy
     while ((c = callRe.exec(body)) !== null) {
       const callee = c[1];
       if (ignored.has(callee)) continue;
+      // `x.has(` / `a?.list(` is a method on some receiver we cannot type, so
+      // resolving it by bare name invents edges (every `Set#has` became a call
+      // into the only user-defined `has`). Only `this.method(` is resolvable.
+      const before = body.slice(Math.max(0, c.index - 64), c.index);
+      if (/\.\s*$/.test(before) && !/(?:^|[^\w$.])this\s*\??\.\s*$/.test(before)) continue;
       if (callee === def.name || callee === bareDefName) continue; // ignore trivial self-recursion noise
       const line = lineForIndex(lineStarts, bodyOffset + c.index);
       const local = localByName.get(callee);
@@ -349,8 +335,14 @@ export async function extractSymbols(filePath: string, root: string): Promise<Sy
 // modules the caller's module actually imports. If exactly one survives, an
 // edge is emitted. This is both more precise (avoids same-named symbols in
 // unrelated files) and higher-recall (resolves names that aren't globally
-// unique). Falls back to the global-unique rule when the import-constrained
-// set is empty or no import map is provided.
+// unique).
+//
+// The global-unique fallback ("the only symbol with this name anywhere") is
+// only used when no import map is supplied, or for languages whose imports the
+// map cannot express (Python absolute imports are recorded as packages). For a
+// JS/TS caller, a callee in a module it neither defines nor
+// imports cannot be what it calls — guessing produced confident-looking edges
+// to unrelated files.
 export function resolvePendingCalls(
   pendingCalls: PendingCall[],
   globalSymbolsByName: Map<string, string[]>,
@@ -365,16 +357,17 @@ export function resolvePendingCalls(
     let to: string | null = null;
     if (importsByModule) {
       const callerModule = symbolToModule(pc.from);
-      const imported = importsByModule.get(callerModule);
-      if (imported) {
-        const constrained = candidates.filter(
-          (id) => imported.has(symbolToModule(id)) || symbolToModule(id) === callerModule,
-        );
-        if (constrained.length === 1) to = constrained[0];
-      }
+      const imported = importsByModule.get(callerModule) ?? new Set<string>();
+      const constrained = candidates.filter(
+        (id) => imported.has(symbolToModule(id)) || symbolToModule(id) === callerModule,
+      );
+      if (constrained.length === 1) to = constrained[0];
     }
-    // Fall back to global-unique resolution.
-    if (!to && candidates.length === 1) to = candidates[0];
+    // An ES module cannot call another module's function without importing it,
+    // so with an import map available a JS/TS caller never uses the fallback.
+    const callerFile = pc.evidence.replace(/:\d+$/, "");
+    const strict = importsByModule !== undefined && JS_FAMILY_EXTS.has(path.extname(callerFile).toLowerCase());
+    if (!to && !strict && candidates.length === 1) to = candidates[0];
     if (!to) continue;
     if (to === pc.from) continue;
 

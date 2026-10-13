@@ -17,5 +17,5 @@ Owns security review for auth, authorization, data exposure, secrets, public API
 ## Outputs
 
 - Security sections in unit NFR design
-- `.engineering-intelligence/aidlc/operations/mcp-security-review.md` when MCP/tooling is in scope
+- `.graphward/aidlc/operations/mcp-security-review.md` when MCP/tooling is in scope
 - Findings for review reports

@@ -11,8 +11,8 @@ Systematically diagnose issues through evidence-driven root cause analysis, leve
 
 - Bug report or error description (symptoms, error messages, stack traces)
 - Repository root path
-- Graph intelligence from `.engineering-intelligence/graph/` (when available)
-- Project intelligence from `.engineering-intelligence/knowledge-base/` and `.engineering-intelligence/`
+- Graph intelligence from `.graphward/graph/` (when available)
+- Project intelligence from `.graphward/knowledge-base/` and `.graphward/`
 - Optional: log output, reproduction steps from reporter, environment details
 
 ## Procedure
@@ -99,11 +99,11 @@ Systematically diagnose issues through evidence-driven root cause analysis, leve
 
    Call `analyze_change_impact` on the proposed fix files, then invoke `impact-analysis-engine` for detailed assessment.
 
-7. **Generate Debug Report** — Write `.engineering-intelligence/reports/DEBUG-XXX-<slug>.md`.
+7. **Generate Debug Report** — Write `.graphward/reports/DEBUG-XXX-<slug>.md`.
 
 ## Output Format
 
-Write `.engineering-intelligence/reports/DEBUG-XXX-<slug>.md`:
+Write `.graphward/reports/DEBUG-XXX-<slug>.md`:
 
 ```markdown
 # DEBUG-XXX: <descriptive title>
@@ -181,7 +181,7 @@ Write `.engineering-intelligence/reports/DEBUG-XXX-<slug>.md`:
 
 ## Fallback When Graph Intelligence Is Missing
 
-If `.engineering-intelligence/graph/` files do not exist or are empty:
+If `.graphward/graph/` files do not exist or are empty:
 1. Use file-system search (`grep`, `find`) to trace imports and call chains manually.
 2. Use `git log --follow <file>` to identify recent changes near the fault area.
 3. Record `[DEGRADED: no graph intelligence available]` in the debug report.
@@ -189,7 +189,7 @@ If `.engineering-intelligence/graph/` files do not exist or are empty:
 ## Cross-References
 
 - Depends on: `graph-engine` (error propagation tracing), `impact-analysis-engine` (fix impact assessment)
-- Used by: `engineering-intelligence-skill`
+- Used by: `graphward-skill`
 - Consumed by: `engineering-change-review` (when fix is implemented as a change)
 - Reproduction harness: `vertical-tdd-engine` (for creating minimal reproduction tests)
 
