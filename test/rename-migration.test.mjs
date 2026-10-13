@@ -160,6 +160,7 @@ test("update upgrades a pre-rename installation cleanly", async () => {
   assert.deepEqual(Object.keys(mcp.mcpServers), ["graphward"]);
 
   assert.ok(!existsSync(path.join(root, oldSkill)), "old-named skill removed");
+  assert.ok(!existsSync(path.join(root, path.dirname(oldSkill))), "its now-empty directory is removed too");
   assert.ok(existsSync(path.join(root, ".claude/skills/graphward-skill/SKILL.md")));
   assert.ok(existsSync(path.join(root, ".graphward", "install-manifest.json")));
 });

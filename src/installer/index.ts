@@ -1,4 +1,4 @@
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rmdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { renderAdapters } from "../adapters/index.js";
 import { MANIFEST_PATH, TEMPLATE_VERSION, hashContent, readManifest, writeManifest } from "../manifest/index.js";
@@ -31,6 +31,25 @@ async function readMaybe(location: string): Promise<string | undefined> {
       return undefined;
     }
     throw error;
+  }
+}
+
+/**
+ * After removing a managed file, remove the directories it leaves empty (up to,
+ * never including, the project root). An empty `.claude/skills/<old-name>/`
+ * otherwise looks to hosts and agents like a skill whose SKILL.md is missing.
+ */
+async function pruneEmptyDirs(root: string, startDir: string): Promise<void> {
+  const stop = path.resolve(root);
+  let dir = path.resolve(startDir);
+  while (dir !== stop && dir.startsWith(stop + path.sep)) {
+    try {
+      if ((await readdir(dir)).length > 0) return;
+      await rmdir(dir);
+    } catch {
+      return;
+    }
+    dir = path.dirname(dir);
   }
 }
 
@@ -188,6 +207,7 @@ async function removeEntry(
   if (!options.dryRun) {
     if (entry.kind === "file") {
       await unlink(absolute);
+      await pruneEmptyDirs(root, path.dirname(absolute));
     } else {
       const remaining = removeManagedBlock(current, entry.blockId!);
       if (remaining.trim().length === 0) {

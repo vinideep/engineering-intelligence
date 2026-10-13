@@ -27,7 +27,13 @@ export interface LegacyMigration {
  * `gw.config.json`) when only the legacy layout exists. Never merges or
  * overwrites: if both directories exist the legacy one is left for the user.
  */
+const checkedRoots = new Set<string>();
+
 export function migrateLegacyLayout(root: string): LegacyMigration {
+  // Entry points can chain (CLI `mcp` → MCP server); check and report once.
+  const key = path.resolve(root);
+  if (checkedRoots.has(key)) return { migrated: false };
+  checkedRoots.add(key);
   const legacyDir = path.join(root, LEGACY_DIR);
   const gwDir = path.join(root, GW_DIR);
   let migrated = false;
