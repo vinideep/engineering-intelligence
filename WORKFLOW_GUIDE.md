@@ -7,23 +7,23 @@ This guide explains how to install and use GraphWard in a new or existing projec
 Install the toolkit from the project root you want to enhance:
 
 ```bash
-npx graphward install . --ide codex --yes
+graphward install . --ide codex --yes
 ```
 
 Common adapters:
 
 ```bash
-npx graphward install . --ide commandcode --yes
-npx graphward install . --ide cursor --yes
-npx graphward install . --ide claude-code --yes
-npx graphward install . --ide gemini-cli --yes
-npx graphward install . --ide generic --yes
+graphward install . --ide commandcode --yes
+graphward install . --ide cursor --yes
+graphward install . --ide claude-code --yes
+graphward install . --ide gemini-cli --yes
+graphward install . --ide generic --yes
 ```
 
 Multiple adapters can be installed together:
 
 ```bash
-npx graphward install . --ide codex --ide commandcode --ide cursor --yes
+graphward install . --ide codex --ide commandcode --ide cursor --yes
 ```
 
 ## 2. Existing Project Setup
@@ -33,7 +33,7 @@ Use this flow for a brownfield repository.
 1. Install the adapter:
 
    ```bash
-   npx graphward install . --ide commandcode --yes
+   graphward install . --ide commandcode --yes
    ```
 
 2. Open the project in your AI coding environment.
@@ -47,12 +47,12 @@ Use this flow for a brownfield repository.
 4. Review generated artifacts:
 
    ```text
-   knowledge-base/
+   .graphward/knowledge-base/
    .graphward/aidlc/
    .graphward/context/
    .graphward/memory/
    .graphward/graph/
-   .changes/
+   .graphward/changes/
    ```
 
 5. Run a focused architecture map when needed:
@@ -89,7 +89,7 @@ Use this flow for a greenfield project.
 2. Install the toolkit:
 
    ```bash
-   npx graphward install . --ide commandcode --yes
+   graphward install . --ide commandcode --yes
    ```
 
 3. Start project creation:
@@ -155,7 +155,7 @@ For each feature or bugfix:
    derived claims without rewriting canonical knowledge prose:
 
    ```bash
-   npx graphward sync . --files src/routes/route-plan.ts,src/providers/carrier.ts
+   graphward sync . --files src/routes/route-plan.ts,src/providers/carrier.ts
    ```
 
    A source change reports that model-assisted knowledge synchronization is
@@ -221,31 +221,31 @@ Usually, you do not need to call them manually. `/graphward` invokes them when t
 Check installation health:
 
 ```bash
-npx graphward doctor .
+graphward doctor .
 ```
 
 Update managed templates:
 
 ```bash
-npx graphward update .
+graphward update .
 ```
 
 Preview an update:
 
 ```bash
-npx graphward update . --dry-run
+graphward update . --dry-run
 ```
 
 Generate a local dashboard:
 
 ```bash
-npx graphward visualize .
+graphward visualize .
 ```
 
 Uninstall managed templates while preserving generated runtime intelligence:
 
 ```bash
-npx graphward uninstall .
+graphward uninstall .
 ```
 
 ## 9. CommandCode Notes
@@ -253,7 +253,7 @@ npx graphward uninstall .
 For CommandCode terminal:
 
 ```bash
-npx graphward install . --ide commandcode --yes
+graphward install . --ide commandcode --yes
 ```
 
 This writes:
@@ -279,7 +279,7 @@ CommandCode also discovers `.agents/skills/`, but this toolkit uses `.commandcod
 After regular use, a healthy project contains:
 
 ```text
-knowledge-base/
+.graphward/knowledge-base/
 .graphward/aidlc/
 .graphward/context/
 .graphward/context/context-manifest.md
@@ -287,7 +287,7 @@ knowledge-base/
 .graphward/graph/
 .graphward/reports/
 .graphward/snapshots/
-.changes/
+.graphward/changes/
 ```
 
 The most important files to review are:
@@ -297,6 +297,6 @@ The most important files to review are:
 .graphward/aidlc/execution-plan.md
 .graphward/aidlc/checkpoints.md
 .graphward/reports/IMP-XXX-*.md
-.changes/CHG-XXX-*.md
-knowledge-base/15-validation-report.md
+.graphward/changes/CHG-XXX-*.md
+.graphward/knowledge-base/15-validation-report.md
 ```

@@ -1,16 +1,16 @@
 ---
-name: engineering-intelligence-skill
+name: graphward-skill
 description: Executes engineering changes with impact analysis, implementation, tests, validation, and incremental synchronization of project intelligence. Use for feature, bugfix, update, refactor, architecture, infrastructure, or security requests.
 ---
 
-# Engineering Intelligence Implementation
+# GraphWard Implementation
 
 The core implementation skill for engineering work. Use after project intelligence has been initialized.
 
 ## Inputs
 
 - User request describing the desired change
-- Repository with initialized intelligence (`.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/`)
+- Repository with initialized intelligence (`.graphward/knowledge-base/`, `.graphward/`)
 
 ## Request Classification
 
@@ -47,8 +47,8 @@ Record the depth on line 2 of the impact report header. For **Minimal** depth, l
 
 Before reading any project intelligence:
 
-1. Run `npx engineering-intelligence user-profile .` if the profile doesn't yet exist.
-2. Resolve identity: `git config user.email` → `.engineering-intelligence/memory/users/<slug>/user-intelligence.md`.
+1. Run `npx graphward@6.0.0 user-profile .` if the profile doesn't yet exist.
+2. Resolve identity: `git config user.email` → `.graphward/memory/users/<slug>/user-intelligence.md`.
 3. Skip if CI environment detected (`$CI`, `$GITHUB_ACTIONS`, etc.).
 4. Load the **Active Predictions block only** (~50t) and apply immediately:
    - Test generation policy (always / on-request / inferred-rarely)
@@ -61,14 +61,14 @@ This calibrates the entire workflow before a single line of code is written or r
 
 ### 1. Pre-Flight: Read Intelligence
 
-Use `context-budget-optimizer` and call `get_engineering_context` before loading broad intelligence or opening source files. Treat its ContextPackV2 route, trust state, graph neighborhood, evidence hashes, conflicts, provider fallbacks, required gates, and stop reason as the pre-flight contract. Do not read all of `.engineering-intelligence/knowledge-base/` or all graph JSON by default. Build `.engineering-intelligence/context/context-manifest.md`, then load only relevant slices:
-- `.engineering-intelligence/knowledge-base/` — only H2 sections relevant to the changed modules, APIs, schemas, or risk areas
-- `.engineering-intelligence/aidlc/` — `aidlc-state.md`, active checkpoint, active unit, acceptance criteria, and execution-plan rows relevant to the request
-- `.engineering-intelligence/memory/` — only matching decisions, constraints, conventions, regression patterns, and ADR references
-- `.engineering-intelligence/context/` — module/service/runtime rows near the change scope
-- `.engineering-intelligence/graph/` — only relevant nodes/edges by graph proximity
+Use `context-budget-optimizer` and call `get_engineering_context` before loading broad intelligence or opening source files. Treat its ContextPackV2 route, trust state, graph neighborhood, evidence hashes, conflicts, provider fallbacks, required gates, and stop reason as the pre-flight contract. Do not read all of `.graphward/knowledge-base/` or all graph JSON by default. Build `.graphward/context/context-manifest.md`, then load only relevant slices:
+- `.graphward/knowledge-base/` — only H2 sections relevant to the changed modules, APIs, schemas, or risk areas
+- `.graphward/aidlc/` — `aidlc-state.md`, active checkpoint, active unit, acceptance criteria, and execution-plan rows relevant to the request
+- `.graphward/memory/` — only matching decisions, constraints, conventions, regression patterns, and ADR references
+- `.graphward/context/` — module/service/runtime rows near the change scope
+- `.graphward/graph/` — only relevant nodes/edges by graph proximity
 
-**If intelligence is missing or stale**: Run `initialize-intelligence-skill` first. When only a provider is unavailable, continue with the pack's native fallback and report degradation; never bypass stale EI knowledge by trusting provider output directly.
+**If intelligence is missing or stale**: Run `initialize-intelligence-skill` first. When only a provider is unavailable, continue with the pack's native fallback and report degradation; never bypass stale GraphWard knowledge by trusting provider output directly.
 
 Token rule: keep initial intelligence loading under 40% of the available context budget whenever possible. Lazy-load safety-gate evidence only when the trigger applies.
 
@@ -95,7 +95,7 @@ Before finalizing the impact analysis and planning:
 
 ### 3. Impact Analysis: Write Report
 
-Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>.md`. Call `analyze_change_impact` to compute direct and indirect impact programmatically, then incorporate its output into the report.
+Before any code edit, write `.graphward/reports/IMP-XXX-<summary>.md`. Call `analyze_change_impact` to compute direct and indirect impact programmatically, then incorporate its output into the report.
 
 ```markdown
 # IMP-XXX: <summary>
@@ -133,7 +133,7 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
 
 ### 4. Implement the Change
 
-- Select the adaptive delivery mode inside the existing Engineering Intelligence workflow:
+- Select the adaptive delivery mode inside the existing GraphWard workflow:
   - Standard Agile delivery for normal feature, bugfix, update, and refactor work
   - Adversarial delivery for auth, payment, public API, secrets, or compliance-sensitive work
   - TDD delivery for high-reliability business rules and service contracts
@@ -146,24 +146,24 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
 - **Skip Condition**: Skip when modifying existing internal function bodies or bugfixes.
 
 - Update Agile artifacts when product behavior is in scope:
-  - `.engineering-intelligence/aidlc/agile/product-backlog.md`
-  - `.engineering-intelligence/aidlc/agile/sprint-plan.md`
-  - `.engineering-intelligence/aidlc/agile/acceptance-criteria.md`
-  - `.engineering-intelligence/aidlc/agile/definition-of-ready.md`
-  - `.engineering-intelligence/aidlc/agile/definition-of-done.md`
-- Update `.engineering-intelligence/aidlc/execution-plan.md` and call `update_aidlc_state` to transition the AI-DLC lifecycle
-- Split broad changes into construction units and keep `.engineering-intelligence/aidlc/construction/cross-unit-discoveries.md` current
+  - `.graphward/aidlc/agile/product-backlog.md`
+  - `.graphward/aidlc/agile/sprint-plan.md`
+  - `.graphward/aidlc/agile/acceptance-criteria.md`
+  - `.graphward/aidlc/agile/definition-of-ready.md`
+  - `.graphward/aidlc/agile/definition-of-done.md`
+- Update `.graphward/aidlc/execution-plan.md` and call `update_aidlc_state` to transition the AI-DLC lifecycle
+- Split broad changes into construction units and keep `.graphward/aidlc/construction/cross-unit-discoveries.md` current
 - Edit only the files necessary for the request
-- Follow existing coding patterns from `.engineering-intelligence/memory/coding-patterns.md`
-- Read conventions from `.engineering-intelligence/knowledge-base/16-conventions.md` and `.engineering-intelligence/memory/coding-patterns.md` — match naming patterns, import style, error handling patterns, and code structure
+- Follow existing coding patterns from `.graphward/memory/coding-patterns.md`
+- Read conventions from `.graphward/knowledge-base/16-conventions.md` and `.graphward/memory/coding-patterns.md` — match naming patterns, import style, error handling patterns, and code structure
 - If conventions document is missing or outdated, run `convention-detector` first
 - After generating or modifying each file, compare it against `coding-patterns.md` for naming, import order, error handling, logging, folder structure, test style, and framework idioms. Auto-correct minor violations. Structural convention violations become review findings and block completion when critical.
-- Respect architectural boundaries from `.engineering-intelligence/memory/architecture-decisions.md`
+- Respect architectural boundaries from `.graphward/memory/architecture-decisions.md`
 - Consult `dangerous-areas.md` before modifying flagged code
 
 #### Adaptive Vertical TDD Execution
 - **Trigger**: When TDD delivery mode is selected, or when implementing complex business rules, parsers, state machines, or auth logic.
-- **Action**: Use `vertical-tdd-engine` to write vertical slice tests against public interfaces first (RED), write minimal passing code (GREEN), and clean code under tests (REFACTOR). Save failing output in `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md`.
+- **Action**: Use `vertical-tdd-engine` to write vertical slice tests against public interfaces first (RED), write minimal passing code (GREEN), and clean code under tests (REFACTOR). Save failing output in `.graphward/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md`.
 - If this sequence is skipped, mark the construction unit blocked unless the user explicitly approves non-TDD execution.
 
 ### 5. Add/Update Tests
@@ -186,14 +186,14 @@ Before any code edit, write `.engineering-intelligence/reports/IMP-XXX-<summary>
 - Run `environment-variable-auditor` when environment variable reads, validation schemas, deployment config, or CI secrets change
 - Run `adr-compliance-checker` when accepted ADRs or architecture decisions apply to the changed area
 - Run `llm-prompt-injection-guard` when user-controlled data reaches prompts, RAG, agent tools, LLM calls, or durable AI memory
-- Write `.engineering-intelligence/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md` for non-trivial units
+- Write `.graphward/aidlc/construction/<unit>/build-and-test/build-and-test-summary.md` for non-trivial units
 - **Never claim validation passed unless it actually ran and passed**
 - Record partial or failed validation honestly
 - The 10 specialized safety engines listed above are **skills** invoked as subagents or inline procedures; `validate_change` runs the deterministic subset automatically
 
 #### Acceptance Criteria Verification Matrix
 
-Before Definition of Done can pass, map every criterion from `.engineering-intelligence/aidlc/agile/acceptance-criteria.md` to evidence:
+Before Definition of Done can pass, map every criterion from `.graphward/aidlc/agile/acceptance-criteria.md` to evidence:
 
 ```markdown
 ## Acceptance Criteria Verification Matrix
@@ -216,15 +216,15 @@ Call `sync_engineering_knowledge` after edits, then use `incremental-sync-engine
 - AI-DLC lifecycle artifacts if state, plan, NFRs, ADRs, operations readiness, or unit discoveries changed
 - Agile artifacts if backlog, story status, acceptance criteria, Ready/Done gates, or retrospective learning changed
 
-Run `validate_change` after synchronization. Completion requires current graph/index evidence, re-derived claims, applicable deterministic gates, and explicit reporting of any unavailable provider or validation. Provider caches are disposable; EI artifacts remain durable authority.
+Run `validate_change` after synchronization. Completion requires current graph/index evidence, re-derived claims, applicable deterministic gates, and explicit reporting of any unavailable provider or validation. Provider caches are disposable; GraphWard artifacts remain durable authority.
 
 #### Adaptive Session Handoff Trigger
 - **Trigger**: When context window limits approach, work is paused across sessions, or task is transferred to another agent.
-- **Action**: Run `session-handoff-engine` to emit `.engineering-intelligence/handoffs/HO-<date>-<task>.md` with ground truth, modified files, and immediate next commands.
+- **Action**: Run `session-handoff-engine` to emit `.graphward/handoffs/HO-<date>-<task>.md` with ground truth, modified files, and immediate next commands.
 
 ### 8. Record Change
 
-Create `.engineering-intelligence/changes/CHG-XXX-<summary>.md`:
+Create `.graphward/changes/CHG-XXX-<summary>.md`:
 
 ```markdown
 # CHG-XXX: <summary>
@@ -318,7 +318,7 @@ Summarize to the user:
 - [ ] High-risk changes went through review gate
 - [ ] Generated code follows detected project conventions (naming, imports, structure)
 - [ ] ContextPackV2 was used before direct exploration and its trust/fallback state was honored
-- [ ] Post-edit graph, provider index, derived claims, validation, and affected EI knowledge were synchronized
+- [ ] Post-edit graph, provider index, derived claims, validation, and affected GraphWard knowledge were synchronized
 
 ## Rules
 

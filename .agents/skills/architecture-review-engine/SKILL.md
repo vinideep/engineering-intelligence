@@ -9,9 +9,9 @@ Systematically assess architectural quality using evidence from code, graphs, an
 
 ## Inputs
 
-- `.engineering-intelligence/graph/` (dependency, service, runtime graphs)
-- `.engineering-intelligence/knowledge-base/02-architecture.md`
-- `.engineering-intelligence/memory/architecture-decisions.md`
+- `.graphward/graph/` (dependency, service, runtime graphs)
+- `.graphward/knowledge-base/02-architecture.md`
+- `.graphward/memory/architecture-decisions.md`
 - Specific scope or concern (optional)
 
 ## Review Checklist
@@ -66,7 +66,7 @@ Systematically assess architectural quality using evidence from code, graphs, an
 
 ## Output Format
 
-Write `.engineering-intelligence/knowledge-base/16-architecture-review.md`:
+Write `.graphward/knowledge-base/16-architecture-review.md`:
 
 ```markdown
 # Architecture Review

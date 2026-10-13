@@ -1,5 +1,98 @@
 # Changelog
 
+## 6.0.0 — Renamed to GraphWard; accuracy fixes
+
+The npm package `engineering-intelligence` is deprecated as "Renamed to
+graphward". This release renames the codebase to match. The package is marked
+`private` because npm's `graphward` 1.x is published from a separate repository.
+
+### Breaking (with automatic migration)
+
+| Before | Now |
+|---|---|
+| package / CLI `engineering-intelligence`, `ei-mcp` | `graphward`, `gw`, `gw-mcp` (old names kept as alias bins) |
+| `.engineering-intelligence/`, `ei.config.json`, `.eiignore` | `.graphward/`, `gw.config.json`, `.gwignore` |
+| `EI_PROVIDER_HOME` and other `EI_*` env vars | `GW_*` (the `EI_*` names are still read) |
+| MCP key / managed block id `engineering-intelligence` | `graphward` |
+| skill `engineering-intelligence-skill`; workflows `engineering-intelligence`, `initialize-engineering-intelligence`, `sync-engineering-intelligence` | `graphward-skill`; `graphward`, `initialize-graphward`, `sync-graphward` |
+
+Any `graphward` command, hook or MCP server moves the legacy directory and
+config into place the first time it runs. `graphward update .` then replaces
+the old hook entries, MCP key and managed block, and removes the old-named
+skill and workflow files if you never edited them.
+
+Generated hooks, hook messages, skills, MCP registration and CI templates now
+pin the CLI (`npx graphward@<version>`), so npm's `latest` can't run a
+different release from the one that installed the project.
+
+### Fixed: analysis that gave confidently wrong answers
+
+- **dead-exports** reported live exports as dead whenever a module was an
+  `index.ts` consumed through a namespace or dynamic import, because the ids
+  didn't match (118 → 32 findings on this repository). Imports of `dist/` now
+  count as uses of `src/`.
+- **verify / Stop gate.** Trimming `git status --porcelain` output corrupted
+  the first changed path, so that file was never checked and the gate could
+  pass unverified edits.
+- **Monorepos and renames.** Git paths are now mapped to the analysed root
+  (`--relative`, `--show-prefix`), and renames report both sides. This fixes
+  incremental graph refresh, churn, flight tracking, the api-diff and
+  migration-lint gates, and freshness.
+- **Call graph.**
+  - Receiver method calls such as `set.has(` no longer resolve to a
+    same-named user method.
+  - A JS/TS caller never resolves a call into a module it doesn't import.
+  - Symbols are extracted from masked source, so strings, comments and regexes
+    produce no calls.
+  - Symbol paths keep their file extension, so `testsToRun` lists real files.
+- **Scanner.** Regex literals (for example `/\/*$/`) no longer swallow the
+  imports that follow them, and `${}` template interpolations are parsed as
+  code.
+- **Imports.**
+  - `.jsx`, `.mts` and `.cts` are parsed everywhere.
+  - A runtime re-export after a type alias is no longer labelled type-only.
+  - Python `import x as y` and `from . import z` resolve to real ids.
+  - Rust `use crate::` resolves from the crate root.
+- **Gates.**
+  - api-diff no longer loses every route after a `"/*"` wildcard.
+  - migration-lint checks SQL statements, not lines, so multi-line `ALTER` and
+    `UPDATE` statements are caught.
+  - env-vars handles mixed-case names and destructured `process.env`.
+- **Context classification** uses the words in the task plus specific path
+  signals, not substrings. `src/index.ts` is no longer a "database change".
+- **MCP.** `read_knowledge` and `get_graph` can no longer read files outside
+  their directories (path traversal).
+- **Claims and freshness.**
+  - Claim hashes ignore CRLF line endings.
+  - Undated documents use their real last-modified date.
+  - Sources with uncommitted edits count as changed now.
+- **Rendering.**
+  - HTML comments inside code are no longer stripped from skills, which broke
+    the freshness-marker instructions.
+  - Routing files only mention `SKILL-BRIEF.md` when briefs are installed.
+
+### Agent-facing documentation
+
+- The installed `CLAUDE.md`/`AGENTS.md` block lists all 13 advertised MCP tools
+  with their real CLI equivalents, the correct `hooks.*` config keys, and a
+  computed skill count. Tests pin all of these to the code.
+- The repository's own `CLAUDE.md`/`AGENTS.md` now explain how to develop it.
+  `.mcp.json` runs the local build.
+- `--help` is reorganised and covers every command.
+- `npm test` discovers test files automatically (`scripts/run-tests.mjs`).
+- Removed one-off session and marketing files, and the stale install that was
+  committed inside the benchmark fixture.
+
+## 4.2.0 – 5.0.0 (summarised from git history)
+
+- Consolidated MCP surface: `get_engineering_context`, `analyze_change_impact`,
+  `validate_change`, `sync_engineering_knowledge` and `provider_status`. The
+  older tools remain callable by name.
+- Managed Graphify and CCE providers with pinned versions and a native fallback.
+- AI-DLC clarification gate and state tools.
+- Graph-guided experiment tools.
+- Cross-platform CI fixes.
+
 ## 4.1.0 — Antigravity custom agents
 
 - Antigravity and Antigravity CLI now install native Markdown custom agents at

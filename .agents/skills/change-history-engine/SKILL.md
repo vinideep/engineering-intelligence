@@ -17,7 +17,7 @@ Create structured, traceable change records that document what was done, why, wh
 
 ## Change Record Format
 
-Store change records in `.engineering-intelligence/changes/`:
+Store change records in `.graphward/changes/`:
 
 - Initialization creates `CHG-000-initialization.md`
 - Subsequent changes create the next numbered `CHG-XXX-<summary>.md`
@@ -66,9 +66,9 @@ Store change records in `.engineering-intelligence/changes/`:
 ## Synchronized Artifacts
 | Artifact | Change |
 |---|---|
-| .engineering-intelligence/knowledge-base/04-api-documentation.md | Updated rate limiting section |
-| .engineering-intelligence/graph/runtime-graph.json | Added rate-limiter node |
-| .engineering-intelligence/context/module-map.md | Added rate-limiter entry |
+| .graphward/knowledge-base/04-api-documentation.md | Updated rate limiting section |
+| .graphward/graph/runtime-graph.json | Added rate-limiter node |
+| .graphward/context/module-map.md | Added rate-limiter entry |
 
 ## Unresolved Risks
 - <any remaining concerns, follow-ups, or known limitations>
@@ -87,16 +87,16 @@ Store change records in `.engineering-intelligence/changes/`:
 - Type: initialization
 
 ## Summary
-Initial engineering intelligence generated for <project name>.
+Initial GraphWard generated for <project name>.
 
 ## Generated Artifacts
 | Category | Count | Path |
 |---|---|---|
-| Knowledge Base | 16 documents | .engineering-intelligence/knowledge-base/ |
-| Memory | 5 documents | .engineering-intelligence/memory/ |
-| Context | 6 maps | .engineering-intelligence/context/ |
-| Events | 5 guides | .engineering-intelligence/events/ |
-| Graphs | 4 JSON + 1 map | .engineering-intelligence/graph/ |
+| Knowledge Base | 16 documents | .graphward/knowledge-base/ |
+| Memory | 5 documents | .graphward/memory/ |
+| Context | 6 maps | .graphward/context/ |
+| Events | 5 guides | .graphward/events/ |
+| Graphs | 4 JSON + 1 map | .graphward/graph/ |
 
 ## Confidence Assessment
 - High confidence areas: <list>
@@ -127,6 +127,6 @@ Initial engineering intelligence generated for <project name>.
 
 ## Cross-References
 
-- Used by: `engineering-intelligence-skill` (step 7), `initialize-intelligence-skill` (step 9)
+- Used by: `graphward-skill` (step 7), `initialize-intelligence-skill` (step 9)
 - Depends on: `impact-analysis-engine` (for report references)
 - Related: `engineering-change-review` (may trigger a review report)

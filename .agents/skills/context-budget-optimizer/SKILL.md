@@ -7,7 +7,7 @@ description: Minimizes AI IDE token usage by ranking, slicing, summarizing, and 
 
 Use this skill before broad intelligence reads in implementation, analysis, review, and synchronization workflows. The goal is to produce the same engineering output with fewer tokens by loading only the most relevant evidence.
 
-**Prefer ContextPackV2.** Call `get_engineering_context` before broad intelligence reads or direct file exploration. It verifies EI knowledge first, uses EI's normalized graph to choose the architectural neighborhood, retrieves current CCE spans only inside that scope, filters every result through the project file policy, and falls back to native scoped retrieval when needed. The pack carries classification, route, trust, claims, conflicts, risks, required gates, provider health, token allocation, confidence, and a stop reason. `get_context` remains a compatibility surface.
+**Prefer ContextPackV2.** Call `get_engineering_context` before broad intelligence reads or direct file exploration. It verifies GraphWard knowledge first, uses GraphWard's normalized graph to choose the architectural neighborhood, retrieves current CCE spans only inside that scope, filters every result through the project file policy, and falls back to native scoped retrieval when needed. The pack carries classification, route, trust, claims, conflicts, risks, required gates, provider health, token allocation, confidence, and a stop reason. `get_context` remains a compatibility surface.
 
 Retrieval is progressive: begin with five compressed/current spans, expand to ten only when confidence and stop conditions require it, then expand individual chunks or full files only for an unresolved material question. Stop when components, dependency paths, tests, and supporting evidence are resolved. Never spend additional budget merely because it is available.
 
@@ -29,7 +29,7 @@ If the AI IDE exposes a context-window size, estimate against that. If not, use 
 Before loading full documents, create or update:
 
 ```text
-.engineering-intelligence/context/context-manifest.md
+.graphward/context/context-manifest.md
 ```
 
 Format:
@@ -45,8 +45,8 @@ Format:
 ## Ranked Context
 | Rank | Artifact | Sections / Keys | Reason | Estimated Tokens | Load Mode |
 |---:|---|---|---|---:|---|
-| 1 | `.engineering-intelligence/context/module-map.md` | auth row | direct scope | 120 | slice |
-| 2 | `.engineering-intelligence/knowledge-base/04-api-documentation.md` | H2: Auth API | API contract | 500 | section |
+| 1 | `.graphward/context/module-map.md` | auth row | direct scope | 120 | slice |
+| 2 | `.graphward/knowledge-base/04-api-documentation.md` | H2: Auth API | API contract | 500 | section |
 ```
 
 ## Procedure
@@ -54,7 +54,7 @@ Format:
 0. **Load User Intelligence Profile (pinned, ~50t, always first)**
 
    Before ranking any other artifact:
-   - Run `npx engineering-intelligence user-profile .` if `.engineering-intelligence/memory/users/` doesn't exist yet.
+   - Run `npx graphward@6.0.0 user-profile .` if `.graphward/memory/users/` doesn't exist yet.
    - Resolve identity: `git config user.email` → slug → `memory/users/<slug>/user-intelligence.md`.
    - If CI environment detected (`$CI`, `$GITHUB_ACTIONS`, etc.) → skip personal profile; load `team-preferences.md` only.
    - Load the **Active Predictions block only** (~50t) from the personal profile.
@@ -85,7 +85,7 @@ Format:
      - Load snapshots only when API replay applies.
 
 5. **Summarize And Cache**
-   - Write compact summaries to `.engineering-intelligence/context/context-manifest.md`.
+   - Write compact summaries to `.graphward/context/context-manifest.md`.
    - Store pointers to source evidence instead of copying long excerpts.
    - Reuse manifest rankings during resume/checkpoint flows.
 

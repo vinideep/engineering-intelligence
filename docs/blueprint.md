@@ -1,3 +1,8 @@
+> **Historical design document.** This is the original blueprint the project
+> started from. It describes aspirations (for example an LLM provider layer and a
+> `packages/` layout) that do not match the current code. For how GraphWard
+> actually works, read the README, CLAUDE.md and the source.
+
 # GraphWard --- Complete Blueprint
 
 ## Vision

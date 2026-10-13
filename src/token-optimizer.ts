@@ -14,6 +14,7 @@
  */
 
 import { WORKFLOW_NAMES, readTemplate } from "./templates.js";
+import { cliInvocation } from "./version.js";
 
 // --- Rendered-file preparation ------------------------------------------------
 
@@ -36,7 +37,16 @@ import { WORKFLOW_NAMES, readTemplate } from "./templates.js";
  * frontmatter-at-byte-0 invariant has one owner.
  */
 export function prepareRendered(content: string): string {
-  return smartCrush(content);
+  return pinCliInvocations(smartCrush(content));
+}
+
+/**
+ * Templates say `npx graphward <cmd>`; installed files must name the version
+ * that installed them. Unpinned, `npx` resolves npm's `latest`, which can be a
+ * different release (or codebase) than the one whose skills the agent follows.
+ */
+export function pinCliInvocations(content: string, invocation = cliInvocation()): string {
+  return content.replace(/\bnpx (?:-y |--yes )?graphward(?![@\w-])/g, invocation);
 }
 
 // --- Workflow → skill routing table ------------------------------------------

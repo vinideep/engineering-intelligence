@@ -46,9 +46,10 @@ Omit `--id` to close the most recent open flight.
 
 ### As MCP tools
 
-`preflight` and `postflight` are also MCP tools, so an agent can run the whole
-loop itself: declare intent → edit → self-audit, and report the verdict back to
-you.
+`preflight` and `postflight` are also callable as MCP tools (compatibility
+tools: they work when called by name but are not in the advertised tool list),
+so an agent can run the whole loop itself: declare intent → edit → self-audit,
+and report the verdict back to you.
 
 ## Memory with receipts (self-invalidating knowledge)
 

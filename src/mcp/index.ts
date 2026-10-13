@@ -218,13 +218,25 @@ const TOOLS = [
   },
 ];
 
-/** Tool names and one-line purposes, for the installed instructions. */
-export const MCP_TOOL_SUMMARY: ReadonlyArray<readonly [string, string]> = [
-  ["get_engineering_context", "build ContextPackV2 from verified GraphWard knowledge, canonical structure, and current scoped code"],
-  ["analyze_change_impact", "compute direct and indirect impact, affected tests, risks, and unknowns"],
-  ["validate_change", "run impact, safety gates, claims, knowledge, and citation validation"],
-  ["sync_engineering_knowledge", "refresh affected graph, provider indexes, claims, and knowledge health after edits"],
-  ["provider_status", "report pinned provider health, versions, fallbacks, and remediation"],
+/**
+ * Every tool the MCP server advertises (non-expert mode), with a one-line
+ * purpose and its CLI equivalent, for the installed instructions. A test pins
+ * this list to the consolidated registry so the docs cannot drift from it.
+ */
+export const MCP_TOOL_SUMMARY: ReadonlyArray<readonly [name: string, purpose: string, cli: string | null]> = [
+  ["get_engineering_context", "build ContextPackV2 from verified GraphWard knowledge, canonical structure, and current scoped code", `context "<task>" [--files a,b] [--budget N]`],
+  ["analyze_change_impact", "compute direct and indirect impact, affected tests, risks, and unknowns", "impact <file...>"],
+  ["validate_change", "run impact, safety gates, claims, knowledge, and citation validation", null],
+  ["sync_engineering_knowledge", "refresh affected graph, provider indexes, claims, and knowledge health after edits", "sync [--files a,b]"],
+  ["provider_status", "report pinned provider health, versions, fallbacks, and remediation", "providers status"],
+  ["assess_prompt_clarity", "score a request's clarity and list the questions to ask before building", null],
+  ["check_aidlc_gate", "check whether the repository meets the criteria to leave the current AI-DLC phase", null],
+  ["freeze_clarified_requirements", "write the chosen clarification answers to `.graphward/aidlc/inception/requirements.md` before construction", null],
+  ["get_aidlc_state", "read the durable AI-DLC position and breadcrumb", null],
+  ["update_aidlc_state", "update the durable AI-DLC position and breadcrumb", null],
+  ["generate_experiment_candidates", "rank optimization candidates from graph and git signals", "experiment candidates"],
+  ["evaluate_experiment_step", "verify one experiment change and KEEP or REVERT it", null],
+  ["get_experiment_history", "list past experiments and their verdicts", null],
 ];
 
 /**

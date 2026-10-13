@@ -10,7 +10,7 @@ Review completed engineering work for correctness, completeness, and alignment w
 ## Inputs
 
 - Implementation diff or changed scope
-- Impact report (`.engineering-intelligence/reports/IMP-XXX-*.md`)
+- Impact report (`.graphward/reports/IMP-XXX-*.md`)
 - Test and validation evidence
 - Updated graph and intelligence artifacts
 
@@ -96,7 +96,7 @@ Review completed engineering work for correctness, completeness, and alignment w
 
 ## Output Format
 
-Write `.engineering-intelligence/reports/REV-XXX-<slug>.md`:
+Write `.graphward/reports/REV-XXX-<slug>.md`:
 
 ```markdown
 # REV-XXX: <summary>
@@ -133,7 +133,7 @@ Write `.engineering-intelligence/reports/REV-XXX-<slug>.md`:
 ## Intelligence Sync Status
 | Artifact | Status | Notes |
 |---|---|---|
-| .engineering-intelligence/knowledge-base/ | ✅ Synced | API docs updated |
+| .graphward/knowledge-base/ | ✅ Synced | API docs updated |
 | graph/ | ⚠️ Partial | Missing new service node |
 
 ## Stale Intelligence Risks
@@ -164,5 +164,5 @@ Write `.engineering-intelligence/reports/REV-XXX-<slug>.md`:
 ## Cross-References
 
 - Depends on: `change-detection-engine` (identifies what to review)
-- Used by: `engineering-intelligence-skill` (high-risk review gate), `review-engineering-change` workflow
+- Used by: `graphward-skill` (high-risk review gate), `review-engineering-change` workflow
 - Reads: Impact reports, change records, graph artifacts

@@ -1,5 +1,12 @@
 # Token frugality
 
+> **Tool names in this document.** `get_brief`, `get_graph`, `map_dependencies`,
+> `analyze_impact`, `who_calls`, `find_symbol` and `read_knowledge` are the
+> original MCP tools. They still work when called by name, but the server now
+> advertises the consolidated set instead (`get_engineering_context`,
+> `analyze_change_impact`, `validate_change`, … — see the README). The shaping
+> and budgets described here apply to both.
+
 Does this actually save tokens versus typing your requirement straight into the
 AI chat? Yes — but the savings come from a different place than most "context
 compression" tools, so it's worth being precise.
@@ -83,7 +90,7 @@ regression-tested in `test/accuracy.test.mjs`:
    so trimming rarely triggers at all.
 
 Escape hatches: pass `budget: 0` to any tool for an uncapped response, set
-per-project caps in `.graphward/config.json`
+per-project caps in `.graphward/gw.config.json`
 (`{ "tokenBudgets": { "analyze_impact": 3000 } }`), or use `ask --full` on the
 CLI. And every tool's `--json` / raw output is always complete.
 

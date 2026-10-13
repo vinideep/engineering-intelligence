@@ -1,134 +1,135 @@
-# GraphWard (EI)
+# GraphWard
 
-GraphWard gives AI coding assistants a living blueprint of your codebase so they stop guessing, hallucinating, and breaking working code.
+GraphWard gives AI coding agents a computed map of your codebase: a real dependency and call graph, impact analysis, safety gates and an evidence-checked knowledge base. Agents use it to check facts before they change code instead of guessing.
 
----
-
-## What is GraphWard? (In Simple Terms)
-
-When you ask standard AI to write code, it often guesses how your project works. It might change a button and accidentally break your database, or delete code it didn't understand.
-
-**GraphWard acts like an automated lead architect and project manager:**
-1. **Maps your project** — Scans your entire app to understand how every file and function connects.
-2. **Clarifies before coding** — If your request is vague, it stops and asks you simple multiple-choice questions instead of guessing.
-3. **Tests in a safety sandbox** — Tests changes in an isolated workspace. If anything breaks, it rolls back automatically so your working files are never damaged.
-4. **Remembers past mistakes** — Keeps a record of failed attempts so the AI never repeats the same mistake twice.
+> **Renamed from `engineering-intelligence`.** The npm package `engineering-intelligence` is deprecated in favour of `graphward`. This repository is version **6.0.0** and is marked `private`. It is **not** the `graphward` currently published on npm (1.x), which is built from a separate repository. Run it from source as shown below. Existing installs migrate automatically: see [Migrating from engineering-intelligence](#migrating-from-engineering-intelligence).
 
 ---
 
-## Quick Start: 3-Step Process
+## What it does
 
-You do not need to be an engineer to use this. Here is the step-by-step guide:
+1. **Maps your project.** It builds `.graphward/graph/dependency-graph.json`:
+   - module imports for TypeScript/JavaScript (`.ts .tsx .mts .cts .js .jsx .mjs .cjs`), Python, Go, Rust, Ruby, Java and Kotlin;
+   - function and method calls for TypeScript/JavaScript and Python.
+2. **Answers impact questions.** `impact <file>` and `who-calls <symbol>` report direct and indirect dependents, the tests to run, and high-churn risk, each with `file:line` evidence.
+3. **Runs safety gates.** These are `env-vars`, `dead-exports`, `api-diff` and `migration-lint`. They are deterministic and exit non-zero in CI.
+4. **Verifies before "done".** `verify` runs your project's own checks and binds the result to the exact bytes it checked. The Stop hook can require that receipt.
+5. **Clarifies before building.** The clarification gate and the AI-DLC state tools record the decisions you made before construction starts.
+6. **Ships agent workflows.** It installs skills, agents and workflows for 9 AI editors, plus an MCP server that exposes the tools above.
 
-### Step 1: Initialize Your Project (Run Once)
+GraphWard reports what it can't resolve (`unknowns`) rather than guessing. Results are only as good as the source it can parse and the tests you have.
 
-Open your terminal in your project folder and run:
+---
+
+## Install (from source)
+
+Requirements: Node.js **20.11+** and git. The optional Graphify and CCE providers also need `uv` and Python 3.11+.
 
 ```bash
-npx graphward initialize . --yes
+git clone https://github.com/vinideep/engineering-intelligence.git graphward
+cd graphward
+npm ci
+npm run build
+npm link            # puts `graphward` and `gw` on your PATH (optional)
 ```
 
-This creates a hidden `.graphward/` folder that holds the blueprint, memory, and dependency graphs of your application.
+Without `npm link`, run `node /absolute/path/to/graphward/dist/cli/index.js <command>`.
 
----
+## Quick start
 
-### Step 2: Open Your AI Editor
-
-Open your project in any supported AI editor:
-- **Google Antigravity**
-- **Cursor**
-- **Claude Code**
-- **GitHub Copilot**
-- **Gemini CLI**
-
-In your AI chat window, select or mention the single main coordinator:
-```text
-@engineering-orchestrator
-```
-You don't need to remember any complex commands or internal tool names. **The orchestrator is the single front door for everything.**
-
----
-
-### Step 3: Describe What You Need
-
-Type your request in plain English. For example:
-
-- **To fix a problem:**
-  > "The checkout submit button isn't giving any feedback or loading spinner when clicked."
-- **To add a feature:**
-  > "Add an export-to-PDF button on the customer invoice page."
-- **To speed up or improve logic:**
-  > "Optimize the order total calculation to handle large baskets faster."
-
----
-
-## What Happens Automatically When You Prompt It
-
-```mermaid
-flowchart TD
-    User["Your Plain English Prompt"] --> Orchestrator["engineering-orchestrator"]
-    Orchestrator --> Clarity{"Is the prompt clear?"}
-    Clarity -->|Vague / Missing Details| Gate["Socratic Gate: Asks you 2-3 friendly multiple-choice questions"]
-    Gate --> Freezing["Freezes your decisions in requirements"]
-    Clarity -->|Clear| Blueprint["Reads Dependency Graph & Negative Constraints"]
-    Freezing --> Blueprint
-    Blueprint --> Sandbox["Tests Changes in Safe Isolated Sandbox"]
-    Sandbox --> Verification{"Did all tests pass?"}
-    Verification -->|Yes| Keep["Keeps change & updates living blueprint"]
-    Verification -->|No| Revert["Discards failure safely with zero data loss"]
+```bash
+cd /path/to/your/project
+graphward initialize . --yes          # detects your editors, installs workflows, builds the graph
 ```
 
-1. **Clarification Gate**: If your prompt is missing details (e.g., "fix the button"), the AI pauses and presents 2–3 multiple-choice options (which screen? visual ripple or loading spinner?). It will never blindly change code on an assumption.
-2. **Context Retrieval**: Pulls in only the exact code needed, plus "Negative Constraints" (patterns that previously failed).
-3. **Safe Execution**: Makes the change and tests it. If anything breaks, it rolls back cleanly.
-4. **Blueprint Synchronization**: Updates the internal memory and documentation so your project blueprint stays fresh.
+This creates `.graphward/`, holding the graph, knowledge base, memory, AI-DLC state and reports, and installs the editor files. Then open the project in your editor and start non-trivial work with the **`engineering-orchestrator`** agent, or run the `graphward` workflow with your request.
 
----
+### Supported editors
 
-## Advanced Options & CLI Reference (For Developers)
-
-### Initialization Modes
-
-| Command | Best For |
+| `--ide` id | Editor |
 |---|---|
-| `npx graphward initialize . --yes` | Default recommended setup with auto-detected providers |
-| `npx graphward initialize . --providers native --yes` | Offline, zero-download deterministic setup using built-in parser |
-| `npx graphward initialize . --ide cursor --yes` | Explicitly targets a specific editor adapter |
+| `claude-code` | Claude Code |
+| `cursor` | Cursor |
+| `codex` | OpenAI Codex |
+| `github-copilot` | GitHub Copilot |
+| `gemini-cli` | Gemini CLI |
+| `antigravity`, `antigravity-cli` | Google Antigravity |
+| `commandcode` | CommandCode |
+| `generic` | Any agent that reads `AGENTS.md` and `.agents/skills/` |
 
-### Health & Diagnostic Commands
+## Command reference
 
 ```bash
-# Check if your project intelligence is healthy and up-to-date
-npx graphward health . --strict
+graphward --help            # common commands
+graphward --help --all      # every command
 
-# Diagnose installation and tool dependencies
-npx graphward doctor .
-
-# Run test receipts and verify code safety gates
-npx graphward verify .
-
-# Fast update of the dependency graph after manual file edits
-npx graphward sync . --files src/index.ts
+graphward context "add rate limiting to login" --files src/auth/login.ts
+graphward impact src/payments/gateway.ts
+graphward who-calls chargeCard
+graphward gate api-diff . --base origin/main
+graphward verify .
+graphward health . --strict
+graphward sync . --files src/index.ts
 ```
 
-### What GraphWard Stores in Your Repository
+Initialization modes:
 
-All intelligence lives safely under `.graphward/`:
-- `knowledge-base/` — Verified documentation and architecture maps.
-- `graph/` — `dependency-graph.json` tracking connections between all modules and symbols.
-- `aidlc/` — Project state, requirements, open questions, and backlog tickets.
-- `memory/` — Conventions, past decisions, and negative constraints (preventing repeated mistakes).
-- `reports/` — Impact and safety audit records.
+| Command | Use it for |
+|---|---|
+| `graphward initialize . --yes` | The default: managed providers are used when available, with the native parser as fallback |
+| `graphward initialize . --providers native --yes` | Offline and deterministic: built-in parser only, no downloads |
+| `graphward initialize . --ide cursor --yes` | Targeting one editor explicitly |
 
----
+### MCP server
+
+Editors that read `.mcp.json` or `.cursor/mcp.json` start the server themselves after `install`. The generated registration pins the version, as `npx -y graphward@<version> mcp`. That resolves only once this version is published. Until then, point it at your build:
+
+```json
+{ "mcpServers": { "graphward": { "command": "node", "args": ["/absolute/path/to/graphward/dist/cli/index.js", "mcp", "."] } } }
+```
+
+It advertises 13 tools:
+
+- **Context and impact:** `get_engineering_context`, `analyze_change_impact`
+- **Validation and sync:** `validate_change`, `sync_engineering_knowledge`, `provider_status`
+- **Clarification and AI-DLC:** `assess_prompt_clarity`, `check_aidlc_gate`, `freeze_clarified_requirements`, `get_aidlc_state`, `update_aidlc_state`
+- **Experiments:** `generate_experiment_candidates`, `evaluate_experiment_step`, `get_experiment_history`
+
+### What GraphWard stores in your repository
+
+Everything lives under `.graphward/`:
+
+- `graph/`: `dependency-graph.json` (modules, symbols, imports, calls).
+- `knowledge-base/`: evidence-cited documentation.
+- `claims/`: machine-checked facts (`claims derive`) and attributed assertions (`claims add`).
+- `aidlc/`: lifecycle state, requirements, questions and backlog.
+- `memory/`: conventions, decisions and negative constraints.
+- `reports/`, `changes/`, `flight/`: impact reports, change history and tracked-change records.
+- `gw.config.json`: your configuration. It is written once and is yours to edit. Hook behaviour lives under its `hooks` key.
+
+Files under `.graphward/` are excluded from analysis. To exclude other paths, add them to `.gwignore`, which uses `.gitignore` syntax.
+
+## Migrating from engineering-intelligence
+
+This happens automatically the first time any `graphward` command, hook or MCP server runs in a project:
+
+- `.engineering-intelligence/` is moved to `.graphward/`, and `ei.config.json` is renamed to `gw.config.json`. If both directories already exist, nothing is merged. The old one is left for you to remove.
+- `graphward update .` then replaces the old hook entries, the `mcpServers.engineering-intelligence` key and the old `CLAUDE.md`/`AGENTS.md` block in place. Old-named skills and workflows that you never edited are removed:
+  - `engineering-intelligence-skill`
+  - `initialize-engineering-intelligence`
+  - `sync-engineering-intelligence`
+- The old names still work. `EI_*` environment variables are read when the matching `GW_*` variable is unset, `.eiignore` is honoured when there is no `.gwignore`, and the `engineering-intelligence` and `ei-mcp` binaries remain as aliases.
+
+The GitHub repository is still named `engineering-intelligence`. Renaming it is up to the maintainer.
 
 ## Development
 
 ```bash
 npm ci
-npm test               # Runs all 242 automated test suites
-npm run test:integration
-npm run build
+npm run build              # tsc → dist/
+npm test                   # build + every unit test file in test/ (scripts/run-tests.mjs)
+npm run test:integration   # install, MCP and end-to-end CLI tests
+npm run test:benchmark     # deterministic benchmark on a disposable fixture copy
 ```
 
-Full technical architecture documentation is available in [WORKFLOW_GUIDE.md](WORKFLOW_GUIDE.md) and [graphward-blueprint.md](graphward-blueprint.md).
+Contributor and agent guidance (layout, conventions, how to add a skill, gate or MCP tool) is in [CLAUDE.md](CLAUDE.md) and [AGENTS.md](AGENTS.md). Workflow details are in [WORKFLOW_GUIDE.md](WORKFLOW_GUIDE.md). [docs/blueprint.md](docs/blueprint.md) is the original design document; it is kept for history and does not describe the current architecture.

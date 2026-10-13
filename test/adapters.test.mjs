@@ -243,11 +243,10 @@ test("CLAUDE.md skill count is derived from SKILL_NAMES, not hardcoded", async (
     new RegExp(`description of all ${SKILL_NAMES.length} skills`),
     `CLAUDE.md must report the real skill count (${SKILL_NAMES.length})`,
   );
-  // Guard against the count drifting out of sync with the template payload again.
-  assert.ok(
-    !/description of all 44 skills/.test(claudeMd),
-    "CLAUDE.md must not carry a stale hardcoded '44 skills' count",
-  );
+  // Guard against ANY other count appearing (46 shipped stale for a release).
+  for (const match of claudeMd.matchAll(/description of all (\d+) skills/g)) {
+    assert.equal(Number(match[1]), SKILL_NAMES.length, "every skill count in CLAUDE.md is the real one");
+  }
 });
 
 test("backlog decomposition and delivery ship as skills and commands for Claude Code", async () => {

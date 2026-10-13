@@ -5,7 +5,7 @@ description: Interview-based skill for new greenfield projects. Conducts a struc
 
 # Greenfield Architect
 
-Guide a developer from zero to a fully scaffolded, opinionated project with engineering intelligence pre-configured. This skill operates in three phases: requirements interview, architecture generation, and scaffold output.
+Guide a developer from zero to a fully scaffolded, opinionated project with GraphWard pre-configured. This skill operates in three phases: requirements interview, architecture generation, and scaffold output.
 
 ## Inputs
 
@@ -108,8 +108,8 @@ project-root/
 │   └── e2e/
 ├── .github/
 │   └── workflows/
-├── .engineering-intelligence/knowledge-base/             # Pre-filled engineering intelligence
-├── .engineering-intelligence/
+├── .graphward/knowledge-base/             # Pre-filled GraphWard
+├── .graphward/
 │   ├── memory/
 │   ├── context/
 │   ├── events/
@@ -282,5 +282,5 @@ Generate starter event guidance files with generic templates appropriate for the
 
 - Uses: `codebase-discovery-engine` (for post-scaffold verification)
 - Feeds into: `initialize-intelligence-skill` (provides the initial knowledge baseline)
-- Consumed by: `engineering-intelligence-skill`, `engineering-orchestrator`
+- Consumed by: `graphward-skill`, `engineering-orchestrator`
 - Related: `convention-detector` (validates conventions after initial development)

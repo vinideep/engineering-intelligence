@@ -24,9 +24,9 @@ Owns adversarial validation for critical flows.
 - Attack paths are documented
 - Blocking security or data integrity issues are resolved or escalated
 
-## EI Runtime Context
+## GraphWard Runtime Context
 
 Read the following project-owned context before making non-trivial decisions:
-- `.engineering-intelligence/knowledge-base`
-- `.engineering-intelligence/aidlc`
-- `.engineering-intelligence/graph`
+- `.graphward/knowledge-base`
+- `.graphward/aidlc`
+- `.graphward/graph`

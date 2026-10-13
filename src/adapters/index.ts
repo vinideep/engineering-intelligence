@@ -10,6 +10,7 @@ import {
 import { claudeCodeHookSettings, cursorHookSettings, defaultConfigFile } from "../hooks/index.js";
 import { MCP_TOOL_SUMMARY, mcpServerRegistration } from "../mcp/index.js";
 import { IDE_IDS, type IdeId, type RenderedFile } from "../types.js";
+import { cliInvocation } from "../version.js";
 
 const BLOCK_ID = "graphward";
 
@@ -65,11 +66,11 @@ This repository uses installed GraphWard workflows.
 
 ## Tools (prefer these over reasoning by hand)
 
-These run deterministically. Use them instead of inferring the answer from source — they are the difference between a computed fact and a guess. Available over MCP (server \`graphward\`) and as CLI commands:
+These run deterministically. Use them instead of inferring the answer from source — they are the difference between a computed fact and a guess. MCP server \`graphward\` advertises ${MCP_TOOL_SUMMARY.length} tools:
 
-${MCP_TOOL_SUMMARY.map(([n, d]) => `- \`${n}\` — ${d}`).join("\n")}
+${MCP_TOOL_SUMMARY.map(([n, d, cli]) => `- \`${n}\` — ${d}${cli ? ` (CLI: \`${cliInvocation()} ${cli}\`)` : ""}`).join("\n")}
 
-CLI equivalents: \`npx graphward map|gate <name>|verify|freshness|context|claims verify|git-analysis .\`. \`gate\` and \`verify\` exit non-zero on failure, so they work in CI too.
+Other CLI checks: \`gate <env-vars|dead-exports|api-diff|migration-lint> .\`, \`verify .\`, \`claims verify .\`, \`freshness .\`, \`health .\`. \`gate\` and \`verify\` exit non-zero on failure, so they work in CI too. The \`.graphward/\` directory exists only after \`install\`/\`initialize\`; if it is missing, the knowledge base has not been generated yet — say so instead of assuming its contents.
 `;
 
 /**
@@ -99,13 +100,13 @@ Load **optional** skills only when the request explicitly requires that capabili
 
 ## Enforcement Hooks (Claude Code)
 
-\`.claude/settings.json\` wires four lifecycle hooks to \`graphward hook <event>\`:
+\`.claude/settings.json\` wires four lifecycle hooks to \`${cliInvocation()} hook <event>\`:
 - **SessionStart** injects the current intelligence freshness/drift summary.
 - **PreToolUse** warns before editing source while documentation is stale.
 - **PostToolUse** records changed source files and validation commands for the session.
 - **Stop** can require that a validation command actually ran before finishing.
 
-Tune behaviour in \`.graphward/gw.config.json\` (\`blockStaleEdits\`, \`requireValidationOnStop\`, \`freshnessThreshold\`). Hooks are fail-safe: with no intelligence installed they do nothing.
+Tune behaviour under the \`hooks\` key of \`.graphward/gw.config.json\` (\`hooks.blockStaleEdits\`, \`hooks.requireValidationOnStop\`, \`hooks.freshnessThreshold\`). Hooks are fail-safe: with no intelligence installed they do nothing.
 `;
 
 function file(path: string, content: string, owner: IdeId): RenderedFile {

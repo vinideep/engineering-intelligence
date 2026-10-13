@@ -60,51 +60,54 @@ interface Options {
 function usage(all = false): string {
   const core = `graphward — codebase intelligence that lives in your repo.
 
-Core commands:
+Usage: graphward <command> [path] [options]     (path defaults to the current directory)
 
-Usage:
-  graphward install [path] [--ide <id>...] [--yes] [--dry-run] [--force]
-  graphward initialize [path] [--providers auto|full|native] [--offline] [--require-providers] [--yes] [--dry-run]
-  graphward providers status|install|repair|upgrade|expose|hide|purge [graphify|cce] [path]
-  graphward create [path] [--ide <id>...] [--yes]
-  graphward update [path] [--dry-run] [--force]
-  graphward sync [path] [--files a,b] [--json]
-  graphward health [path] [--strict] [--json]
-  graphward doctor [path] [--json]
-  graphward uninstall [path] [--dry-run] [--force]
-  graphward visualize [path] [--open]
-  graphward map [path] [--type dependency] [--update] [--files a,b,c]
-  graphward mcp [path]
-  graphward freshness [path] [--threshold 60] [--json]
-  graphward git-analysis [path] [--window 90] [--json]
-  graphward user-profile [path] [--json]
-  graphward hook <event> [path]   (internal: driven by IDE lifecycle hooks)
-  graphward gate <name> [path] [--base <ref>] [--fail-on error|warning] [--json]
-  graphward verify [path] [--json]
-  graphward claims verify [path] [--json] [--strict]
-  graphward claims derive [path] [--json]
-  graphward claims add --statement "..." --evidence "src/a.ts:10-20,src/b.ts" --author "name" [path]
-  graphward claims list [path] [--json]
-  graphward context "<task>" [path] [--files a,b] [--budget 2000] [--json]
-  graphward telemetry [path] [--json]
+Set up:
+  setup [path] [--ide <id>...] [--yes] [--dry-run] [--force]   detect IDEs, install, build the graph
+  initialize [path] [--ide <id>...] [--providers auto|full|native] [--offline] [--require-providers] [--expert] [--yes] [--dry-run] [--force]
+  install [path] [--ide <id>...] [--yes] [--dry-run] [--force]
+  update [path] [--dry-run] [--force]
+  uninstall [path] [--dry-run] [--force]
+  providers status|install|repair|upgrade|expose|hide|purge [graphify|cce] [path] [--expert]
+
+Understand and change code:
+  ask "<question>" [path] [--full] [--json]                     route a question to the right tool
+  context "<task>" [path] [--files a,b] [--budget 2000] [--json]
+  impact <file...> [--json]
+  who-calls <symbol> [--transitive] [--json]
+  guard "<intent>" [file...]   (start a tracked change)  /  guard   (close it and report drift)
+  sync [path] [--files a,b] [--json]
+
+Check:
+  verify [path] [--json]
+  gate <name> [path] [--base <ref>] [--fail-on error|warning] [--json]
+  claims verify|derive|list [path] [--json] [--strict]
+  claims add --statement "..." --evidence "src/a.ts:10-20,src/b.ts" --author "name" [path]
+  health [path] [--strict] [--json]
+  doctor [path] [--json]
+  freshness [path] [--threshold 60] [--json]
+
+Servers and internals:
+  mcp [path]                    stdio MCP server
+  hook <event> [path]           driven by IDE lifecycle hooks; not for direct use
 
 IDE ids: ${IDE_IDS.join(", ")}
 Hook events: session-start, pre-tool-use, post-tool-use, stop
 Gates: env-vars, dead-exports, api-diff, migration-lint
 `;
-  if (!all) return core + "\nRun `graphward --help --all` for the full advanced command list.\n";
+  if (!all) return core + "\nRun `graphward --help --all` for the advanced command list.\n";
   return core + `
-Advanced commands (the 4 verbs above orchestrate these; use directly if you want):
-  install / create / update / uninstall [path] [--ide <id>...] [--dry-run] [--force]
+Advanced commands (the commands above orchestrate these):
+  create [path] [--ide <id>...] [--yes]
   map [path] [--type dependency] [--update] [--files a,b,c]
-  impact <file...> [--json]            who-calls <symbol> [--transitive] [--json]
-  verify [path] [--strict] [--json]    visualize [path] [--open]
+  visualize [path] [--open]
   preflight --intent "<s>" [file...]   postflight [--id <flight>] [--strict]
   evidence-record [path]               evidence-check [path] [--strict] [--json]
-  freshness [path] [--threshold 60]    git-analysis [path] [--window 90]
+  git-analysis [path] [--window 90] [--json]
+  user-profile [path] [--json]
+  telemetry [path] [--json]
   experiment candidates|history [path] [--json]
   aidlc gate|clarify|state [phase|prompt] [path] [--json]
-  user-profile [path] [--json]
 `;
 }
 

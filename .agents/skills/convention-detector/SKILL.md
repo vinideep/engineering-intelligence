@@ -133,11 +133,11 @@ This capability does not modify product code.
 
    A pattern must exceed `>70%` adherence to be treated as a convention. Structural means the violation changes file placement, layer ownership, dependency direction, API envelope, persistence access, or lifecycle hook usage rather than simple naming.
 
-10. **Write conventions document** — Generate `.engineering-intelligence/knowledge-base/16-conventions.md` following the output format below.
+10. **Write conventions document** — Generate `.graphward/knowledge-base/16-conventions.md` following the output format below.
 
-11. **Enhance coding patterns memory** — Update `.engineering-intelligence/memory/coding-patterns.md` with durable conventions that are unlikely to change.
+11. **Enhance coding patterns memory** — Update `.graphward/memory/coding-patterns.md` with durable conventions that are unlikely to change.
 
-## Output: `.engineering-intelligence/knowledge-base/16-conventions.md`
+## Output: `.graphward/knowledge-base/16-conventions.md`
 
 ```markdown
 # Project Conventions
@@ -184,7 +184,7 @@ Sample size: <N files analyzed across M modules>
 | ... | ... | ... | ... |
 ```
 
-## Output: `.engineering-intelligence/memory/coding-patterns.md` (Enhanced)
+## Output: `.graphward/memory/coding-patterns.md` (Enhanced)
 
 Add a `## Conventions` section with only durable patterns that pass the durability check: "Will this convention still be relevant after 10+ more changes?"
 
@@ -198,15 +198,15 @@ Add a `## Conventions` section with only durable patterns that pass the durabili
 - [ ] Each convention has an adherence rate and evidence citation
 - [ ] Exceptions to conventions are listed (not hidden)
 - [ ] Convention violations include severity and blocking decision
-- [ ] `.engineering-intelligence/knowledge-base/16-conventions.md` exists and follows the output format
+- [ ] `.graphward/knowledge-base/16-conventions.md` exists and follows the output format
 - [ ] `coding-patterns.md` is enhanced with a Conventions section
 - [ ] Only patterns with >70% adherence are classified as conventions
 
 ## Cross-References
 
 - Depends on: `codebase-discovery-engine` (tech stack context)
-- Used by: `initialize-intelligence-skill`, `engineering-intelligence-skill`
-- Feeds into: `.engineering-intelligence/knowledge-base/16-conventions.md`, `.engineering-intelligence/memory/coding-patterns.md`
+- Used by: `initialize-intelligence-skill`, `graphward-skill`
+- Feeds into: `.graphward/knowledge-base/16-conventions.md`, `.graphward/memory/coding-patterns.md`
 - Consumed by: `ongoing-learning-engine` (for convention drift detection)
 
 This capability does not modify product code.

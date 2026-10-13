@@ -5,18 +5,18 @@ description: Compares knowledge-base document timestamps against related source 
 
 # Staleness Detector
 
-Monitor the freshness of all engineering intelligence documents by comparing their last-updated timestamps against the modification times of the source files they describe. Produce a freshness report and trigger incremental sync for stale documents.
+Monitor the freshness of all GraphWard documents by comparing their last-updated timestamps against the modification times of the source files they describe. Produce a freshness report and trigger incremental sync for stale documents.
 
-**Run the deterministic scorer first:** `npx engineering-intelligence freshness . [--threshold 60] [--json]` computes each document's 0-100 freshness from its cited evidence paths and their git history, and writes the report. Documents with no citations are reported `unverifiable` rather than fresh. Use the steps below to act on that output, not to recompute it by hand.
+**Run the deterministic scorer first:** `npx graphward@6.0.0 freshness . [--threshold 60] [--json]` computes each document's 0-100 freshness from its cited evidence paths and their git history, and writes the report. Documents with no citations are reported `unverifiable` rather than fresh. Use the steps below to act on that output, not to recompute it by hand.
 
 This capability does not modify product code.
 
 ## Inputs
 
 - Repository root path
-- Knowledge base directory (`.engineering-intelligence/knowledge-base/`)
-- Memory directory (`.engineering-intelligence/memory/`)
-- Context directory (`.engineering-intelligence/context/`)
+- Knowledge base directory (`.graphward/knowledge-base/`)
+- Memory directory (`.graphward/memory/`)
+- Context directory (`.graphward/context/`)
 - Optional: specific document or module to check
 - Optional: custom freshness threshold (default: 60)
 
@@ -25,18 +25,18 @@ This capability does not modify product code.
 0. **Use the CLI first (saves ~2,000 tokens)** — Before computing freshness manually, run:
 
    ```bash
-   npx engineering-intelligence freshness .
+   npx graphward@6.0.0 freshness .
    ```
 
-   This runs the deterministic staleness formula in milliseconds and writes `.engineering-intelligence/reports/FRESHNESS-report.md`. If the report exists and was generated within the last 10 minutes, **read it directly and skip steps 1–8**. The Pre-Implementation Drift Decision in the report replaces manual computation.
+   This runs the deterministic staleness formula in milliseconds and writes `.graphward/reports/FRESHNESS-report.md`. If the report exists and was generated within the last 10 minutes, **read it directly and skip steps 1–8**. The Pre-Implementation Drift Decision in the report replaces manual computation.
 
    Only fall through to steps 1–8 if the CLI is unavailable.
 
 1. **Inventory knowledge documents** — Enumerate all documents in:
-   - `.engineering-intelligence/knowledge-base/*.md` (00 through 16)
-   - `.engineering-intelligence/memory/*.md`
-   - `.engineering-intelligence/context/*.md`
-   - `.engineering-intelligence/graph/*.json`
+   - `.graphward/knowledge-base/*.md` (00 through 16)
+   - `.graphward/memory/*.md`
+   - `.graphward/context/*.md`
+   - `.graphward/graph/*.json`
 
    For each document, extract:
    - Document path
@@ -98,11 +98,12 @@ This capability does not modify product code.
 5. **Add freshness metadata** — Inject or update a frontmatter block at the top of each knowledge document:
 
    ```markdown
-
+   <!-- freshness: score=75, status=aging, last_checked=2024-01-20T14:30:00Z -->
+   <!-- stale_sources: src/auth/middleware.ts (modified 5 days after doc update) -->
    ```
 
    Rules for metadata injection:
-   - If a `` comment already exists, update it in place
+   - If a `<!-- freshness: -->` comment already exists, update it in place
    - If no freshness comment exists, add it after the document title (first `#` heading)
    - Never modify document content — only metadata comments
 
@@ -110,7 +111,7 @@ This capability does not modify product code.
 
    ```markdown
    ## Authentication Flow
-
+   <!-- section-confidence: level=high, score=91, verified_at=2026-06-04T10:00:00Z, evidence=src/auth/middleware.ts -->
    ```
 
    Agents must prefer high/medium confidence sections and skip low-confidence sections unless they verify the section against source first.
@@ -125,7 +126,7 @@ This capability does not modify product code.
    | Referenced file moved | Update evidence citations, re-verify claims |
    | Multiple documents stale for same module | Recommend module-level re-discovery |
 
-7. **Generate FRESHNESS-report.md** — Write to `.engineering-intelligence/reports/FRESHNESS-report.md`:
+7. **Generate FRESHNESS-report.md** — Write to `.graphward/reports/FRESHNESS-report.md`:
 
    ```markdown
    # Freshness Report
@@ -180,7 +181,7 @@ This capability does not modify product code.
    - The list of changed source files
    - The staleness reason (file modified, file deleted, file moved, age)
 
-9. **Pre-Implementation Drift Trigger** — When invoked by `engineering-intelligence-skill`, return a blocking drift decision:
+9. **Pre-Implementation Drift Trigger** — When invoked by `graphward-skill`, return a blocking drift decision:
 
    | Condition | Decision |
    |---|---|
@@ -197,7 +198,7 @@ This capability does not modify product code.
 - [ ] Score interpretation matches the defined status table
 - [ ] Freshness metadata is injected without modifying document content
 - [ ] Section-level confidence metadata is added for H2 sections where evidence can be resolved
-- [ ] FRESHNESS-report.md exists at `.engineering-intelligence/reports/FRESHNESS-report.md`
+- [ ] FRESHNESS-report.md exists at `.graphward/reports/FRESHNESS-report.md`
 - [ ] Structural changes (deleted/moved files) are detected and reported
 - [ ] Documents below threshold are queued for incremental sync
 - [ ] Module-level aggregation is included in the report
@@ -207,8 +208,8 @@ This capability does not modify product code.
 
 - Used by: `ongoing-learning-engine` (for freshness monitoring)
 - Uses: `incremental-sync-engine` (to refresh stale documents)
-- Consumed by: `engineering-intelligence-skill`, `engineering-orchestrator`
-- Feeds into: `.engineering-intelligence/reports/FRESHNESS-report.md`
+- Consumed by: `graphward-skill`, `engineering-orchestrator`
+- Feeds into: `.graphward/reports/FRESHNESS-report.md`
 - Related: `knowledge-base-validator` (validates content accuracy; staleness-detector validates currency)
 
 This capability does not modify product code.

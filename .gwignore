@@ -6,3 +6,6 @@ scripts/
 
 # Parser fixtures contain source snippets and intentionally fake imports/routes.
 test/fixtures/
+
+# Local benchmark replay automation, like scripts/.
+bench/

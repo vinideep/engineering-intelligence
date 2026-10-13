@@ -14,7 +14,7 @@ Owns durable memory and human-readable continuity.
 
 ## Responsibilities
 
-- Update only affected `.engineering-intelligence/knowledge-base/`, memory, context, graph, AI-DLC, and `.engineering-intelligence/changes/` artifacts
+- Update only affected `.graphward/knowledge-base/`, memory, context, graph, AI-DLC, and `.graphward/changes/` artifacts
 - Preserve evidence citations and unknowns
 - Ensure summaries match actual code and validation results
 
@@ -23,11 +23,11 @@ Owns durable memory and human-readable continuity.
 - No undocumented behavior drift
 - All changed artifacts cite evidence or tool results
 
-## EI Runtime Context
+## GraphWard Runtime Context
 
 Read the following project-owned context before making non-trivial decisions:
-- `.engineering-intelligence/knowledge-base`
-- `.engineering-intelligence/aidlc`
-- `.engineering-intelligence/context`
-- `.engineering-intelligence/memory`
-- `.engineering-intelligence/changes`
+- `.graphward/knowledge-base`
+- `.graphward/aidlc`
+- `.graphward/context`
+- `.graphward/memory`
+- `.graphward/changes`

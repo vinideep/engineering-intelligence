@@ -57,6 +57,6 @@ graphward impact src/graph/index.ts src/mcp/index.ts
 # Who calls this function?
 graphward who-calls buildGraph
 
-# Does the knowledge base still match the code?
-graphward verify --strict
+# Do the recorded claims still match the code?
+graphward claims verify . --strict
 ```

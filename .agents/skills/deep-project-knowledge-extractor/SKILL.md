@@ -32,7 +32,7 @@ Scan the repository systematically for each category:
 
 ## Output Specification
 
-Generate each document in `.engineering-intelligence/knowledge-base/` with this structure:
+Generate each document in `.graphward/knowledge-base/` with this structure:
 
 ```markdown
 # <Document Title>

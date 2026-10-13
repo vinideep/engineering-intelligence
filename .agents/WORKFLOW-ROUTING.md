@@ -1,19 +1,19 @@
 # Workflow Routing Table
 
 > **Read this before loading any skill files.**
-> For each primary skill: load `SKILL-BRIEF.md` to understand it (~150t), then `SKILL.md` to execute.
+> For each primary skill: load its `SKILL.md` immediately before executing it.
 > Load **optional** skills only when the request explicitly requires that capability.
-> Skill files are in `.agents/skills/<name>/` (SKILL-BRIEF.md and SKILL.md).
+> Skill files are in `.agents/skills/<name>/SKILL.md`.
 
 | Command | Primary Skills — load first | Optional Skills — load if needed |
 |---|---|---|
-| `engineering-intelligence` | `engineering-intelligence-skill`, `aidlc-lifecycle-engine`, `impact-analysis-engine`, `context-budget-optimizer` | `socratic-stress-tester`, `interface-design-explorer`, `vertical-tdd-engine`, `session-handoff-engine`, `user-intelligence-engine`, `change-detection-engine`, `incremental-sync-engine`, `change-history-engine`, `environmental-backpressure-engine`, `testing-intelligence-engine`, `question-file-engine`, `refactoring-planner`, `debugging-engine` |
-| `initialize-engineering-intelligence` | `initialize-intelligence-skill` | `deep-project-knowledge-extractor`, `knowledge-base-validator`, `graph-engine`, `change-history-engine` |
+| `graphward` | `graphward-skill`, `socratic-clarification-gate`, `aidlc-lifecycle-engine`, `impact-analysis-engine`, `context-budget-optimizer` | `graph-guided-autoresearch`, `socratic-stress-tester`, `interface-design-explorer`, `vertical-tdd-engine`, `session-handoff-engine`, `user-intelligence-engine`, `change-detection-engine`, `incremental-sync-engine`, `change-history-engine`, `environmental-backpressure-engine`, `testing-intelligence-engine`, `question-file-engine`, `refactoring-planner`, `debugging-engine` |
+| `initialize-graphward` | `initialize-intelligence-skill` | `deep-project-knowledge-extractor`, `knowledge-base-validator`, `graph-engine`, `change-history-engine` |
 | `decompose-backlog` | `backlog-decomposition-engine`, `context-budget-optimizer` | `issue-tracker-sync-engine`, `aidlc-lifecycle-engine`, `question-file-engine` |
-| `deliver-backlog` | `aidlc-lifecycle-engine`, `engineering-intelligence-skill` | `backlog-decomposition-engine`, `issue-tracker-sync-engine`, `incremental-sync-engine` |
+| `deliver-backlog` | `aidlc-lifecycle-engine`, `graphward-skill` | `backlog-decomposition-engine`, `issue-tracker-sync-engine`, `incremental-sync-engine` |
 | `map-architecture` | `graph-engine` | `codebase-discovery-engine`, `git-intelligence-engine` |
 | `analyze-impact` | `change-detection-engine`, `impact-analysis-engine` | `graph-engine` |
-| `sync-engineering-intelligence` | `change-detection-engine`, `incremental-sync-engine` | `staleness-detector`, `ongoing-learning-engine`, `knowledge-base-validator`, `graph-engine` |
+| `sync-graphward` | `change-detection-engine`, `incremental-sync-engine` | `staleness-detector`, `ongoing-learning-engine`, `knowledge-base-validator`, `graph-engine` |
 | `review-engineering-change` | `change-detection-engine`, `engineering-change-review` | `impact-analysis-engine` |
 | `scope-requirement` | `requirement-scoper` | `context-budget-optimizer`, `aidlc-lifecycle-engine`, `question-file-engine` |
 | `discover-codebase` | `codebase-discovery-engine`, `convention-detector`, `graph-engine` | — |
