@@ -33,7 +33,7 @@ interface Rule {
   message: string;
 }
 
-// Ordered rules; each matched line yields at most the first matching finding per rule.
+// Ordered rules; each statement yields at most one finding per rule.
 const RULES: Rule[] = [
   { re: /\bdrop\s+(table|database|schema)\b/i, severity: "error", message: "Destructive: DROP {table|database|schema} — irreversible data loss. Ensure a backup + rollback plan and explicit approval." },
   { re: /\btruncate\b/i, severity: "error", message: "Destructive: TRUNCATE removes all rows irreversibly." },
@@ -47,22 +47,39 @@ const RULES: Rule[] = [
   { re: /\balter\s+table\b[^;]*\badd\s+(constraint|foreign\s+key)\b/i, severity: "warning", message: "Adding a constraint/foreign key validates existing rows under lock — consider NOT VALID + VALIDATE." },
 ];
 
-function stripLineComment(line: string): string {
-  const idx = line.indexOf("--");
-  return idx >= 0 ? line.slice(0, idx) : line;
+/** Blank `--` and `/* *\/` SQL comments, preserving offsets and newlines. */
+function blankSqlComments(content: string): string {
+  const blank = (m: string) => m.replace(/[^\n]/g, " ");
+  return content.replace(/\/\*[\s\S]*?\*\//g, blank).replace(/--[^\n]*/g, blank);
 }
 
+function lineAt(content: string, offset: number): number {
+  let line = 1;
+  for (let i = 0; i < offset && i < content.length; i++) if (content[i] === "\n") line++;
+  return line;
+}
+
+/**
+ * Rules run per STATEMENT (split on `;`), not per line: SQL is routinely written
+ * as `ALTER TABLE users\n  DROP COLUMN email;`, which a line-based check never
+ * saw. The finding's line is where the rule's match starts.
+ */
 function lintContent(content: string, rel: string): GateFinding[] {
   const findings: GateFinding[] = [];
-  const lines = content.split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    const line = stripLineComment(lines[i]);
+  const text = blankSqlComments(content);
+  let start = 0;
+  while (start < text.length) {
+    const semi = text.indexOf(";", start);
+    const end = semi === -1 ? text.length : semi + 1;
+    const statement = semi === -1 ? `${text.slice(start, end)};` : text.slice(start, end);
     for (const rule of RULES) {
-      rule.re.lastIndex = 0;
-      if (rule.re.test(line)) {
-        findings.push({ severity: rule.severity, message: rule.message, file: rel, line: i + 1, evidence: `${rel}:${i + 1}` });
+      const match = new RegExp(rule.re.source, rule.re.flags.replace("g", "")).exec(statement);
+      if (match) {
+        const line = lineAt(text, start + match.index);
+        findings.push({ severity: rule.severity, message: rule.message, file: rel, line, evidence: `${rel}:${line}` });
       }
     }
+    start = end;
   }
   return findings;
 }

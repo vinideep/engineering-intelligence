@@ -1,7 +1,8 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { runProcessSync } from "../process/index.js";
+import { gitStatusPathsSync } from "../process/git-paths.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -48,6 +49,22 @@ function gitLastModified(filePath: string, root: string): Date | null {
   if (!iso) return null;
   const d = new Date(iso);
   return isNaN(d.getTime()) ? null : d;
+}
+
+function fileMtime(absPath: string): Date | null {
+  try { return statSync(absPath).mtime; } catch { return null; }
+}
+
+/**
+ * When a file last changed. A file with uncommitted edits changed NOW (its
+ * mtime) — the last commit date would hide exactly the edits an agent just made.
+ * Otherwise the commit date (mtimes are reset by every clone/checkout).
+ */
+function lastModified(relPath: string, root: string, dirty: ReadonlySet<string>): Date | null {
+  const normalized = relPath.replace(/\\/g, "/");
+  const abs = path.isAbsolute(relPath) ? relPath : path.join(root, relPath);
+  if (dirty.has(normalized)) return fileMtime(abs) ?? gitLastModified(relPath, root);
+  return gitLastModified(relPath, root) ?? fileMtime(abs);
 }
 
 function fileExists(filePath: string): boolean {
@@ -115,14 +132,17 @@ function actionFromStatus(status: FreshnessStatus): FreshnessAction {
   return "manual-review";
 }
 
-async function scoreDocument(docPath: string, root: string): Promise<DocumentScore> {
+async function scoreDocument(docPath: string, root: string, dirty: ReadonlySet<string> = new Set()): Promise<DocumentScore> {
   const absPath = path.join(root, docPath);
   let content = "";
   try { content = await readFile(absPath, "utf8"); } catch {
     return { docPath, score: 0, status: "obsolete", docLastUpdated: null, staleSources: [], deletedSources: [], action: "manual-review" };
   }
 
-  const docLastUpdated = extractDocTimestamp(content);
+  // No explicit "Last updated" stamp: fall back to when the document itself last
+  // changed. Without this an undated doc took no staleness or age penalty and
+  // scored a permanent 100 ("fresh") however much its sources moved.
+  const docLastUpdated = extractDocTimestamp(content) ?? lastModified(docPath, root, dirty);
   const evidencePaths = extractEvidencePaths(content);
 
   // A document with no evidence citations cannot be checked against anything.
@@ -153,7 +173,7 @@ async function scoreDocument(docPath: string, root: string): Promise<DocumentSco
       deletedSources.push(evPath);
       continue;
     }
-    const fileModified = gitLastModified(evPath, root);
+    const fileModified = lastModified(evPath, root, dirty);
     if (fileModified && docLastUpdated && fileModified > docLastUpdated) {
       const days = daysBetween(docLastUpdated, fileModified);
       const penalty = Math.min(30, Math.round(days * 3));
@@ -312,7 +332,8 @@ ${actionItems}
 
 export async function computeFreshness(root: string, threshold = 60): Promise<FreshnessReport> {
   const docs = await discoverDocuments(root);
-  const scores = await Promise.all(docs.map((d) => scoreDocument(d, root)));
+  const dirty = new Set(gitStatusPathsSync(root) ?? []);
+  const scores = await Promise.all(docs.map((d) => scoreDocument(d, root, dirty)));
 
   return {
     generatedAt: new Date().toISOString(),

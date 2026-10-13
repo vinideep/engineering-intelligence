@@ -24,18 +24,26 @@ interface ExportSite {
   line: number;
 }
 
+/** Both a file and an import specifier that names it must map to the SAME id, so
+ *  extensions and a trailing `/index` are dropped on both sides (`./x/index.js`,
+ *  `./x/index` and `./x` all name `src/x/index.ts`). */
+function normalizeModulePath(rel: string): string {
+  return rel
+    .replace(/\\/g, "/")
+    .replace(/\.(d\.ts|tsx?|jsx?|mts|cts|mjs|cjs)$/, "")
+    .replace(/(^|\/)index$/, "");
+}
+
 function moduleId(root: string, absFile: string): string {
-  const rel = path.relative(root, absFile).replace(/\\/g, "/").replace(/\.(tsx?|jsx?|mjs|cjs)$/, "");
-  return `module:${rel}`;
+  return `module:${normalizeModulePath(path.relative(root, absFile))}`;
 }
 
 function resolveModuleId(root: string, fromFile: string, specifier: string): string | null {
   if (!specifier.startsWith(".")) return null; // external package — not our module
-  const resolved = path.relative(root, path.resolve(path.dirname(fromFile), specifier))
-    .replace(/\\/g, "/")
-    .replace(/\.(tsx?|jsx?|mjs|cjs)$/, "")
-    .replace(/\/index$/, "");
-  return `module:${resolved}`;
+  const rel = normalizeModulePath(path.relative(root, path.resolve(path.dirname(fromFile), specifier)));
+  // Tests and scripts commonly import the compiled output (`../dist/x.js`); that
+  // is a use of the source module `src/x.ts`.
+  return `module:${rel.replace(/^dist\//, "src/")}`;
 }
 
 const EXPORT_DECL = /^\s*export\s+(?:async\s+)?(?:function|class|const|let|var|interface|type|enum)\s+([A-Za-z_$][\w$]*)/;
@@ -81,7 +89,7 @@ export async function deadExportsGate(root: string): Promise<GateResult> {
     else if (pkg.bin && typeof pkg.bin === "object") entryPaths.push(...Object.values(pkg.bin));
     for (const p of entryPaths) {
       entryModules.add(moduleId(root, path.resolve(root, p.replace(/^\.\//, "").replace(/^dist\//, "src/"))));
-      entryModules.add(`module:${p.replace(/\.(tsx?|jsx?|mjs|cjs)$/, "").replace(/^\.\//, "")}`);
+      entryModules.add(`module:${normalizeModulePath(p.replace(/^\.\//, ""))}`);
     }
   } catch { /* no package.json */ }
 

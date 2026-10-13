@@ -302,6 +302,9 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
 
       if (name === "get_graph") {
         const type = typeof args.type === "string" ? args.type : "dependency";
+        // `type` becomes part of a file name: only plain graph names are allowed,
+        // never a path (`../../x` would read arbitrary JSON outside the graph dir).
+        if (!/^[a-z][a-z0-9-]*$/.test(type)) return text(JSON.stringify({ error: `Invalid graph type "${type}".` }), true);
         if (type === "dependency") await ensureFreshGraph(root);
         const graphPath = path.join(root, ".engineering-intelligence", "graph", `${type}-graph.json`);
         const graph = await loadExistingGraph(graphPath);
@@ -452,7 +455,11 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
       if (name === "read_knowledge") {
         const kbDir = path.join(root, ".engineering-intelligence", "knowledge-base");
         if (typeof args.file === "string" && args.file) {
-          const filePath = path.join(kbDir, args.file);
+          const filePath = path.resolve(kbDir, args.file);
+          // Confine reads to the knowledge base: `../../../etc/passwd` must not resolve.
+          if (filePath !== kbDir && !filePath.startsWith(kbDir + path.sep)) {
+            return text(JSON.stringify({ error: `"${args.file}" is outside the knowledge base.` }), true);
+          }
           try {
             return text(await readFile(filePath, "utf8"));
           } catch {

@@ -79,7 +79,9 @@ export function claimsPath(root: string): string {
 function normalizeSpan(text: string): string {
   // Trailing-whitespace and final-newline insensitive so cosmetic edits do not
   // flip a claim stale, but any substantive change to the cited lines does.
-  return text.replace(/[ \t]+$/gm, "").replace(/\n+$/,"");
+  // CRLF-insensitive too: a Windows checkout (core.autocrlf) must not mark every
+  // claim recorded on another platform stale.
+  return text.replace(/\r\n?/g, "\n").replace(/[ \t]+$/gm, "").replace(/\n+$/, "");
 }
 
 function hashText(text: string): string {

@@ -110,14 +110,25 @@ function words(value: string): string[] {
   return [...new Set(value.toLowerCase().match(/[a-z0-9_]+/g) ?? [])].filter((word) => word.length > 2);
 }
 
-function classify(task: string, files: string[]): TaskClassification {
-  const text = `${task} ${files.join(" ")}`.toLowerCase();
-  const security = /auth|security|credential|secret|token|encrypt|permission|rate.?limit|vulnerab/.test(text);
-  const database = /database|migration|schema|sql|table|column|index/.test(text);
-  const api = /\bapi\b|endpoint|route|controller|contract|graphql|openapi/.test(text);
-  const architecture = /architecture|cross.?service|new service|replatform|redesign|monorepo/.test(text);
-  const bug = /\bbug\b|\bfix\b|broken|failure|incorrect|regression|exception/.test(text);
-  const simple = /typo|spelling|comment|rename label/.test(text) && files.length <= 1;
+/**
+ * Classify from the task's WORDS plus specific path signals. Matching substrings
+ * of `task + files` misrouted ordinary work: any `src/index.ts` matched "index"
+ * (database change, migration gates), `token-optimizer.ts` matched "token"
+ * (critical security change), "author" matched "auth", "stable" matched "table".
+ */
+export function classifyTask(task: string, files: string[]): TaskClassification {
+  const text = task.toLowerCase();
+  const paths = files.map((file) => file.replace(/\\/g, "/").toLowerCase());
+  const anyPath = (re: RegExp) => paths.some((file) => re.test(file));
+  const security = /\b(?:o?auth(?:entication|enticate|orization|orize|n|z)?|login|password|security|credentials?|secrets?|encrypt\w*|decrypt\w*|permissions?|rbac|rate.?limit\w*|vulnerab\w*|jwt|csrf|xss|access.?tokens?|api.?keys?|session.?tokens?)\b/.test(text)
+    || anyPath(/(^|\/)(auth|security|permissions?)(\/|\.)/);
+  const database = /\b(?:database|db|migrations?|schemas?|sql|tables?|columns?|indexes|indices)\b/.test(text)
+    || anyPath(/(^|\/)(migrations?|db)\/|\.sql$|(^|\/)schema\.(prisma|sql|rb)$/);
+  const api = /\b(?:api|endpoints?|routes?|controllers?|contracts?|graphql|openapi|rest)\b/.test(text)
+    || anyPath(/(^|\/)(routes?|controllers?|api)\/|(^|\/)(openapi|swagger)[^/]*\.(ya?ml|json)$|\.(graphql|proto)$/);
+  const architecture = /\b(?:architecture|cross.?service|new service|replatform|redesign|monorepo)\b/.test(text);
+  const bug = /\b(?:bugs?|fix(?:es|ed)?|broken|failures?|failing|incorrect|regressions?|exceptions?|crash\w*)\b/.test(text);
+  const simple = /\b(?:typos?|spelling|comments?|rename label)\b/.test(text) && files.length <= 1;
   const kind: TaskKind = security ? "security-change" : database ? "database-change" : api ? "api-change" : architecture ? "architecture-change" : simple ? "simple" : bug ? "bug" : "feature";
   const risk: RiskLevel = security ? "critical" : database || api || architecture ? "high" : simple ? "low" : "medium";
   const domains = [security && "security", database && "database", api && "api", architecture && "architecture"].filter((value): value is string => Boolean(value));
@@ -375,7 +386,7 @@ export async function getEngineeringContext(
 ): Promise<ContextPackV2> {
   if (!request.task.trim()) throw new Error("task is required");
   const requestedFiles = request.files ?? [];
-  const classification = classify(request.task, requestedFiles);
+  const classification = classifyTask(request.task, requestedFiles);
   const budget = request.budget && request.budget > 0 ? request.budget : dynamicBudget(classification);
   // Establish one current structural snapshot before claims and neighborhood
   // reads begin; otherwise concurrent derivation can race a graph refresh.

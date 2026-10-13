@@ -1,21 +1,23 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { runProcessSync } from "../../process/index.js";
+import { parseNameOnly } from "../../process/git-paths.js";
+import { GRAPH_SOURCE_EXTS } from "../source-exts.js";
 import type { DependencyGraph, GraphEdge, GraphNode } from "../schema.js";
 import { parseManifests } from "../parsers/manifest.js";
 import { extractImports } from "../parsers/imports.js";
 import { extractSymbols, resolvePendingCalls, buildGlobalSymbolTable, type PendingCall } from "../parsers/symbols.js";
 import { collectProjectFiles, ProjectFilePolicy } from "../../project-files/index.js";
 
-const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".go", ".rs", ".rb", ".java", ".kt"]);
+const SOURCE_EXTS = GRAPH_SOURCE_EXTS;
 
 function getGitChurn(root: string): Map<string, number> {
   const churn = new Map<string, number>();
-  const result = runProcessSync({ command: "git", args: ["log", "--name-only", "--format=", "-n", "200"], cwd: root, timeoutMs: 10_000 });
+  // `--relative`: churn keys must be root-relative to match node paths when the
+  // analysed root is a subdirectory of the repository.
+  const result = runProcessSync({ command: "git", args: ["log", "--name-only", "--relative", "--format=", "-n", "200"], cwd: root, timeoutMs: 10_000 });
   if (result.exitCode !== 0) return churn;
-  for (const rawLine of result.stdout.split("\n")) {
-    const line = rawLine.trim().replace(/\\/g, "/");
-    if (!line) continue;
+  for (const line of parseNameOnly(result.stdout)) {
     churn.set(line, (churn.get(line) ?? 0) + 1);
   }
   return churn;
@@ -214,7 +216,7 @@ export async function buildDependencyGraph(root: string, options: BuildOptions =
     if (node.kind === "module") {
       let churnCount = churnMap.get(relPath);
       if (churnCount === undefined) {
-        for (const ext of [".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".go", ".rs", ".rb", ".java", ".kt"]) {
+        for (const ext of GRAPH_SOURCE_EXTS) {
           churnCount = churnMap.get(`${relPath}${ext}`);
           if (churnCount !== undefined) break;
         }

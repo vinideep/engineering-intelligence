@@ -38,10 +38,10 @@ import { execFileSync } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const { deriveFacts, factKey } = await import(path.resolve(__dirname, "../dist/claims/derive.js"));
+const { deriveFacts, factKey } = await import(pathToFileURL(path.resolve(__dirname, "../dist/claims/derive.js")).href);
 
 function git(repo, args, opts = {}) {
   return execFileSync("git", args, { cwd: repo, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, ...opts }).trim();

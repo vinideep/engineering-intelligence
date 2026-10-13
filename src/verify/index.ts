@@ -23,6 +23,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { runProcess } from "../process/index.js";
+import { gitStatusPaths } from "../process/git-paths.js";
 
 export const RECEIPT_SCHEMA_VERSION = 1;
 const RECEIPT_DIR = ".engineering-intelligence/.verify";
@@ -100,22 +101,18 @@ async function git(root: string, args: string[]): Promise<string | null> {
  * would pass a change it never verified.
  */
 export async function changedFiles(root: string): Promise<string[]> {
-  const out = await git(root, ["status", "--porcelain", "-uall"]);
-  if (out === null) return [];
-  const files: string[] = [];
-  for (const line of out.split("\n")) {
-    if (!line.trim()) continue;
-    let p = line.slice(3).trim();
-    const arrow = p.indexOf(" -> ");
-    if (arrow >= 0) p = p.slice(arrow + 4);
-    if (p.startsWith('"') && p.endsWith('"')) {
-      try { p = JSON.parse(p) as string; } catch { /* keep raw */ }
-    }
+  // Raw porcelain, mapped to `root` (never trimmed: see process/git-paths.ts).
+  const paths = await gitStatusPaths(root);
+  if (paths === null) return [];
+  const files = new Set<string>();
+  for (const p of paths) {
     // Never record our own state in a receipt — it would invalidate itself.
     if (p.startsWith(".engineering-intelligence/")) continue;
-    files.push(p);
+    // Renames contribute their old path too; it no longer exists, so hashing
+    // skips it and only the new path is bound into a receipt.
+    files.add(p);
   }
-  return files;
+  return [...files];
 }
 
 // ---------------------------------------------------------------------------

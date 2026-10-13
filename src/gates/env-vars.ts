@@ -14,18 +14,25 @@ import {
   walkFiles,
 } from "./index.js";
 
-const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".go", ".rb"]);
+const SOURCE_EXTS = new Set([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs", ".py", ".go", ".rb"]);
 
-// Per-language patterns capturing the variable name in group 1.
+// Per-language patterns capturing the variable name in group 1. Names may be
+// mixed case (`NEXT_PUBLIC_apiUrl`); an upper-case-only class used to truncate
+// such names to their upper-case prefix and report a variable that doesn't exist.
+const NAME = "([A-Za-z_][A-Za-z0-9_]*)";
 const REFERENCE_PATTERNS: RegExp[] = [
-  /process\.env\.([A-Z_][A-Z0-9_]*)/g,               // JS/TS: process.env.FOO
-  /process\.env\[\s*['"]([A-Z_][A-Z0-9_]*)['"]\s*\]/g, // JS/TS: process.env['FOO']
-  /import\.meta\.env\.([A-Z_][A-Z0-9_]*)/g,          // Vite: import.meta.env.FOO
-  /os\.environ(?:\.get)?\[?\(?\s*['"]([A-Z_][A-Z0-9_]*)['"]/g, // Python: os.environ[/get(
-  /os\.getenv\(\s*['"]([A-Z_][A-Z0-9_]*)['"]/g,      // Python: os.getenv('FOO')
-  /os\.Getenv\(\s*"([A-Z_][A-Z0-9_]*)"/g,            // Go: os.Getenv("FOO")
-  /ENV\[\s*['"]([A-Z_][A-Z0-9_]*)['"]\s*\]/g,        // Ruby: ENV['FOO']
+  new RegExp(String.raw`process\.env\.${NAME}\b`, "g"),                     // JS/TS: process.env.FOO
+  new RegExp(String.raw`process\.env\[\s*['"]${NAME}['"]\s*\]`, "g"),      // JS/TS: process.env['FOO']
+  new RegExp(String.raw`import\.meta\.env\.${NAME}\b`, "g"),                // Vite: import.meta.env.FOO
+  new RegExp(String.raw`os\.environ(?:\.get)?\[?\(?\s*['"]${NAME}['"]`, "g"), // Python: os.environ[/get(
+  new RegExp(String.raw`os\.getenv\(\s*['"]${NAME}['"]`, "g"),               // Python: os.getenv('FOO')
+  new RegExp(String.raw`os\.Getenv\(\s*"${NAME}"`, "g"),                     // Go: os.Getenv("FOO")
+  new RegExp(String.raw`ENV(?:\.fetch\(\s*|\[\s*)['"]${NAME}['"]`, "g"),   // Ruby: ENV['FOO'] / ENV.fetch('FOO')
 ];
+
+// `const { DB_URL, PORT: port = 3000 } = process.env` — destructuring (possibly
+// multi-line) names each variable once.
+const DESTRUCTURE = /\{([^{}]*)\}\s*=\s*(?:process\.env|import\.meta\.env)\b/g;
 
 const ENV_FILES = [".env.example", ".env.sample", ".env.template", ".env.dist", ".env.defaults"];
 
@@ -37,6 +44,15 @@ interface Reference {
 
 function extractReferences(content: string, relPath: string): Reference[] {
   const refs: Reference[] = [];
+  let d: RegExpExecArray | null;
+  DESTRUCTURE.lastIndex = 0;
+  while ((d = DESTRUCTURE.exec(content)) !== null) {
+    const line = content.slice(0, d.index).split("\n").length;
+    for (const part of d[1].split(",")) {
+      const name = part.trim().replace(/^\.\.\./, "").split(/[\s:=]/)[0];
+      if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !part.trim().startsWith("...")) refs.push({ name, file: relPath, line });
+    }
+  }
   const lines = content.split("\n");
   for (let i = 0; i < lines.length; i++) {
     for (const pattern of REFERENCE_PATTERNS) {

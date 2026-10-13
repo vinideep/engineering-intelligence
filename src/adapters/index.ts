@@ -222,12 +222,12 @@ interface SkillBundleProfile {
 
 async function skillBundle(owner: IdeId, p: SkillBundleProfile): Promise<RenderedFile[]> {
   const [index, skills, workflowSkills, briefs] = await Promise.all([
-    generateSkillsIndex(SKILL_NAMES, p.skillsDir),
+    generateSkillsIndex(SKILL_NAMES, p.skillsDir, p.emitBriefs),
     skillsAt(p.skillsDir, owner),
     workflowSkillsAt(p.skillsDir, owner),
     p.emitBriefs ? skillBriefsAt(p.skillsDir, owner) : Promise.resolve([]),
   ]);
-  const routing = generateWorkflowRouting(p.skillsDir);
+  const routing = generateWorkflowRouting(p.skillsDir, p.emitBriefs);
   return [
     file(p.indexPath, index, owner),
     file(p.routingPath, routing, owner),

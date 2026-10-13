@@ -19,6 +19,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { collectProjectFiles, ProjectFilePolicy } from "../project-files/index.js";
 import { runProcess } from "../process/index.js";
+import { parseNameOnly } from "../process/git-paths.js";
 
 export type Severity = "error" | "warning" | "info";
 export type GateStatus = "pass" | "warn" | "fail";
@@ -91,7 +92,7 @@ export async function walkFiles(
   return out;
 }
 
-export const JS_TS_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
+export const JS_TS_EXTS = new Set([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"]);
 
 export function isTestFile(relPath: string): boolean {
   return /(^|\/)(test|tests|__tests__|spec|e2e)\//.test(relPath) ||
@@ -102,16 +103,25 @@ export function isTestFile(relPath: string): boolean {
 // Shared git helpers (diff-oriented gates)
 // ---------------------------------------------------------------------------
 
-/** Return a file's contents at a git ref, or null if it did not exist there. */
+/**
+ * Return a file's contents at a git ref, or null if it did not exist there.
+ * `relPath` is relative to `root`; the `./` form makes git resolve it against the
+ * working directory instead of the repository top level (they differ when `root`
+ * is a package inside a monorepo).
+ */
 export async function gitShow(root: string, ref: string, relPath: string): Promise<string | null> {
-  const result = await runProcess({ command: "git", args: ["show", `${ref}:${relPath}`], cwd: root, maxBuffer: 10 * 1024 * 1024 });
+  const result = await runProcess({ command: "git", args: ["show", `${ref}:./${relPath.replace(/\\/g, "/")}`], cwd: root, maxBuffer: 10 * 1024 * 1024 });
   return result.exitCode === 0 ? result.stdout : null;
 }
 
-/** Files changed between `base` and the working tree (added/modified/renamed). */
+/**
+ * Files changed between `base` and the working tree, relative to `root`
+ * (`--relative`), with renames reported as delete + add (`--no-renames`) so the
+ * removed path is visible to gates that compare old vs new content.
+ */
 export async function gitChangedFiles(root: string, base: string): Promise<string[]> {
-  const result = await runProcess({ command: "git", args: ["diff", "--name-only", base, "--"], cwd: root, maxBuffer: 10 * 1024 * 1024 });
-  return result.exitCode === 0 ? result.stdout.split("\n").map((line) => line.trim()).filter(Boolean) : [];
+  const result = await runProcess({ command: "git", args: ["diff", "--name-only", "--relative", "--no-renames", base, "--"], cwd: root, maxBuffer: 10 * 1024 * 1024 });
+  return result.exitCode === 0 ? parseNameOnly(result.stdout) : [];
 }
 
 export async function gitAvailable(root: string): Promise<boolean> {
