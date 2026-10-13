@@ -1,6 +1,6 @@
 ---
 name: question-file-engine
-description: Writes structured MCQ clarification files to .engineering-intelligence/aidlc/open-questions/ instead of asking questions inline. Creates durable decision artifacts and enables context reset between question creation and answer processing. Use when a request has 3+ ambiguities or scope is unclear.
+description: Writes structured MCQ clarification files to .graphward/aidlc/open-questions/ instead of asking questions inline. Creates durable decision artifacts and enables context reset between question creation and answer processing. Use when a request has 3+ ambiguities or scope is unclear.
 ---
 
 # Question File Engine
@@ -18,7 +18,7 @@ Write structured clarification question files rather than asking questions inlin
 
 - Original request or initiative description
 - Ambiguity analysis from calling skill (requirement-scoper, backlog-decomposition-engine)
-- Optional: project architecture from `.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/graph/`
+- Optional: project architecture from `.graphward/knowledge-base/`, `.graphward/graph/`
 
 ## Procedure
 
@@ -37,7 +37,7 @@ Cap at 8 questions per file. Write a second file for additional batches.
 
 ### 2. Write the Question File
 
-Save to `.engineering-intelligence/aidlc/open-questions/YYYYMMDD-{slug}.md`:
+Save to `.graphward/aidlc/open-questions/YYYYMMDD-{slug}.md`:
 
 ```markdown
 # Clarification Questions: {topic}
@@ -81,7 +81,7 @@ Guidelines for good questions:
 
 After writing the file, output exactly this and nothing else:
 
-> Questions written to `.engineering-intelligence/aidlc/open-questions/{filename}`.
+> Questions written to `.graphward/aidlc/open-questions/{filename}`.
 >
 > **Next step:** Open the file, check boxes to select your answers (you may select multiple), then return here and say **"questions answered, continue"**.
 
@@ -98,7 +98,7 @@ When user signals answers are ready:
 
 ## Output
 
-- `.engineering-intelligence/aidlc/open-questions/YYYYMMDD-{slug}.md` — question file (before resume)
+- `.graphward/aidlc/open-questions/YYYYMMDD-{slug}.md` — question file (before resume)
 - On resume: confirmed decision set, referenced by path in the calling skill's output
 
 ## Rules
@@ -106,8 +106,8 @@ When user signals answers are ready:
 - Never ask 3+ questions inline — always write a question file.
 - Never guess or assume answers to unresolved questions.
 - Always re-read the file from disk on resume; never trust in-memory question content.
-- Log confirmed decisions by calling `freeze_clarified_requirements` with `topic` (the question file slug) and `decisions` array (`[{ questionId: "Q1", selectedOptionId: "A", customText?: "..." }]`). This writes to `.engineering-intelligence/aidlc/inception/requirements.md` where `check_aidlc_gate("inception")` expects them.
-- Mirror resolved question status in `.engineering-intelligence/aidlc/open-questions.md` by marking items `status: resolved` so `check_aidlc_gate` no longer treats them as blockers.
+- Log confirmed decisions by calling `freeze_clarified_requirements` with `topic` (the question file slug) and `decisions` array (`[{ questionId: "Q1", selectedOptionId: "A", customText?: "..." }]`). This writes to `.graphward/aidlc/inception/requirements.md` where `check_aidlc_gate("inception")` expects them.
+- Mirror resolved question status in `.graphward/aidlc/open-questions.md` by marking items `status: resolved` so `check_aidlc_gate` no longer treats them as blockers.
 
 ## Tools
 

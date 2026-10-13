@@ -8,7 +8,7 @@ version: 1.0.0
 
 Use this skill whenever schemas, migrations, ORM models, data stores, indexes, or persistence contracts change.
 
-**Run the deterministic gate first:** `npx engineering-intelligence gate migration-lint .` (add `--base <ref>` to lint only changed migrations, or `--json`). It flags destructive operations (DROP/TRUNCATE/DROP COLUMN, mass DELETE), locking operations (non-concurrent index creation, NOT NULL without default, constraint validation), and breaking renames, with file:line evidence. Use the steps below to add rollback-coverage and framework-specific review the gate does not cover.
+**Run the deterministic gate first:** `npx graphward gate migration-lint .` (add `--base <ref>` to lint only changed migrations, or `--json`). It flags destructive operations (DROP/TRUNCATE/DROP COLUMN, mass DELETE), locking operations (non-concurrent index creation, NOT NULL without default, constraint validation), and breaking renames, with file:line evidence. Use the steps below to add rollback-coverage and framework-specific review the gate does not cover.
 
 ## Procedure
 
@@ -39,7 +39,7 @@ Use this skill whenever schemas, migrations, ORM models, data stores, indexes, o
 
 ## Output
 
-Write `.engineering-intelligence/aidlc/construction/<unit>/database-migration-safety.md`:
+Write `.graphward/aidlc/construction/<unit>/database-migration-safety.md`:
 
 ```markdown
 # Database Migration Safety: <unit>

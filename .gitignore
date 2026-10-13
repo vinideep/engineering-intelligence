@@ -7,6 +7,7 @@ package/
 
 # Dogfooding / generated artifacts — not part of the published package
 .claude/
+.graphward/
 .engineering-intelligence/
 knowledge-base/
 

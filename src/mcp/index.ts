@@ -8,9 +8,10 @@ import { buildGraph, analyzeImpact, loadExistingGraph, ensureFreshGraph, findSym
 import { preflight, postflight } from "../flight/index.js";
 import { generateBrief, readBrief } from "../brief/index.js";
 import { shape, terseNode, terseEdge, packRows } from "./shaper.js";
-import { loadEiConfig } from "../config/index.js";
-import { packageVersion } from "../version.js";
+import { loadGwConfig } from "../config/index.js";
+import { packageVersion, packageVersionSync } from "../version.js";
 import { createConsolidatedRegistry } from "./consolidated.js";
+import { migrateLegacyLayout } from "../config/legacy.js";
 
 // Resolve the token budget for a tool call. Precedence:
 //   explicit args.budget (0 = unlimited) → project config → built-in fallback.
@@ -22,10 +23,10 @@ function budgetOf(args: Record<string, unknown>, config: Record<string, number>,
   return fallback;
 }
 
-// Optional per-project budget overrides: .engineering-intelligence/config.json
+// Optional per-project budget overrides: .graphward/config.json
 // { "tokenBudgets": { "analyze_impact": 3000, ... } }
 async function loadBudgetConfig(root: string): Promise<Record<string, number>> {
-  try { return (await loadEiConfig(root)).tokenBudgets; } catch { return {}; }
+  try { return (await loadGwConfig(root)).tokenBudgets; } catch { return {}; }
 }
 
 const budgetProp = { budget: { type: "number", description: "Optional token budget for the response. Exploration fields are capped to fit (answer fields are never truncated); pass 0 for unlimited." } };
@@ -169,7 +170,7 @@ const TOOLS = [
   {
     name: "get_context",
     description:
-      "Compatibility alias for get_engineering_context. Returns the ContextPackV2 Markdown summary built from verified EI knowledge, EI's normalized graph, current scoped source evidence, and explicit provider fallback.",
+      "Compatibility alias for get_engineering_context. Returns the ContextPackV2 Markdown summary built from verified GraphWard knowledge, GraphWard's normalized graph, current scoped source evidence, and explicit provider fallback.",
     inputSchema: {
       type: "object" as const,
       required: ["task"],
@@ -219,7 +220,7 @@ const TOOLS = [
 
 /** Tool names and one-line purposes, for the installed instructions. */
 export const MCP_TOOL_SUMMARY: ReadonlyArray<readonly [string, string]> = [
-  ["get_engineering_context", "build ContextPackV2 from verified EI knowledge, canonical structure, and current scoped code"],
+  ["get_engineering_context", "build ContextPackV2 from verified GraphWard knowledge, canonical structure, and current scoped code"],
   ["analyze_change_impact", "compute direct and indirect impact, affected tests, risks, and unknowns"],
   ["validate_change", "run impact, safety gates, claims, knowledge, and citation validation"],
   ["sync_engineering_knowledge", "refresh affected graph, provider indexes, claims, and knowledge health after edits"],
@@ -231,14 +232,18 @@ export const MCP_TOOL_SUMMARY: ReadonlyArray<readonly [string, string]> = [
  * (Claude Code) or `.cursor/mcp.json` (Cursor) will start the server themselves,
  * so the tools are actually reachable instead of requiring the user to register
  * the server by hand and then somehow know the tool names.
+ *
+ * The package is PINNED to the installing version: an unpinned `npx graphward`
+ * runs whatever npm's `latest` is, which need not match the skills, hooks and
+ * on-disk formats this version just installed.
  */
-export function mcpServerRegistration(): string {
+export function mcpServerRegistration(version = packageVersionSync()): string {
   return JSON.stringify(
     {
       mcpServers: {
-        "engineering-intelligence": {
+        graphward: {
           command: "npx",
-          args: ["-y", "engineering-intelligence", "mcp"],
+          args: ["-y", `graphward@${version}`, "mcp"],
         },
       },
     },
@@ -257,16 +262,19 @@ function safeRegex(pattern: string | undefined): RegExp | undefined {
 }
 
 export async function startMcpServer(projectRoot: string): Promise<void> {
+  // stdout is the protocol channel; any migration note goes to stderr.
+  const legacy = migrateLegacyLayout(projectRoot);
+  if (legacy.message) process.stderr.write(`${legacy.message}\n`);
   const consolidated = await createConsolidatedRegistry(projectRoot);
   const server = new Server(
-    { name: "engineering-intelligence", version: await packageVersion() },
+    { name: "graphward", version: await packageVersion() },
     { capabilities: { tools: {} } },
   );
 
-  // Advertise only the cohesive EI control-plane surface. The legacy tools
+  // Advertise only the cohesive GraphWard control-plane surface. The legacy tools
   // remain callable below as compatibility wrappers for existing clients, but
   // are intentionally absent from discovery so the model does not have to
-  // orchestrate EI, Graphify, and CCE primitives itself.
+  // orchestrate GraphWard, Graphify, and CCE primitives itself.
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: consolidated.list() }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -306,7 +314,7 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
         // never a path (`../../x` would read arbitrary JSON outside the graph dir).
         if (!/^[a-z][a-z0-9-]*$/.test(type)) return text(JSON.stringify({ error: `Invalid graph type "${type}".` }), true);
         if (type === "dependency") await ensureFreshGraph(root);
-        const graphPath = path.join(root, ".engineering-intelligence", "graph", `${type}-graph.json`);
+        const graphPath = path.join(root, ".graphward", "graph", `${type}-graph.json`);
         const graph = await loadExistingGraph(graphPath);
         if (!graph) return text(JSON.stringify({ error: `No ${type}-graph.json found. Run map_dependencies first.` }), true);
 
@@ -453,7 +461,7 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
       }
 
       if (name === "read_knowledge") {
-        const kbDir = path.join(root, ".engineering-intelligence", "knowledge-base");
+        const kbDir = path.join(root, ".graphward", "knowledge-base");
         if (typeof args.file === "string" && args.file) {
           const filePath = path.resolve(kbDir, args.file);
           // Confine reads to the knowledge base: `../../../etc/passwd` must not resolve.
@@ -463,7 +471,7 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
           try {
             return text(await readFile(filePath, "utf8"));
           } catch {
-            return text(JSON.stringify({ error: `.engineering-intelligence/knowledge-base/${args.file} not found` }), true);
+            return text(JSON.stringify({ error: `.graphward/knowledge-base/${args.file} not found` }), true);
           }
         }
         try {
@@ -471,7 +479,7 @@ export async function startMcpServer(projectRoot: string): Promise<void> {
           const files = (entries as string[]).filter((e) => e.endsWith(".md") || e.endsWith(".json"));
           return text(shape({ brief: "call get_brief for a ~500-token repo orientation", files }));
         } catch {
-          return text(JSON.stringify({ files: [], note: "knowledge-base/ not found. Run setup or /initialize-engineering-intelligence first." }));
+          return text(JSON.stringify({ files: [], note: "knowledge-base/ not found. Run setup or /initialize-graphward first." }));
         }
       }
 

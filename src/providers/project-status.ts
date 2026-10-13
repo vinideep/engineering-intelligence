@@ -40,7 +40,7 @@ async function graphifyState(root: string, workspaceHash: string): Promise<Proje
   }
   const graphLocation = path.resolve(root, manifest.graphPath || GRAPHIFY_GRAPH_PATH);
   if (!inside(path.join(root, PROVIDER_DIR), graphLocation)) {
-    return { name: "graphify", health: "invalid", fallback: true, message: "Graphify output path escapes EI's provider directory." };
+    return { name: "graphify", health: "invalid", fallback: true, message: "Graphify output path escapes GraphWard's provider directory." };
   }
   const graph = await readJson<{ nodes?: unknown; edges?: unknown; links?: unknown }>(graphLocation);
   if (!graph || !Array.isArray(graph.nodes) || (!Array.isArray(graph.edges) && !Array.isArray(graph.links))) {
@@ -60,7 +60,7 @@ async function cceState(root: string, workspaceHash: string): Promise<ProjectPro
   }
   const providerRoot = path.join(root, PROVIDER_DIR);
   if (!inside(providerRoot, manifest.indexedPath) || !inside(providerRoot, manifest.storagePath)) {
-    return { name: "cce", health: "invalid", fallback: true, message: "CCE index paths escape EI's provider directory." };
+    return { name: "cce", health: "invalid", fallback: true, message: "CCE index paths escape GraphWard's provider directory." };
   }
   try {
     const [indexed, storage] = await Promise.all([stat(manifest.indexedPath), stat(manifest.storagePath)]);

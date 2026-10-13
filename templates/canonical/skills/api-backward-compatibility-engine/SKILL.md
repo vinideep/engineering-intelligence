@@ -8,12 +8,12 @@ version: 2.0.0
 
 Use this skill when routes, handlers, request schemas, response schemas, GraphQL schemas, RPC contracts, events, SDKs, webhooks, or public service interfaces change. It covers both **contract diffing** (is this change breaking?) and **snapshot/replay verification** (did the actual responses change semantically?).
 
-**Run the deterministic gate first:** `npx engineering-intelligence gate api-diff . --base <ref>` (e.g. `--base origin/main`; add `--json`). It extracts HTTP route registrations, method decorators, and OpenAPI path/method pairs from the working tree and the base ref, and fails on any endpoint removed or method-changed (breaking). Use the steps below to classify request/response schema, GraphQL, and RPC contract changes the gate does not yet parse.
+**Run the deterministic gate first:** `npx graphward gate api-diff . --base <ref>` (e.g. `--base origin/main`; add `--json`). It extracts HTTP route registrations, method decorators, and OpenAPI path/method pairs from the working tree and the base ref, and fails on any endpoint removed or method-changed (breaking). Use the steps below to classify request/response schema, GraphQL, and RPC contract changes the gate does not yet parse.
 
 ## Procedure
 
 1. **Load Current API Contract**
-   - `.engineering-intelligence/knowledge-base/04-api-documentation.md`
+   - `.graphward/knowledge-base/04-api-documentation.md`
    - OpenAPI / Swagger specs
    - GraphQL schemas
    - Protobuf / gRPC definitions
@@ -44,7 +44,7 @@ Use this skill when routes, handlers, request schemas, response schemas, GraphQL
 
 ## Snapshot & Replay Verification
 
-Contract diffing catches *declared* breaks; snapshots catch *observed* ones. For changed endpoints, capture request/response pairs and replay them to detect semantic regressions the static diff misses. Store snapshots under `.engineering-intelligence/snapshots/`.
+Contract diffing catches *declared* breaks; snapshots catch *observed* ones. For changed endpoints, capture request/response pairs and replay them to detect semantic regressions the static diff misses. Store snapshots under `.graphward/snapshots/`.
 
 1. **Select scenarios** for changed endpoints from `04-api-documentation.md`, `service-graph.json`, route files, and existing API tests: happy path, auth failure, validation error, downstream/dependency failure, edge-case response shape.
 2. **Capture pre-change** request/response pairs before implementation when feasible; if runtime capture is unavailable, extract examples from existing tests or API docs and mark confidence accordingly.
@@ -52,11 +52,11 @@ Contract diffing catches *declared* breaks; snapshots catch *observed* ones. For
 4. **Classify differences**: `expected` (intentional, covered by acceptance criteria), `compatible` (additive/non-contractual), `regression-candidate` (semantic difference that may break callers), `breaking` (incompatible response/status without approval).
 5. **Block on unexplained regressions**: `regression-candidate` and `breaking` diffs block Definition of Done until resolved, approved, or recorded as open risk.
 
-Write `.engineering-intelligence/snapshots/<unit>/snapshot-report.md` with the pre-change/post-change sources, a replay-results table (scenario, endpoint, pre-change, post-change, classification, evidence), blocking differences, and approval rationale.
+Write `.graphward/snapshots/<unit>/snapshot-report.md` with the pre-change/post-change sources, a replay-results table (scenario, endpoint, pre-change, post-change, classification, evidence), blocking differences, and approval rationale.
 
 ## Output
 
-Write `.engineering-intelligence/aidlc/construction/<unit>/api-compatibility.md`:
+Write `.graphward/aidlc/construction/<unit>/api-compatibility.md`:
 
 ```markdown
 # API Backward Compatibility: <unit>

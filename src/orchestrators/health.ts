@@ -6,7 +6,7 @@ import { verifyKnowledge } from "../verify/index.js";
 import { checkEvidenceHashes } from "../evidence/index.js";
 import { verifyClaims } from "../claims/index.js";
 import { computeFreshness } from "../freshness/index.js";
-import { loadEiConfig } from "../config/index.js";
+import { loadGwConfig } from "../config/index.js";
 import { ProjectFilePolicy } from "../project-files/index.js";
 import { providerStatus } from "../providers/manager.js";
 import { PROVIDER_NAMES } from "../providers/types.js";
@@ -26,7 +26,7 @@ export interface HealthResult {
 }
 
 export async function runHealth(root: string): Promise<HealthResult> {
-  const lines: string[] = ["Engineering Intelligence — health check", ""];
+  const lines: string[] = ["GraphWard — health check", ""];
   let ok = true;
   const json: Record<string, unknown> = {};
 
@@ -43,7 +43,7 @@ export async function runHealth(root: string): Promise<HealthResult> {
   }
 
   // 2. Graph presence + stats.
-  const graph = await loadExistingGraph(path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json"));
+  const graph = await loadExistingGraph(path.join(root, ".graphward", "graph", "dependency-graph.json"));
   let sourceModules = 0;
   if (!graph) {
     lines.push("✗ Graph: not built — run `setup`");
@@ -77,7 +77,7 @@ export async function runHealth(root: string): Promise<HealthResult> {
   }
 
   // 3. Knowledge-base drift (only if a KB exists).
-  if (existsSync(path.join(root, ".engineering-intelligence", "knowledge-base"))) {
+  if (existsSync(path.join(root, ".graphward", "knowledge-base"))) {
     const verify = await verifyKnowledge(root);
     json.verify = { checked: verify.referencesChecked, drift: verify.drift };
     if (verify.filesScanned === 0) {
@@ -102,7 +102,7 @@ export async function runHealth(root: string): Promise<HealthResult> {
       lines.push(`✓ Evidence: ${ev.checked} citation(s) still match the code`);
     }
   } else {
-    lines.push("• Knowledge base: not initialized (run /initialize-engineering-intelligence)");
+    lines.push("• Knowledge base: not initialized (run /initialize-graphward)");
   }
 
   // Freshness covers canonical knowledge, memory, context and graph artifacts.
@@ -150,7 +150,7 @@ export async function runHealth(root: string): Promise<HealthResult> {
   // 7. Live provider handshake. Missing optional providers are an explicit
   // degraded state with native fallback; they become a hard failure only when
   // the project requires providers.
-  const config = await loadEiConfig(root);
+  const config = await loadGwConfig(root);
   const providersDisabled = config.providers.policy === "native";
   const [statuses, projectRuns] = await Promise.all([
     Promise.all(PROVIDER_NAMES.map((name) => providerStatus(name, { disabled: providersDisabled }))),

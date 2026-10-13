@@ -1,10 +1,10 @@
 {
   "mcpServers": {
-    "engineering-intelligence": {
+    "graphward": {
       "command": "npx",
       "args": [
         "-y",
-        "engineering-intelligence",
+        "graphward",
         "mcp"
       ]
     }

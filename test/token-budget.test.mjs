@@ -16,7 +16,7 @@ import { generateBrief } from "../dist/brief/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
-const GRAPH_PATH = path.join(REPO_ROOT, ".engineering-intelligence", "graph", "dependency-graph.json");
+const GRAPH_PATH = path.join(REPO_ROOT, ".graphward", "graph", "dependency-graph.json");
 
 // Budgets the MCP handlers apply (must match src/mcp/index.ts).
 const BUDGET = { map_dependencies: 150, get_graph: 2500, analyze_impact: 1500, who_calls: 1500, find_symbol: 1500, brief: 800 };
@@ -30,7 +30,7 @@ test("MCP data-layer responses stay within token budgets (with before/after tabl
   const beforeGraph = estimateTokens(JSON.stringify(graph, null, 2));
 
   // AFTER — replicate each handler's response construction.
-  const mapResp = shape({ nodeCount: graph.nodes.length, edgeCount: graph.edges.length, fileCount: 0, wasIncremental: false, graphPath: ".engineering-intelligence/graph/dependency-graph.json", note: "Graph written to disk. Query it with get_graph / analyze_impact / who_calls / find_symbol." });
+  const mapResp = shape({ nodeCount: graph.nodes.length, edgeCount: graph.edges.length, fileCount: 0, wasIncremental: false, graphPath: ".graphward/graph/dependency-graph.json", note: "Graph written to disk. Query it with get_graph / analyze_impact / who_calls / find_symbol." });
   const getGraphResp = shape(
     { scope: graph.scope, nodeCount: graph.nodes.length, edgeCount: graph.edges.length, nodes: graph.nodes.slice(0, 100).map(terseNode), edges: graph.edges.slice(0, 100).map(terseEdge) },
     { budget: BUDGET.get_graph, hints: { nodes: { hint: "get_graph pattern=<id>", priority: 6 }, edges: { hint: "get_graph relation=<rel>", priority: 4 } } },

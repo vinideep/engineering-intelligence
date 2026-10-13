@@ -54,7 +54,7 @@ export interface FlightRecord {
 
 
 function flightDir(root: string): string {
-  return path.join(root, ".engineering-intelligence", "flight");
+  return path.join(root, ".graphward", "flight");
 }
 
 function git(root: string, args: string[]): string | null {

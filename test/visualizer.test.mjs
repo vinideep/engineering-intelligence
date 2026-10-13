@@ -8,7 +8,7 @@ test("generateDashboardHTML returns dashboard HTML content with key components",
   
   // Basic structure
   assert.match(html, /<!DOCTYPE html>/i);
-  assert.match(html, /<title>Engineering Intelligence/i);
+  assert.match(html, /<title>GraphWard/i);
   
   // Tab views
   assert.match(html, /id="skills"/);
@@ -18,7 +18,7 @@ test("generateDashboardHTML returns dashboard HTML content with key components",
 
   // Enhanced skills catalog contents
   assert.match(html, /initialize-intelligence-skill/);
-  assert.match(html, /engineering-intelligence-skill/);
+  assert.match(html, /graphward-skill/);
   assert.match(html, /deep-project-knowledge-extractor/);
   assert.match(html, /knowledge-base-validator/);
   assert.match(html, /codebase-discovery-engine/);
@@ -33,8 +33,8 @@ test("generateDashboardHTML returns dashboard HTML content with key components",
   assert.match(html, /context-budget-optimizer/);
 
   // Workflow pipelines
-  assert.match(html, /initialize-engineering-intelligence/);
-  assert.match(html, /engineering-intelligence/);
+  assert.match(html, /initialize-graphward/);
+  assert.match(html, /graphward/);
   assert.match(html, /discover-codebase/);
   assert.match(html, /create-project/);
 });

@@ -8,7 +8,7 @@ version: 3.0.0
 
 Extract actionable intelligence from git history to reveal hidden dependencies, ownership patterns, and codebase evolution trends.
 
-**Run the deterministic analyzer first:** `npx engineering-intelligence git-analysis . [--window 90] [--json]` computes hotspots, ownership, change coupling and velocity from git history and writes the report. If it ran within the last hour, read the report instead of re-running. Use the steps below to interpret it.
+**Run the deterministic analyzer first:** `npx graphward git-analysis . [--window 90] [--json]` computes hotspots, ownership, change coupling and velocity from git history and writes the report. If it ran within the last hour, read the report instead of re-running. Use the steps below to interpret it.
 
 ## Inputs
 
@@ -22,10 +22,10 @@ Extract actionable intelligence from git history to reveal hidden dependencies, 
 0. **Use the CLI first (saves ~2,000 tokens)** — Before computing manually, run:
 
    ```bash
-   npx engineering-intelligence git-analysis .
+   npx graphward git-analysis .
    ```
 
-   This runs hotspot analysis, ownership mapping, change coupling, and velocity tracking using pure git commands and writes `.engineering-intelligence/reports/GIT-intelligence.md`. If the report exists and was generated within the last hour, **read it directly and skip steps 1–8**.
+   This runs hotspot analysis, ownership mapping, change coupling, and velocity tracking using pure git commands and writes `.graphward/reports/GIT-intelligence.md`. If the report exists and was generated within the last hour, **read it directly and skip steps 1–8**.
 
    Only fall through to steps 1–8 if the CLI is unavailable.
 
@@ -80,16 +80,16 @@ Extract actionable intelligence from git history to reveal hidden dependencies, 
    | Merge complexity | Estimated effort to reconcile (based on overlapping changes) |
    | Stale branches | Branches with no commits in >30 days |
 
-7. **Feed Graph Intelligence** — Write git-derived edges to `.engineering-intelligence/graph/`:
+7. **Feed Graph Intelligence** — Write git-derived edges to `.graphward/graph/`:
    - Add `co-changes-with` edges to `dependency-graph.json` for verified change-coupled pairs
    - Add `owned-by` metadata to graph nodes based on ownership mapping
    - Mark edge confidence based on analysis evidence
 
-8. **Generate Report** — Write `.engineering-intelligence/reports/GIT-intelligence.md` with all findings, ranked by actionability.
+8. **Generate Report** — Write `.graphward/reports/GIT-intelligence.md` with all findings, ranked by actionability.
 
 ## Output Format
 
-Write `.engineering-intelligence/reports/GIT-intelligence.md`:
+Write `.graphward/reports/GIT-intelligence.md`:
 
 ```markdown
 # Git Intelligence Report

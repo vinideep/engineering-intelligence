@@ -176,7 +176,7 @@ function excerpt(markdown: string, maxLines = 28): string {
 
 async function loadKnowledge(root: string, task: string) {
   const [verification, evidence] = await Promise.all([verifyKnowledge(root), checkEvidenceHashes(root)]);
-  const files = await walkMarkdown(path.join(root, ".engineering-intelligence", "knowledge-base"));
+  const files = await walkMarkdown(path.join(root, ".graphward", "knowledge-base"));
   const taskWords = words(task);
   const brokenDocs = new Set(verification.details.map((detail) => detail.file.replace(/\\/g, "/")));
   const documents: KnowledgeContextItem[] = [];
@@ -198,8 +198,8 @@ async function loadKnowledge(root: string, task: string) {
     documents.push(...ranked.slice(0, 5).map(({ score: _score, ...item }) => item));
   }
   const decisionFiles = [
-    ...(await walkMarkdown(path.join(root, ".engineering-intelligence", "aidlc", "decisions"))),
-    ...(await walkMarkdown(path.join(root, ".engineering-intelligence", "knowledge-base", "decisions"))),
+    ...(await walkMarkdown(path.join(root, ".graphward", "aidlc", "decisions"))),
+    ...(await walkMarkdown(path.join(root, ".graphward", "knowledge-base", "decisions"))),
   ];
   const decisions: KnowledgeContextItem[] = [];
   for (const absolute of decisionFiles.slice(0, 10)) {
@@ -247,7 +247,7 @@ interface ArchitectureNeighborhoodResult {
 
 async function architectureNeighborhood(root: string, task: string, requestedFiles: string[]): Promise<ArchitectureNeighborhoodResult> {
   await ensureFreshGraph(root);
-  const graph = await loadExistingGraph(path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json"));
+  const graph = await loadExistingGraph(path.join(root, ".graphward", "graph", "dependency-graph.json"));
   if (!graph) return { seeds: [], nodes: [], edges: [], approvedScope: [], graph: null as DependencyGraph | null };
   const seeds = selectSeeds(graph, root, task, requestedFiles);
   const selected = new Set(seeds);
@@ -344,9 +344,9 @@ function trimArchitecture(
 }
 
 function renderMarkdown(pack: Omit<ContextPackV2, "markdown">): string {
-  const lines = [`# Engineering context: ${pack.task}`, "", `Route: ${pack.classification.kind}; risk ${pack.classification.risk}; confidence ${pack.overallConfidence.toFixed(2)}.`, `Knowledge trust: ${pack.knowledge.trust}. Retrieval: ${pack.providers.cce.fallback ? "EI native fallback" : "CCE"}.`, ""];
+  const lines = [`# Engineering context: ${pack.task}`, "", `Route: ${pack.classification.kind}; risk ${pack.classification.risk}; confidence ${pack.overallConfidence.toFixed(2)}.`, `Knowledge trust: ${pack.knowledge.trust}. Retrieval: ${pack.providers.cce.fallback ? "GraphWard native fallback" : "CCE"}.`, ""];
   if (pack.knowledge.documents.length > 0) {
-    lines.push("## Verified EI knowledge");
+    lines.push("## Verified GraphWard knowledge");
     for (const item of pack.knowledge.documents) lines.push(`- ${item.title} (${item.path})`);
     lines.push("");
   }
@@ -432,8 +432,8 @@ export async function getEngineeringContext(
   ];
   const graphUnknowns = architecture.graph?.unknowns ?? [];
   const unknowns = [
-    ...(knowledge.trust === "degraded" ? [`EI knowledge has ${knowledge.citationDrift} missing reference(s) and ${knowledge.staleEvidence} stale citation(s); affected prose was not loaded.`] : []),
-    ...(knowledge.trust === "unverifiable" ? ["EI knowledge has no recorded citation snapshot; prose was not promoted as verified context."] : []),
+    ...(knowledge.trust === "degraded" ? [`GraphWard knowledge has ${knowledge.citationDrift} missing reference(s) and ${knowledge.staleEvidence} stale citation(s); affected prose was not loaded.`] : []),
+    ...(knowledge.trust === "unverifiable" ? ["GraphWard knowledge has no recorded citation snapshot; prose was not promoted as verified context."] : []),
     ...graphUnknowns.slice(0, 20),
     ...(retrieval.staleRejected > 0 ? [`CCE returned ${retrieval.staleRejected} stale span(s), which were rejected.`] : []),
     ...(retrieval.scopeRejected > 0 ? [`CCE returned ${retrieval.scopeRejected} out-of-scope span(s), which were rejected.`] : []),

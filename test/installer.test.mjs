@@ -12,7 +12,7 @@ import { doctor } from "../dist/validation/index.js";
 const options = { packageVersion: "3.5.0" };
 
 async function project() {
-  return mkdtemp(path.join(tmpdir(), "engineering-intelligence-"));
+  return mkdtemp(path.join(tmpdir(), "graphward-"));
 }
 
 async function readable(root, relative) {
@@ -60,24 +60,24 @@ test("installs shared skills once for overlapping adapters", async () => {
   const root = await project();
   const result = await install(root, ["antigravity", "codex", "gemini-cli"], options);
   assert.equal(result.conflicts, 0);
-  const manifest = JSON.parse(await readable(root, ".engineering-intelligence/install-manifest.json"));
-  const shared = manifest.files.filter((entry) => entry.path === ".agents/skills/engineering-intelligence-skill/SKILL.md");
+  const manifest = JSON.parse(await readable(root, ".graphward/install-manifest.json"));
+  const shared = manifest.files.filter((entry) => entry.path === ".agents/skills/graphward-skill/SKILL.md");
   assert.equal(shared.length, 1);
   assert.deepEqual(shared[0].owners, ["antigravity", "codex", "gemini-cli"]);
-  assert.match(await readable(root, ".agents/workflows/initialize-engineering-intelligence.md"), /knowledge-base/);
+  assert.match(await readable(root, ".agents/workflows/initialize-graphward.md"), /knowledge-base/);
   assert.match(await readable(root, ".agents/workflows/map-architecture.md"), /dependency-graph\.json/);
-  assert.match(await readable(root, ".gemini/commands/engineering-intelligence.toml"), /User supplied scope or request/);
+  assert.match(await readable(root, ".gemini/commands/graphward.toml"), /User supplied scope or request/);
 });
 
 test("installs CommandCode native project skills and commands", async () => {
   const root = await project();
   const result = await install(root, ["commandcode"], options);
   assert.equal(result.conflicts, 0);
-  assert.match(await readable(root, ".commandcode/skills/engineering-intelligence-skill/SKILL.md"), /Engineering Intelligence Implementation/);
-  assert.match(await readable(root, ".commandcode/commands/engineering-intelligence.md"), /\$ARGUMENTS/);
+  assert.match(await readable(root, ".commandcode/skills/graphward-skill/SKILL.md"), /GraphWard Implementation/);
+  assert.match(await readable(root, ".commandcode/commands/graphward.md"), /\$ARGUMENTS/);
   assert.match(await readable(root, ".commandcode/commands/scope-requirement.md"), /\$ARGUMENTS/);
   assert.doesNotMatch(await readable(root, ".commandcode/commands/map-architecture.md"), /\$ARGUMENTS/);
-  const manifest = JSON.parse(await readable(root, ".engineering-intelligence/install-manifest.json"));
+  const manifest = JSON.parse(await readable(root, ".graphward/install-manifest.json"));
   assert.ok(manifest.adapters.includes("commandcode"));
 });
 
@@ -87,7 +87,7 @@ test("managed instructions preserve existing user text and uninstall removes onl
   await install(root, ["codex"], options);
   const installed = await readable(root, "AGENTS.md");
   assert.match(installed, /# Existing Rules/);
-  assert.match(installed, /<!-- engineering-intelligence:start -->/);
+  assert.match(installed, /<!-- graphward:start -->/);
   const result = await uninstall(root, options);
   assert.equal(result.conflicts, 0);
   assert.equal(await readable(root, "AGENTS.md"), "# Existing Rules\n\nKeep this.\n");
@@ -96,24 +96,24 @@ test("managed instructions preserve existing user text and uninstall removes onl
 test("update preserves locally modified managed files unless forced", async () => {
   const root = await project();
   await install(root, ["cursor"], options);
-  const relative = ".cursor/commands/engineering-intelligence.md";
+  const relative = ".cursor/commands/graphward.md";
   await writeFile(path.join(root, relative), "custom local workflow\n");
   const result = await update(root, options);
   assert.equal(result.conflicts, 1);
   assert.equal(await readable(root, relative), "custom local workflow\n");
   const forced = await update(root, { ...options, force: true });
   assert.equal(forced.conflicts, 0);
-  assert.match(await readable(root, relative), /Engineering Intelligence/);
+  assert.match(await readable(root, relative), /GraphWard/);
 });
 
 test("doctor reports legacy folders and locally edited managed content", async () => {
   const root = await project();
   await install(root, ["generic"], options);
-  await writeFile(path.join(root, ".agents/skills/engineering-intelligence-skill/SKILL.md"), "changed\n");
+  await writeFile(path.join(root, ".agents/skills/graphward-skill/SKILL.md"), "changed\n");
   await writeFile(path.join(root, ".agent"), "legacy marker");
   const actions = await doctor(root);
   assert.ok(actions.some((action) => action.path === ".agent" && action.status === "warning"));
-  assert.ok(actions.some((action) => action.path.includes("engineering-intelligence-skill/SKILL.md") && action.status === "warning"));
+  assert.ok(actions.some((action) => action.path.includes("graphward-skill/SKILL.md") && action.status === "warning"));
 });
 
 test("doctor recognizes an untouched installation as healthy", async () => {
@@ -126,7 +126,7 @@ test("doctor recognizes an untouched installation as healthy", async () => {
 test("doctor detects package drift and canonical files omitted from the install manifest", async () => {
   const root = await project();
   await install(root, ["generic"], options);
-  const manifestPath = path.join(root, ".engineering-intelligence/install-manifest.json");
+  const manifestPath = path.join(root, ".graphward/install-manifest.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   const omitted = manifest.files.find((entry) => entry.path.includes("graph-engine/SKILL.md"));
   assert.ok(omitted);
@@ -142,14 +142,14 @@ test("dry run does not write installer state or adapter files", async () => {
   const root = await project();
   const result = await install(root, ["claude-code"], { ...options, dryRun: true });
   assert.ok(result.changed > 0);
-  await assert.rejects(access(path.join(root, ".engineering-intelligence/install-manifest.json")));
-  await assert.rejects(access(path.join(root, ".claude/skills/engineering-intelligence-skill/SKILL.md")));
+  await assert.rejects(access(path.join(root, ".graphward/install-manifest.json")));
+  await assert.rejects(access(path.join(root, ".claude/skills/graphward-skill/SKILL.md")));
 });
 
 test("update removes an obsolete unchanged managed file recorded by an older manifest", async () => {
   const root = await project();
   await install(root, ["generic"], options);
-  const manifestPath = path.join(root, ".engineering-intelligence/install-manifest.json");
+  const manifestPath = path.join(root, ".graphward/install-manifest.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   const obsolete = ".agents/skills/old-engine/SKILL.md";
   const content = "old managed skill\n";
@@ -175,10 +175,10 @@ test("update migrates legacy Antigravity JSON agents and preserves edited legacy
   const legacyPrompt = "# Locally customized legacy agent\n";
   const originalPrompt = "# Legacy prompt\n";
   await mkdir(path.dirname(path.join(root, legacyJsonPath)), { recursive: true });
-  await mkdir(path.join(root, ".engineering-intelligence"), { recursive: true });
+  await mkdir(path.join(root, ".graphward"), { recursive: true });
   await writeFile(path.join(root, legacyJsonPath), legacyJson);
   await writeFile(path.join(root, legacyPromptPath), legacyPrompt);
-  await writeFile(path.join(root, ".engineering-intelligence/install-manifest.json"), JSON.stringify({
+  await writeFile(path.join(root, ".graphward/install-manifest.json"), JSON.stringify({
     schemaVersion: 1,
     packageVersion: "4.0.0",
     templateVersion: "4.0.0",
@@ -200,14 +200,14 @@ test("update migrates legacy Antigravity JSON agents and preserves edited legacy
   assert.equal(await readable(root, legacyPromptPath), legacyPrompt);
   assert.match(await readable(root, ".agents/agents/engineering-orchestrator/agent.md"), /mainAgent: true/);
 
-  const manifest = JSON.parse(await readable(root, ".engineering-intelligence/install-manifest.json"));
+  const manifest = JSON.parse(await readable(root, ".graphward/install-manifest.json"));
   assert.ok(manifest.files.some((entry) => entry.path === legacyPromptPath), "edited legacy file must remain tracked for future review");
 });
 
 test("update upgrades a V1-shaped installation with V2 graph and impact assets", async () => {
   const root = await project();
   await install(root, ["antigravity", "generic"], options);
-  const manifestPath = path.join(root, ".engineering-intelligence/install-manifest.json");
+  const manifestPath = path.join(root, ".graphward/install-manifest.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   const v2Segments = [
     "/graph-engine/",
@@ -216,7 +216,7 @@ test("update upgrades a V1-shaped installation with V2 graph and impact assets",
     "/engineering-change-review/",
     "/map-architecture.md",
     "/analyze-impact.md",
-    "/sync-engineering-intelligence.md",
+    "/sync-graphward.md",
     "/review-engineering-change.md",
   ];
   const removed = manifest.files.filter((entry) => v2Segments.some((segment) => entry.path.includes(segment)));
@@ -238,7 +238,7 @@ test("update upgrades a V1-shaped installation with V2 graph and impact assets",
 test("upgrade installs new V2 files while preserving edited managed instructions", async () => {
   const root = await project();
   await install(root, ["generic"], options);
-  const manifestPath = path.join(root, ".engineering-intelligence/install-manifest.json");
+  const manifestPath = path.join(root, ".graphward/install-manifest.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   const graphEntry = manifest.files.find((entry) => entry.path === ".agents/skills/graph-engine/SKILL.md");
   manifest.files = manifest.files.filter((entry) => entry !== graphEntry);
@@ -254,8 +254,8 @@ test("upgrade installs new V2 files while preserving edited managed instructions
 test("uninstall removes templates but preserves runtime graph and report artifacts", async () => {
   const root = await project();
   await install(root, ["generic"], options);
-  const graph = ".engineering-intelligence/graph/dependency-graph.json";
-  const report = ".engineering-intelligence/reports/IMP-001-example.md";
+  const graph = ".graphward/graph/dependency-graph.json";
+  const report = ".graphward/reports/IMP-001-example.md";
   await mkdir(path.dirname(path.join(root, graph)), { recursive: true });
   await mkdir(path.dirname(path.join(root, report)), { recursive: true });
   await writeFile(path.join(root, graph), '{"schemaVersion":1}\n');

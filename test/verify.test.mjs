@@ -35,14 +35,14 @@ async function repo(scripts = { test: 'node -e "0"' }) {
 test("changedFiles expands untracked directories and excludes our own state", async () => {
   const root = await repo();
   await writeFile(path.join(root, "src/new.ts"), "export const x = 1;\n", "utf8");
-  await mkdir(path.join(root, ".engineering-intelligence"), { recursive: true });
-  await writeFile(path.join(root, ".engineering-intelligence/ei.config.json"), "{}", "utf8");
+  await mkdir(path.join(root, ".graphward"), { recursive: true });
+  await writeFile(path.join(root, ".graphward/gw.config.json"), "{}", "utf8");
 
   const files = await changedFiles(root);
   // Without -uall git reports the untracked dir as `src/`, hiding the new file
   // and letting an unverified change slip past the gate.
   assert.ok(files.includes("src/new.ts"), `expected src/new.ts in ${JSON.stringify(files)}`);
-  assert.ok(!files.some((f) => f.startsWith(".engineering-intelligence/")), "own state must never enter a receipt");
+  assert.ok(!files.some((f) => f.startsWith(".graphward/")), "own state must never enter a receipt");
 });
 
 test("detectCheckCommands prefers an aggregate check, else typecheck/lint/test", async () => {

@@ -4,7 +4,7 @@
  *
  * Validates that:
  *  - The server initializes and responds to the initialize handshake
- *  - tools/list returns only the consolidated EI control-plane surface
+ *  - tools/list returns only the consolidated GraphWard control-plane surface
  *  - hidden legacy wrappers remain callable for compatibility
  */
 
@@ -76,7 +76,7 @@ test("MCP server: initialize, list tools, call get_graph and analyze_impact", as
     });
     const initResponse = await readResponse(proc, 1);
     assert.ok(!initResponse.error, `initialize failed: ${JSON.stringify(initResponse.error)}`);
-    assert.equal(initResponse.result?.serverInfo?.name, "engineering-intelligence");
+    assert.equal(initResponse.result?.serverInfo?.name, "graphward");
     assert.equal(initResponse.result?.serverInfo?.version, await packageVersion());
 
     // Notify initialized

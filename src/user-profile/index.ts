@@ -315,14 +315,14 @@ ${signalRows}
 // Public API
 // ---------------------------------------------------------------------------
 
-const EI_GITIGNORE_ENTRY = "memory/users/\n";
+const GW_GITIGNORE_ENTRY = "memory/users/\n";
 
 async function ensureEiGitignore(eiDir: string): Promise<void> {
   const gitignorePath = path.join(eiDir, ".gitignore");
   let existing = "";
   try { existing = await readFile(gitignorePath, "utf8"); } catch { /* new file */ }
   if (!existing.includes("memory/users/")) {
-    await writeFile(gitignorePath, existing + (existing.endsWith("\n") || !existing ? "" : "\n") + EI_GITIGNORE_ENTRY, "utf8");
+    await writeFile(gitignorePath, existing + (existing.endsWith("\n") || !existing ? "" : "\n") + GW_GITIGNORE_ENTRY, "utf8");
   }
 }
 
@@ -337,11 +337,11 @@ export async function runUserProfile(root: string): Promise<{ profile: UserProfi
     };
   }
 
-  const eiDir = path.join(root, ".engineering-intelligence");
+  const eiDir = path.join(root, ".graphward");
   const userDir = path.join(eiDir, "memory", "users", identity.slug);
   const profilePath = path.join(userDir, "user-intelligence.md");
 
-  // Ensure .engineering-intelligence/.gitignore ignores users/
+  // Ensure .graphward/.gitignore ignores users/
   await mkdir(eiDir, { recursive: true });
   await ensureEiGitignore(eiDir);
 
@@ -437,7 +437,7 @@ function parseExistingProfile(raw: string): Partial<UserProfile> {
 export async function loadUserProfile(root: string): Promise<{ path: string; content: string } | null> {
   if (detectCI()) return null;
   const identity = resolveIdentity(root);
-  const profilePath = path.join(root, ".engineering-intelligence", "memory", "users", identity.slug, "user-intelligence.md");
+  const profilePath = path.join(root, ".graphward", "memory", "users", identity.slug, "user-intelligence.md");
   try {
     const content = await readFile(profilePath, "utf8");
     return { path: path.relative(root, profilePath), content };

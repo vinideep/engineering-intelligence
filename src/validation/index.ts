@@ -26,15 +26,12 @@ export async function validateRender(ides: IdeId[]): Promise<string[]> {
     }
   }
   const allContent = rendered.map((item) => item.content).join("\n");
-  // After universal path aliasing, `.engineering-intelligence/` becomes `$EI` in all skill files,
-  // so `.engineering-intelligence/graph/` becomes `$EIgraph/` and `.engineering-intelligence/reports/`
-  // becomes `$EIreports/`. The alias preamble preserves `.engineering-intelligence/aidlc/` literally.
-  for (const [requiredPath, alias] of [
-    [".engineering-intelligence/aidlc/", "$AIDLC"],
-    [".engineering-intelligence/graph/", "$EIgraph/"],
-    [".engineering-intelligence/reports/", "$EIreports/"],
-  ] as [string, string][]) {
-    if (!allContent.includes(requiredPath) && !allContent.includes(alias)) {
+  for (const requiredPath of [
+    ".graphward/aidlc/",
+    ".graphward/graph/",
+    ".graphward/reports/",
+  ]) {
+    if (!allContent.includes(requiredPath)) {
       errors.push(`Rendered templates do not describe required runtime path: ${requiredPath}`);
     }
   }
@@ -50,10 +47,10 @@ export async function doctor(root: string, expectedPackageVersion?: string): Pro
   }
   const expectedVersion = expectedPackageVersion ?? await packageVersion();
   if (manifest.packageVersion !== expectedVersion) {
-    actions.push({ path: MANIFEST_PATH, status: "error", message: `Installed package version ${manifest.packageVersion} differs from canonical ${expectedVersion}; run engineering-intelligence update.` });
+    actions.push({ path: MANIFEST_PATH, status: "error", message: `Installed package version ${manifest.packageVersion} differs from canonical ${expectedVersion}; run graphward update.` });
   }
   if (manifest.templateVersion !== TEMPLATE_VERSION) {
-    actions.push({ path: MANIFEST_PATH, status: "error", message: `Installed template version ${manifest.templateVersion} differs from canonical ${TEMPLATE_VERSION}; run engineering-intelligence update.` });
+    actions.push({ path: MANIFEST_PATH, status: "error", message: `Installed template version ${manifest.templateVersion} differs from canonical ${TEMPLATE_VERSION}; run graphward update.` });
   }
   const renderingErrors = await validateRender(manifest.adapters);
   // Needed to verify json-merge entries: we must know what we would write in
@@ -63,12 +60,12 @@ export async function doctor(root: string, expectedPackageVersion?: string): Pro
   const manifestByPath = new Map(manifest.files.map((entry) => [entry.path, entry]));
   for (const rendered of desired) {
     if (!manifestByPath.has(rendered.path)) {
-      actions.push({ path: rendered.path, status: "error", message: "Canonical managed artifact is missing from the install manifest; run engineering-intelligence update." });
+      actions.push({ path: rendered.path, status: "error", message: "Canonical managed artifact is missing from the install manifest; run graphward update." });
     }
   }
   for (const entry of manifest.files) {
     if (!desiredByPath.has(entry.path)) {
-      actions.push({ path: entry.path, status: "warning", message: "Install manifest tracks an artifact that is no longer canonical; run engineering-intelligence update." });
+      actions.push({ path: entry.path, status: "warning", message: "Install manifest tracks an artifact that is no longer canonical; run graphward update." });
     }
   }
   for (const message of renderingErrors) {
@@ -106,7 +103,7 @@ export async function doctor(root: string, expectedPackageVersion?: string): Pro
           : {
               path: entry.path,
               status: "warning",
-              message: "Enforcement hook entries are missing. Run `engineering-intelligence update` to re-merge them.",
+              message: "Enforcement hook entries are missing. Run `graphward update` to re-merge them.",
             },
       );
       continue;

@@ -9,7 +9,7 @@ import type {
 } from "./types.js";
 
 function aidlcDir(root: string): string {
-  return path.join(root, ".engineering-intelligence", "aidlc");
+  return path.join(root, ".graphward", "aidlc");
 }
 
 export function defaultAidlcState(): AidlcState {
@@ -19,7 +19,7 @@ export function defaultAidlcState(): AidlcState {
     position: {
       phase: "discovery",
       stage: "Initial discovery and environment mapping",
-      activeWorkflow: "initialize-engineering-intelligence",
+      activeWorkflow: "initialize-graphward",
       activeHat: "Engineering Orchestrator",
       completionStatus: "in-progress",
     },

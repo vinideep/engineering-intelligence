@@ -9,20 +9,20 @@ Use the `requirement-scoper` capability to interactively scope and document a us
 
 ## Pipeline
 
-1. **Read Context** — Read `.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/aidlc/`, `.engineering-intelligence/memory/`, and `.engineering-intelligence/graph/` mapping files.
+1. **Read Context** — Read `.graphward/knowledge-base/`, `.graphward/aidlc/`, `.graphward/memory/`, and `.graphward/graph/` mapping files.
 2. **Draft Questions** — Assess clarity level:
-   - **Vague or Incomplete** (3+ ambiguities, unclear scope, or missing critical info): Use `question-file-engine` to write a structured MCQ clarification file at `.engineering-intelligence/aidlc/open-questions/`. Stop and wait for the user to fill answers and signal "questions answered, continue" before proceeding.
+   - **Vague or Incomplete** (3+ ambiguities, unclear scope, or missing critical info): Use `question-file-engine` to write a structured MCQ clarification file at `.graphward/aidlc/open-questions/`. Stop and wait for the user to fill answers and signal "questions answered, continue" before proceeding.
    - **Clear** (0–2 minor gaps): Ask 3–5 targeted questions inline and iterate.
 3. **Iterate** — Wait for user responses (from question file or inline). Adjust assumptions based on answers.
-4. **Document Scoping** — Create or update `.engineering-intelligence/knowledge-base/19-requirements.md` and `.engineering-intelligence/aidlc/agile/` artifacts with goals, user stories, acceptance criteria, edge cases, dependencies, and the Q&A log.
-5. **Finalize Prompt** — Output the exact `/engineering-intelligence` command required to build the ready story.
+4. **Document Scoping** — Create or update `.graphward/knowledge-base/19-requirements.md` and `.graphward/aidlc/agile/` artifacts with goals, user stories, acceptance criteria, edge cases, dependencies, and the Q&A log.
+5. **Finalize Prompt** — Output the exact `/graphward` command required to build the ready story.
 
 ## Completion Report
 
 Finish with:
 - Summary of scoped requirements
-- Location of the requirements document (`.engineering-intelligence/knowledge-base/19-requirements.md`)
-- Agile artifacts updated under `.engineering-intelligence/aidlc/agile/`
+- Location of the requirements document (`.graphward/knowledge-base/19-requirements.md`)
+- Agile artifacts updated under `.graphward/aidlc/agile/`
 - The exact implementation command prompt
 
 **Contract**: This workflow does not modify product code.

@@ -4,7 +4,7 @@ import { loadExistingGraph, type DependencyGraph } from "../graph/index.js";
 import type { ExperimentRecord } from "./types.js";
 
 function graphFilePath(root: string): string {
-  return path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json");
+  return path.join(root, ".graphward", "graph", "dependency-graph.json");
 }
 
 export async function attachExperimentToGraph(root: string, record: ExperimentRecord): Promise<boolean> {

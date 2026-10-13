@@ -44,7 +44,7 @@ test("the user's own hooks survive the merge", () => {
   const merged = parseJsonOrEmpty(mergeHookConfig(theirs, OURS));
   const commands = merged.hooks.SessionStart.map((e) => e.hooks[0].command);
   assert.ok(commands.includes("echo mine"), "user hook must not be replaced");
-  assert.ok(commands.some((c) => c.includes("engineering-intelligence hook")), "ours is added");
+  assert.ok(commands.some((c) => /graphward@[^ ]+ hook/.test(c)), "ours is added");
   assert.equal(merged.hooks.SessionStart.length, 2);
 });
 
@@ -91,10 +91,10 @@ test("MCP registration merges beside other servers and is removed cleanly", () =
   const theirs = JSON.stringify({ mcpServers: { "other-tool": { command: "node", args: ["x.js"] } } });
   const merged = parseJsonOrEmpty(mergeHookConfig(theirs, mcpServerRegistration()));
   assert.ok(merged.mcpServers["other-tool"], "the user's server is untouched");
-  assert.ok(merged.mcpServers["engineering-intelligence"], "ours is registered");
+  assert.ok(merged.mcpServers["graphward"], "ours is registered");
   assert.equal(hasOurEntries(JSON.stringify(merged), mcpServerRegistration()), true);
 
   const remaining = parseJsonOrEmpty(removeOurEntries(JSON.stringify(merged)));
   assert.ok(remaining.mcpServers["other-tool"], "the user's server survives uninstall");
-  assert.ok(!remaining.mcpServers["engineering-intelligence"], "ours is gone");
+  assert.ok(!remaining.mcpServers["graphward"], "ours is gone");
 });

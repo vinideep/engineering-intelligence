@@ -5,35 +5,35 @@ description: Runs the adaptive AI-DLC lifecycle with Discovery, Inception, Const
 
 # AI-DLC Lifecycle Engine
 
-Use this skill inside the existing Engineering Intelligence workflows. It is not a separate command family. It turns Agile intent into an adaptive, artifact-driven delivery path while preserving familiar Agile concepts: vision, backlog, user stories, acceptance criteria, sprint planning, implementation, review, release readiness, and retrospective learning.
+Use this skill inside the existing GraphWard workflows. It is not a separate command family. It turns Agile intent into an adaptive, artifact-driven delivery path while preserving familiar Agile concepts: vision, backlog, user stories, acceptance criteria, sprint planning, implementation, review, release readiness, and retrospective learning.
 
 ## Runtime Artifacts
 
-Use `.engineering-intelligence/aidlc/` as the canonical AI-DLC root:
+Use `.graphward/aidlc/` as the canonical AI-DLC root:
 
 | Path | Purpose |
 |---|---|
-| `.engineering-intelligence/aidlc/aidlc-state.md` | Active phase, stage, workflow, hat, unit, and completion status |
-| `.engineering-intelligence/aidlc/audit.md` | Append-only chronological log of decisions, user answers, tool checks, and transitions |
-| `.engineering-intelligence/aidlc/open-questions.md` | Unresolved ambiguities and owner/status |
-| `.engineering-intelligence/aidlc/execution-plan.md` | Adaptive stage plan with mandatory/conditional/skipped stages |
-| `.engineering-intelligence/aidlc/checkpoints.md` | Resume checkpoints after major workflow steps |
-| `.engineering-intelligence/aidlc/discovery/vision.md` | Business objectives, personas, value, success metrics |
-| `.engineering-intelligence/aidlc/discovery/technical-environment.md` | Runtime, deployment, integrations, data stores, auth, constraints |
-| `.engineering-intelligence/aidlc/agile/product-backlog.md` | High-level epics, priorities, dependencies, and status |
-| `.engineering-intelligence/aidlc/agile/backlog/` | Hierarchical Epic → Feature → Ticket backlog with stable IDs, dependency graph, and per-feature approval gates, owned by `backlog-decomposition-engine` |
-| `.engineering-intelligence/aidlc/agile/sprint-plan.md` | Active sprint goal, selected stories, capacity, risks, and commitments |
-| `.engineering-intelligence/aidlc/agile/acceptance-criteria.md` | Story-level acceptance criteria expressed as executable validation targets |
-| `.engineering-intelligence/aidlc/agile/definition-of-ready.md` | Readiness checklist before construction |
-| `.engineering-intelligence/aidlc/agile/definition-of-done.md` | Completion checklist after validation and sync |
-| `.engineering-intelligence/aidlc/agile/retrospective.md` | Lessons, process improvements, recurring risks, and follow-ups |
-| `.engineering-intelligence/aidlc/inception/requirements.md` | Validated functional requirements and edge cases |
-| `.engineering-intelligence/aidlc/inception/reverse-engineering/` | Brownfield architecture, API, code structure, component inventory, technology stack |
-| `.engineering-intelligence/aidlc/construction/cross-unit-discoveries.md` | Shared discoveries from parallel or sequential units |
-| `.engineering-intelligence/aidlc/construction/<unit>/` | Unit functional design, NFR design, ADRs, code plan, build/test evidence |
-| `.engineering-intelligence/aidlc/operations/` | Deployment readiness, observability, runbooks, rollback notes |
+| `.graphward/aidlc/aidlc-state.md` | Active phase, stage, workflow, hat, unit, and completion status |
+| `.graphward/aidlc/audit.md` | Append-only chronological log of decisions, user answers, tool checks, and transitions |
+| `.graphward/aidlc/open-questions.md` | Unresolved ambiguities and owner/status |
+| `.graphward/aidlc/execution-plan.md` | Adaptive stage plan with mandatory/conditional/skipped stages |
+| `.graphward/aidlc/checkpoints.md` | Resume checkpoints after major workflow steps |
+| `.graphward/aidlc/discovery/vision.md` | Business objectives, personas, value, success metrics |
+| `.graphward/aidlc/discovery/technical-environment.md` | Runtime, deployment, integrations, data stores, auth, constraints |
+| `.graphward/aidlc/agile/product-backlog.md` | High-level epics, priorities, dependencies, and status |
+| `.graphward/aidlc/agile/backlog/` | Hierarchical Epic → Feature → Ticket backlog with stable IDs, dependency graph, and per-feature approval gates, owned by `backlog-decomposition-engine` |
+| `.graphward/aidlc/agile/sprint-plan.md` | Active sprint goal, selected stories, capacity, risks, and commitments |
+| `.graphward/aidlc/agile/acceptance-criteria.md` | Story-level acceptance criteria expressed as executable validation targets |
+| `.graphward/aidlc/agile/definition-of-ready.md` | Readiness checklist before construction |
+| `.graphward/aidlc/agile/definition-of-done.md` | Completion checklist after validation and sync |
+| `.graphward/aidlc/agile/retrospective.md` | Lessons, process improvements, recurring risks, and follow-ups |
+| `.graphward/aidlc/inception/requirements.md` | Validated functional requirements and edge cases |
+| `.graphward/aidlc/inception/reverse-engineering/` | Brownfield architecture, API, code structure, component inventory, technology stack |
+| `.graphward/aidlc/construction/cross-unit-discoveries.md` | Shared discoveries from parallel or sequential units |
+| `.graphward/aidlc/construction/<unit>/` | Unit functional design, NFR design, ADRs, code plan, build/test evidence |
+| `.graphward/aidlc/operations/` | Deployment readiness, observability, runbooks, rollback notes |
 
-These AI-DLC files complement `.engineering-intelligence/knowledge-base/`, `.engineering-intelligence/memory/`, `.engineering-intelligence/context/`, `.engineering-intelligence/graph/`, `.engineering-intelligence/reports/`, and `.engineering-intelligence/changes/`.
+These AI-DLC files complement `.graphward/knowledge-base/`, `.graphward/memory/`, `.graphward/context/`, `.graphward/graph/`, `.graphward/reports/`, and `.graphward/changes/`.
 
 ## MCP Tools
 
@@ -135,7 +135,7 @@ Use when deployment, infrastructure, observability, or production readiness is i
 
 ## Delivery Mode Selection
 
-Within `/engineering-intelligence`, choose a delivery mode:
+Within `/graphward`, choose a delivery mode:
 
 | Mode | Use When | Required Hats |
 |---|---|---|
@@ -158,7 +158,7 @@ Each stage must end with binary evidence:
 
 ## Checkpoint And Resume
 
-Write `.engineering-intelligence/aidlc/checkpoints.md` and call `update_aidlc_state` after each major step:
+Write `.graphward/aidlc/checkpoints.md` and call `update_aidlc_state` after each major step:
 
 | Checkpoint | Meaning | Resume Action |
 |---|---|---|
@@ -179,7 +179,7 @@ If the user asks for dry run, preview, or plan-only execution:
 - Show files likely to change and why
 - Run safe current-state checks such as type/lint/test discovery
 - Do not edit product code
-- Write a pre-flight report under `.engineering-intelligence/reports/`
+- Write a pre-flight report under `.graphward/reports/`
 
 ## Environmental Backpressure
 
@@ -211,7 +211,7 @@ AI-DLC: <phase> -> <stage> -> <status>
 
 - Pre-flight: `socratic-clarification-gate` (clarity assessment), `question-file-engine` (3+ ambiguities)
 - Inception: `backlog-decomposition-engine` (Epic → Feature → Ticket), `requirement-scoper` (detailed scoping)
-- Construction: `engineering-intelligence-skill` (implementation), `vertical-tdd-engine` (TDD mode)
+- Construction: `graphward-skill` (implementation), `vertical-tdd-engine` (TDD mode)
 - Operations: `operations-readiness-engine` (deployment, observability, rollback)
-- Used by: `engineering-intelligence` (main workflow), `engineering-orchestrator` (routing)
+- Used by: `graphward` (main workflow), `engineering-orchestrator` (routing)
 

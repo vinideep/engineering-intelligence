@@ -22,7 +22,7 @@ Check for defense in depth:
 
 ## MCP Review Artifact
 
-Write `.engineering-intelligence/aidlc/operations/mcp-security-review.md`:
+Write `.graphward/aidlc/operations/mcp-security-review.md`:
 
 ```markdown
 # MCP Security Review

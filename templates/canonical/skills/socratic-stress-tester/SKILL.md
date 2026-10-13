@@ -11,8 +11,8 @@ Interactively stress-test technical proposals, PRDs, or architecture plans using
 
 - Proposed plan, PRD, or architectural RFC
 - Target scope or feature requirements
-- Relevant ADRs and constraints from `.engineering-intelligence/knowledge-base/`
-- Verified claims and active context maps from `.engineering-intelligence/context/`
+- Relevant ADRs and constraints from `.graphward/knowledge-base/`
+- Verified claims and active context maps from `.graphward/context/`
 
 ## Procedure
 
@@ -34,7 +34,7 @@ Interactively stress-test technical proposals, PRDs, or architecture plans using
 
 4. **Converge on Signed-Off Decisions**:
    - Once the user resolves the ambiguities, document the agreed decisions and trade-offs.
-   - Call `freeze_clarified_requirements` with `topic` and `decisions` array to persist agreed decisions to `.engineering-intelligence/aidlc/inception/requirements.md`.
+   - Call `freeze_clarified_requirements` with `topic` and `decisions` array to persist agreed decisions to `.graphward/aidlc/inception/requirements.md`.
    - Call `update_aidlc_state` with `stage: "requirements-frozen"` to record the transition.
    - If the proposal or PRD is a separate document, update it with explicit decision rationales before proceeding to implementation.
 
@@ -47,5 +47,5 @@ Interactively stress-test technical proposals, PRDs, or architecture plans using
 ## Cross-References
 
 - Depends on: `socratic-clarification-gate` (lightweight gate; this skill is the deep interrogation)
-- Used by: `engineering-intelligence-skill` (Step 2 Pre-Flight), `engineering-intelligence` (Step 4)
+- Used by: `graphward-skill` (Step 2 Pre-Flight), `graphward` (Step 4)
 - Related: `question-file-engine` (for 3+ ambiguities, write a question file instead of inline)

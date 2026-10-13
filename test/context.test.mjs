@@ -60,7 +60,7 @@ test("token budget is respected and lower-priority sections are trimmed first", 
   const root = await fixture();
   try {
     await addClaim(root, { statement: "charge is the core billing entry point used across checkout", evidence: [{ path: "src/pay.ts", lines: [1, 3] }], author: "tester" });
-    await write(root, ".engineering-intelligence/memory/coding-patterns.md", Array.from({ length: 50 }, (_, i) => `- convention line ${i} with some descriptive text`).join("\n"));
+    await write(root, ".graphward/memory/coding-patterns.md", Array.from({ length: 50 }, (_, i) => `- convention line ${i} with some descriptive text`).join("\n"));
 
     const pack = await getContext(root, { task: "refund support in charge", files: ["src/pay.ts"], budget: 80 });
     assert.ok(pack.tokensEstimated <= pack.budget, `pack ${pack.tokensEstimated} must fit budget ${pack.budget}`);
@@ -75,7 +75,7 @@ test("no intelligence → graceful, non-empty guidance", async () => {
   try {
     const pack = await getContext(root, { task: "anything" });
     assert.match(pack.markdown, /Context for: anything/);
-    assert.match(pack.markdown, /initialize-engineering-intelligence/);
+    assert.match(pack.markdown, /initialize-graphward/);
     assert.equal(pack.included.length, 0);
   } finally { await rm(root, { recursive: true, force: true }); }
 });

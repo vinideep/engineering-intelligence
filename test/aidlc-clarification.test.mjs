@@ -59,9 +59,9 @@ test("checkDiscoveryExit and checkInceptionExit enforce required artifacts and o
     assert.ok(disc1.missingPrerequisites.some((m) => m.includes("vision.md")));
 
     // 2. Create discovery artifacts
-    mkdirSync(path.join(dir, ".engineering-intelligence", "aidlc", "discovery"), { recursive: true });
-    writeFileSync(path.join(dir, ".engineering-intelligence", "aidlc", "discovery", "vision.md"), "# Vision\nTarget: automated delivery\n");
-    writeFileSync(path.join(dir, ".engineering-intelligence", "aidlc", "discovery", "technical-environment.md"), "# Tech Env\nNode 22\n");
+    mkdirSync(path.join(dir, ".graphward", "aidlc", "discovery"), { recursive: true });
+    writeFileSync(path.join(dir, ".graphward", "aidlc", "discovery", "vision.md"), "# Vision\nTarget: automated delivery\n");
+    writeFileSync(path.join(dir, ".graphward", "aidlc", "discovery", "technical-environment.md"), "# Tech Env\nNode 22\n");
 
     const disc2 = await checkDiscoveryExit(dir);
     assert.equal(disc2.status, "pass");
@@ -73,17 +73,17 @@ test("checkDiscoveryExit and checkInceptionExit enforce required artifacts and o
     assert.ok(incep1.missingPrerequisites.some((m) => m.includes("requirements.md")));
 
     // 4. Create requirements and backlog
-    mkdirSync(path.join(dir, ".engineering-intelligence", "aidlc", "inception"), { recursive: true });
-    mkdirSync(path.join(dir, ".engineering-intelligence", "aidlc", "agile"), { recursive: true });
-    writeFileSync(path.join(dir, ".engineering-intelligence", "aidlc", "inception", "requirements.md"), "# Requirements\n");
-    writeFileSync(path.join(dir, ".engineering-intelligence", "aidlc", "agile", "product-backlog.md"), "# Backlog\n");
+    mkdirSync(path.join(dir, ".graphward", "aidlc", "inception"), { recursive: true });
+    mkdirSync(path.join(dir, ".graphward", "aidlc", "agile"), { recursive: true });
+    writeFileSync(path.join(dir, ".graphward", "aidlc", "inception", "requirements.md"), "# Requirements\n");
+    writeFileSync(path.join(dir, ".graphward", "aidlc", "agile", "product-backlog.md"), "# Backlog\n");
 
     const incep2 = await checkInceptionExit(dir);
     assert.equal(incep2.status, "pass");
 
     // 5. Add a blocking question to open-questions.md -> should block inception
     writeFileSync(
-      path.join(dir, ".engineering-intelligence", "aidlc", "open-questions.md"),
+      path.join(dir, ".graphward", "aidlc", "open-questions.md"),
       "# Open Questions\n- [ ] Critical blocking question: Which database engine to use?\n",
     );
 

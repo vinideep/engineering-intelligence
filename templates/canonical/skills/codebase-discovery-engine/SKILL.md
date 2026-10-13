@@ -12,9 +12,9 @@ This capability does not modify product code.
 
 ## Context source and scope
 
-Prefer EI's persisted, verified intelligence over re-exploration. If initialization evidence exists, read `.engineering-intelligence/context/initialization-evidence.json` and request `get_engineering_context` before scanning files. Apply the shared EI project file policy to every discovery pass; record why a root/path was included or excluded. Graphify may corroborate structural hypotheses, and CCE may retrieve exact spans inside the EI-approved neighborhood, but neither provider owns canonical conclusions.
+Prefer GraphWard's persisted, verified intelligence over re-exploration. If initialization evidence exists, read `.graphward/context/initialization-evidence.json` and request `get_engineering_context` before scanning files. Apply the shared GraphWard project file policy to every discovery pass; record why a root/path was included or excluded. Graphify may corroborate structural hypotheses, and CCE may retrieve exact spans inside the GraphWard-approved neighborhood, but neither provider owns canonical conclusions.
 
-If provider health is degraded, continue with native EI extraction and report the fallback. Exclude stale, contested, unverifiable, secret-bearing, generated, vendored, provider-cache, and escaped-symlink evidence from high-confidence findings. Raw provider access is reserved for explicit expert mode.
+If provider health is degraded, continue with native GraphWard extraction and report the fallback. Exclude stale, contested, unverifiable, secret-bearing, generated, vendored, provider-cache, and escaped-symlink evidence from high-confidence findings. Raw provider access is reserved for explicit expert mode.
 
 ## Inputs
 
@@ -24,7 +24,7 @@ If provider health is degraded, continue with native EI extraction and report th
 
 ## Outputs
 
-- `.engineering-intelligence/reports/DISCOVERY-report.md` — structured discovery findings with per-area confidence scores
+- `.graphward/reports/DISCOVERY-report.md` — structured discovery findings with per-area confidence scores
 - Feeds directly into `initialize-intelligence-skill` for knowledge base generation
 
 ---
@@ -279,7 +279,7 @@ After Phases 1 and 2, ask ONLY questions that cannot be answered from code evide
 
 ## Phase 4: Confidence Report
 
-Generate `.engineering-intelligence/reports/DISCOVERY-report.md` with this structure:
+Generate `.graphward/reports/DISCOVERY-report.md` with this structure:
 
 ```markdown
 # Codebase Discovery Report
@@ -418,7 +418,7 @@ Scope: <full repo | specific scope>
 - [ ] No findings are stated without evidence citations
 - [ ] Clarification questions number between 5 and 10
 - [ ] No question asks about something discoverable from code
-- [ ] DISCOVERY-report.md exists at `.engineering-intelligence/reports/DISCOVERY-report.md`
+- [ ] DISCOVERY-report.md exists at `.graphward/reports/DISCOVERY-report.md`
 - [ ] Per-area confidence summary covers all major areas
 - [ ] Git history analysis includes hotspots and change velocity
 - [ ] Monorepo detection was performed (even if result is "not a monorepo")
@@ -431,6 +431,6 @@ Scope: <full repo | specific scope>
 - Used by: `initialize-intelligence-skill`, `engineering-orchestrator`
 - Consumed by: all sync engines, `convention-detector`, `ongoing-learning-engine`
 - Depends on: git history access, file system read access
-- Feeds into: `.engineering-intelligence/knowledge-base/00-project-overview.md`, `.engineering-intelligence/memory/technology-decisions.md`
+- Feeds into: `.graphward/knowledge-base/00-project-overview.md`, `.graphward/memory/technology-decisions.md`
 
 This capability does not modify product code.

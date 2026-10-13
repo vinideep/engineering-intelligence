@@ -11,14 +11,14 @@ import { claudeCodeHookSettings, cursorHookSettings, defaultConfigFile } from ".
 import { MCP_TOOL_SUMMARY, mcpServerRegistration } from "../mcp/index.js";
 import { IDE_IDS, type IdeId, type RenderedFile } from "../types.js";
 
-const BLOCK_ID = "engineering-intelligence";
+const BLOCK_ID = "graphward";
 
 // Workflows that act on a user-supplied request and therefore receive the
 // host's argument placeholder when rendered as a native slash command.
 const INPUT_WORKFLOWS = new Set<(typeof WORKFLOW_NAMES)[number]>([
-  "engineering-intelligence",
+  "graphward",
   "analyze-impact",
-  "sync-engineering-intelligence",
+  "sync-graphward",
   "review-engineering-change",
   "scope-requirement",
   "create-project",
@@ -33,9 +33,9 @@ const INPUT_WORKFLOWS = new Set<(typeof WORKFLOW_NAMES)[number]>([
 // Slash-command argument hints surfaced by hosts that render a command picker
 // (e.g. Claude Code reads `argument-hint` from command frontmatter).
 const WORKFLOW_ARGUMENT_HINTS: Partial<Record<(typeof WORKFLOW_NAMES)[number], string>> = {
-  "engineering-intelligence": "<implementation request>",
+  "graphward": "<implementation request>",
   "analyze-impact": "<intended change or diff to analyze>",
-  "sync-engineering-intelligence": "<scope, e.g. the current working-tree diff>",
+  "sync-graphward": "<scope, e.g. the current working-tree diff>",
   "review-engineering-change": "<scope, e.g. the current working-tree diff>",
   "scope-requirement": "<requirement to scope>",
   "create-project": "<new project description>",
@@ -47,29 +47,29 @@ const WORKFLOW_ARGUMENT_HINTS: Partial<Record<(typeof WORKFLOW_NAMES)[number], s
   "design-an-interface": "<interface or API to design>",
 };
 
-const sharedInstructions = `# Engineering Intelligence OS
+const sharedInstructions = `# GraphWard
 
-This repository uses installed engineering intelligence workflows.
+This repository uses installed GraphWard workflows.
 
 - When the .agents/agents/ directory is available, start non-trivial work with the engineering-orchestrator custom agent. It routes the request to the right specialist and keeps the workflow evidence-based.
-- For initial understanding and documentation, invoke \`initialize-engineering-intelligence\` or ask the agent to initialize engineering intelligence.
-- For implementation work, invoke \`engineering-intelligence\` with the request or ask the agent to apply the engineering intelligence workflow. This workflow embeds AI-DLC and Agile delivery modes internally.
-- For epic-sized initiatives, invoke \`decompose-backlog\` to autonomously create an Epic → Feature → Ticket backlog under \`.engineering-intelligence/aidlc/agile/backlog/\`, then \`deliver-backlog\` to implement it feature by feature. Each feature requires human approval before implementation; the local backlog is the source of truth and can optionally be mirrored to GitHub Issues.
-- For architecture mapping, impact analysis, synchronization, or review, invoke \`map-architecture\`, \`analyze-impact\`, \`sync-engineering-intelligence\`, or \`review-engineering-change\`; these workflows do not modify product code.
-- Canonical generated outputs live in \`.engineering-intelligence/knowledge-base/\`, \`.engineering-intelligence/aidlc/\`, \`.engineering-intelligence/memory/\`, \`.engineering-intelligence/context/\`, \`.engineering-intelligence/events/\`, \`.engineering-intelligence/graph/\`, \`.engineering-intelligence/reports/\`, \`.engineering-intelligence/flight/\`, and \`.engineering-intelligence/changes/\`.
+- For initial understanding and documentation, invoke \`initialize-graphward\` or ask the agent to initialize GraphWard.
+- For implementation work, invoke \`graphward\` with the request or ask the agent to apply the GraphWard workflow. This workflow embeds AI-DLC and Agile delivery modes internally.
+- For epic-sized initiatives, invoke \`decompose-backlog\` to autonomously create an Epic → Feature → Ticket backlog under \`.graphward/aidlc/agile/backlog/\`, then \`deliver-backlog\` to implement it feature by feature. Each feature requires human approval before implementation; the local backlog is the source of truth and can optionally be mirrored to GitHub Issues.
+- For architecture mapping, impact analysis, synchronization, or review, invoke \`map-architecture\`, \`analyze-impact\`, \`sync-graphward\`, or \`review-engineering-change\`; these workflows do not modify product code.
+- Canonical generated outputs live in \`.graphward/knowledge-base/\`, \`.graphward/aidlc/\`, \`.graphward/memory/\`, \`.graphward/context/\`, \`.graphward/events/\`, \`.graphward/graph/\`, \`.graphward/reports/\`, \`.graphward/flight/\`, and \`.graphward/changes/\`.
 - Before non-trivial edits, write an impact report; after edits, validate and incrementally synchronize only affected intelligence and graph artifacts.
-- AI-DLC work must preserve durable state in \`.engineering-intelligence/aidlc/aidlc-state.md\`, maintain Agile artifacts, use environmental backpressure, and end with an \`AI-DLC: <phase> -> <stage> -> <status>\` breadcrumb.
+- AI-DLC work must preserve durable state in \`.graphward/aidlc/aidlc-state.md\`, maintain Agile artifacts, use environmental backpressure, and end with an \`AI-DLC: <phase> -> <stage> -> <status>\` breadcrumb.
 - Base documentation claims on repository evidence and identify unknowns explicitly.
-- **Prefer persisted intelligence over re-exploration.** Before reading source files to understand the codebase, read the persisted knowledge base in \`.engineering-intelligence/knowledge-base/\`, context maps in \`.engineering-intelligence/context/\`, and architecture graphs in \`.engineering-intelligence/graph/\`. Re-read source only for the specific files a task touches. Run \`sync-engineering-intelligence\` to refresh these artifacts incrementally rather than re-deriving from scratch each session.
+- **Prefer persisted intelligence over re-exploration.** Before reading source files to understand the codebase, read the persisted knowledge base in \`.graphward/knowledge-base/\`, context maps in \`.graphward/context/\`, and architecture graphs in \`.graphward/graph/\`. Re-read source only for the specific files a task touches. Run \`sync-graphward\` to refresh these artifacts incrementally rather than re-deriving from scratch each session.
 - **Route before loading skills.** Consult the installed \`WORKFLOW-ROUTING.md\` and \`SKILLS-INDEX.md\` in your IDE's skills directory before opening any individual \`SKILL.md\`. Load only the 1-3 skills relevant to the current request.
 
 ## Tools (prefer these over reasoning by hand)
 
-These run deterministically. Use them instead of inferring the answer from source — they are the difference between a computed fact and a guess. Available over MCP (server \`engineering-intelligence\`) and as CLI commands:
+These run deterministically. Use them instead of inferring the answer from source — they are the difference between a computed fact and a guess. Available over MCP (server \`graphward\`) and as CLI commands:
 
 ${MCP_TOOL_SUMMARY.map(([n, d]) => `- \`${n}\` — ${d}`).join("\n")}
 
-CLI equivalents: \`npx engineering-intelligence map|gate <name>|verify|freshness|context|claims verify|git-analysis .\`. \`gate\` and \`verify\` exit non-zero on failure, so they work in CI too.
+CLI equivalents: \`npx graphward map|gate <name>|verify|freshness|context|claims verify|git-analysis .\`. \`gate\` and \`verify\` exit non-zero on failure, so they work in CI too.
 `;
 
 /**
@@ -99,13 +99,13 @@ Load **optional** skills only when the request explicitly requires that capabili
 
 ## Enforcement Hooks (Claude Code)
 
-\`.claude/settings.json\` wires four lifecycle hooks to \`engineering-intelligence hook <event>\`:
+\`.claude/settings.json\` wires four lifecycle hooks to \`graphward hook <event>\`:
 - **SessionStart** injects the current intelligence freshness/drift summary.
 - **PreToolUse** warns before editing source while documentation is stale.
 - **PostToolUse** records changed source files and validation commands for the session.
 - **Stop** can require that a validation command actually ran before finishing.
 
-Tune behaviour in \`.engineering-intelligence/ei.config.json\` (\`blockStaleEdits\`, \`requireValidationOnStop\`, \`freshnessThreshold\`). Hooks are fail-safe: with no intelligence installed they do nothing.
+Tune behaviour in \`.graphward/gw.config.json\` (\`blockStaleEdits\`, \`requireValidationOnStop\`, \`freshnessThreshold\`). Hooks are fail-safe: with no intelligence installed they do nothing.
 `;
 
 function file(path: string, content: string, owner: IdeId): RenderedFile {
@@ -183,7 +183,7 @@ function withArgumentHint(content: string, hint: string): string {
 
 // Render workflows as Claude Code slash commands. Request-driven workflows get
 // an `argument-hint` and the `$ARGUMENTS` placeholder so the user's input is
-// passed through (e.g. `/engineering-intelligence Add rate limiting`).
+// passed through (e.g. `/graphward Add rate limiting`).
 // `withArgumentHint` splices into the frontmatter, so content must be prepared
 // (and therefore still start with `---`) before the hint is inserted.
 async function claudeCommandsAt(directory: string, owner: IdeId): Promise<RenderedFile[]> {
@@ -237,19 +237,6 @@ async function skillBundle(owner: IdeId, p: SkillBundleProfile): Promise<Rendere
   ];
 }
 
-function routingInstructions(routingPath: string, indexPath: string): string {
-  return `
-## Token-Efficient Skill Loading
-
-**Before loading any skill file, consult:**
-1. \`${routingPath}\` — primary/optional skill map per workflow command (~400t)
-2. \`${indexPath}\` — one-line description of all skills (~1,500t)
-
-Load **optional** skills only when the request explicitly requires that capability.
-Path aliases in skill files: \`$AIDLC\`=\`.engineering-intelligence/aidlc/\`, \`$EI\`=\`.engineering-intelligence/\`. Expand before writing file paths.
-`;
-}
-
 function parseFrontmatter(content: string): { meta: Record<string, string>; body: string } {
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/m);
   if (!match) return { meta: {}, body: content };
@@ -269,66 +256,66 @@ const AGENT_METADATA: Record<
   { context: string[]; agents?: string[]; skills?: string[]; autoRoute?: boolean; parallel?: boolean }
 > = {
   "engineering-orchestrator": {
-    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/memory", ".engineering-intelligence/changes"],
+    context: [".graphward/knowledge-base", ".graphward/aidlc", ".graphward/context", ".graphward/memory", ".graphward/changes"],
     agents: ["product-analyst", "system-architect", "change-agent", "test-engineer", "quality-agent", "knowledge-agent"],
     skills: ["session-handoff-engine"],
     autoRoute: true,
     parallel: false,
   },
   "change-agent": {
-    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/changes"],
-    skills: ["engineering-intelligence-skill", "context-budget-optimizer", "aidlc-lifecycle-engine", "impact-analysis-engine", "change-detection-engine", "type-safety-engine", "api-backward-compatibility-engine", "environment-variable-auditor", "adr-compliance-checker", "llm-prompt-injection-guard", "vertical-tdd-engine", "session-handoff-engine", "interface-design-explorer"],
+    context: [".graphward/knowledge-base", ".graphward/aidlc", ".graphward/context", ".graphward/changes"],
+    skills: ["graphward-skill", "context-budget-optimizer", "aidlc-lifecycle-engine", "impact-analysis-engine", "change-detection-engine", "type-safety-engine", "api-backward-compatibility-engine", "environment-variable-auditor", "adr-compliance-checker", "llm-prompt-injection-guard", "vertical-tdd-engine", "session-handoff-engine", "interface-design-explorer"],
   },
   "quality-agent": {
-    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
+    context: [".graphward/knowledge-base", ".graphward/aidlc", ".graphward/context"],
     skills: ["engineering-change-review", "knowledge-base-validator", "testing-intelligence-engine", "environmental-backpressure-engine", "contract-test-generator", "adr-compliance-checker"],
   },
   "knowledge-agent": {
-    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/memory", ".engineering-intelligence/changes"],
+    context: [".graphward/knowledge-base", ".graphward/aidlc", ".graphward/context", ".graphward/memory", ".graphward/changes"],
     skills: ["incremental-sync-engine", "context-budget-optimizer", "graph-engine", "change-history-engine", "dead-code-detector"],
   },
   "product-analyst": {
-    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/graph"],
+    context: [".graphward/knowledge-base", ".graphward/aidlc", ".graphward/context", ".graphward/graph"],
     skills: ["requirement-scoper", "backlog-decomposition-engine", "context-budget-optimizer", "aidlc-lifecycle-engine", "socratic-stress-tester"],
   },
   "system-architect": {
-    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph", ".engineering-intelligence/memory"],
+    context: [".graphward/knowledge-base", ".graphward/aidlc", ".graphward/graph", ".graphward/memory"],
     skills: ["aidlc-lifecycle-engine", "nfr-adr-governor", "architecture-review-engine", "graph-engine", "adr-compliance-checker", "socratic-stress-tester", "interface-design-explorer"],
   },
   "security-officer": {
-    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
+    context: [".graphward/knowledge-base", ".graphward/aidlc", ".graphward/graph"],
     skills: ["security-audit-engine", "mcp-security-governor", "nfr-adr-governor", "llm-prompt-injection-guard", "environment-variable-auditor"],
   },
   "database-administrator": {
-    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
+    context: [".graphward/knowledge-base", ".graphward/aidlc", ".graphward/graph"],
     skills: ["nfr-adr-governor", "impact-analysis-engine", "database-migration-safety-engine"],
   },
   "test-engineer": {
-    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context"],
+    context: [".graphward/knowledge-base", ".graphward/aidlc", ".graphward/context"],
     skills: ["testing-intelligence-engine", "environmental-backpressure-engine", "type-safety-engine", "api-backward-compatibility-engine", "contract-test-generator", "vertical-tdd-engine"],
   },
   "adversary": {
-    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
+    context: [".graphward/knowledge-base", ".graphward/aidlc", ".graphward/graph"],
     skills: ["security-audit-engine", "testing-intelligence-engine", "environmental-backpressure-engine"],
   },
   "performance-analyst": {
-    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
+    context: [".graphward/knowledge-base", ".graphward/aidlc", ".graphward/graph"],
     skills: ["performance-analysis-engine", "environmental-backpressure-engine", "nfr-adr-governor"],
   },
   "compliance-auditor": {
-    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/reports"],
+    context: [".graphward/knowledge-base", ".graphward/aidlc", ".graphward/reports"],
     skills: ["nfr-adr-governor", "mcp-security-governor", "engineering-change-review"],
   },
   "release-engineer": {
-    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/changes"],
+    context: [".graphward/knowledge-base", ".graphward/aidlc", ".graphward/changes"],
     skills: ["git-intelligence-engine", "pr-intelligence-engine", "issue-tracker-sync-engine", "operations-readiness-engine", "api-backward-compatibility-engine", "database-migration-safety-engine"],
   },
   "site-reliability-engineer": {
-    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/graph"],
+    context: [".graphward/knowledge-base", ".graphward/aidlc", ".graphward/graph"],
     skills: ["operations-readiness-engine", "performance-analysis-engine"],
   },
   "documentation-writer": {
-    context: [".engineering-intelligence/knowledge-base", ".engineering-intelligence/aidlc", ".engineering-intelligence/context", ".engineering-intelligence/memory", ".engineering-intelligence/changes"],
+    context: [".graphward/knowledge-base", ".graphward/aidlc", ".graphward/context", ".graphward/memory", ".graphward/changes"],
     skills: ["incremental-sync-engine", "change-history-engine"],
   },
 };
@@ -364,7 +351,7 @@ async function agentsAsMarkdownAt(directory: string, owner: IdeId): Promise<Rend
       "---",
     ].join("\n");
     const runtimeContext = [
-      "## EI Runtime Context",
+      "## GraphWard Runtime Context",
       "",
       "Read the following project-owned context before making non-trivial decisions:",
       ...extra.context.map((location) => "- `" + location + "`"),
@@ -395,7 +382,7 @@ async function agentsAsMarkdownAt(directory: string, owner: IdeId): Promise<Rend
 async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
   switch (ide) {
     case "antigravity": {
-      const ruleContent = prepareRendered(await readTemplate("rules", "engineering-intelligence"));
+      const ruleContent = prepareRendered(await readTemplate("rules", "graphward"));
       const [bundle, agents, workflows] = await Promise.all([
         skillBundle(ide, {
           skillsDir: ".agents/skills",
@@ -413,7 +400,7 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
         ...bundle,
         ...agents,
         ...workflows,
-        file(".agents/rules/engineering-intelligence.md", ruleContent, ide),
+        file(".agents/rules/graphward.md", ruleContent, ide),
       ];
     }
     case "antigravity-cli": {
@@ -478,19 +465,19 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
         ...commands,
         jsonMerge(".claude/settings.json", claudeCodeHookSettings(), ide),
         jsonMerge(".mcp.json", mcpServerRegistration(), ide),
-        seed(".engineering-intelligence/ei.config.json", defaultConfigFile(), ide),
+        seed(".graphward/gw.config.json", defaultConfigFile(), ide),
         block("CLAUDE.md", sharedInstructions + claudeCodeInstructions, ide),
       ];
     }
     case "cursor": {
-      const ruleContent = prepareRendered(await readTemplate("rules", "engineering-intelligence"));
-      const rule = `---\ndescription: Engineering Intelligence orchestration and synchronization rules\nalwaysApply: true\n---\n\n${ruleContent}`;
+      const ruleContent = prepareRendered(await readTemplate("rules", "graphward"));
+      const rule = `---\ndescription: GraphWard orchestration and synchronization rules\nalwaysApply: true\n---\n\n${ruleContent}`;
       return [
-        file(".cursor/rules/engineering-intelligence.mdc", rule, ide),
+        file(".cursor/rules/graphward.mdc", rule, ide),
         ...(await workflowsAt(".cursor/commands", ide)),
         jsonMerge(".cursor/hooks.json", cursorHookSettings(), ide),
         jsonMerge(".cursor/mcp.json", mcpServerRegistration(), ide),
-        seed(".engineering-intelligence/ei.config.json", defaultConfigFile(), ide),
+        seed(".graphward/gw.config.json", defaultConfigFile(), ide),
       ];
     }
     case "github-copilot": {
@@ -521,11 +508,11 @@ async function renderAdapter(ide: IdeId): Promise<RenderedFile[]> {
     }
     case "gemini-cli": {
       const workflowDescriptions: Record<(typeof WORKFLOW_NAMES)[number], string> = {
-        "initialize-engineering-intelligence": "Initialize engineering intelligence for this project.",
-        "engineering-intelligence": "Implement a request using engineering intelligence.",
+        "initialize-graphward": "Initialize GraphWard for this project.",
+        "graphward": "Implement a request using GraphWard.",
         "map-architecture": "Build or refresh evidence-backed architecture graph intelligence.",
         "analyze-impact": "Analyze an intended change or existing diff without modifying product code.",
-        "sync-engineering-intelligence": "Synchronize affected project intelligence without modifying product code.",
+        "sync-graphward": "Synchronize affected project intelligence without modifying product code.",
         "review-engineering-change": "Review an engineering change without applying fixes.",
         "scope-requirement": "Scope requirements and create a technical requirement prompt without modifying product code.",
         "discover-codebase": "Autonomously discover and map codebase architecture and patterns.",

@@ -8,7 +8,7 @@ version: 1.0.0
 
 Use this skill when code adds, removes, or changes environment variables, configuration schemas, deployment manifests, or CI/CD secrets.
 
-**Run the deterministic gate first:** `npx engineering-intelligence gate env-vars .` (add `--json` for structured output). It reports variables referenced in code but missing from `.env.example`, and declared-but-unused variables, with file:line evidence. Use the steps below only to extend the audit to validation schemas, CI secrets, and deploy config the gate does not cover.
+**Run the deterministic gate first:** `npx graphward gate env-vars .` (add `--json` for structured output). It reports variables referenced in code but missing from `.env.example`, and declared-but-unused variables, with file:line evidence. Use the steps below only to extend the audit to validation schemas, CI secrets, and deploy config the gate does not cover.
 
 ## Procedure
 
@@ -29,7 +29,7 @@ Use this skill when code adds, removes, or changes environment variables, config
 
 ## Output
 
-Write `.engineering-intelligence/aidlc/construction/<unit>/environment-variable-audit.md`:
+Write `.graphward/aidlc/construction/<unit>/environment-variable-audit.md`:
 
 ```markdown
 # Environment Variable Audit: <unit>

@@ -1,9 +1,9 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-export const EI_CONFIG_PATH = ".engineering-intelligence/ei.config.json";
-export const LEGACY_CONFIG_PATH = ".engineering-intelligence/config.json";
-export const EI_CONFIG_SCHEMA_VERSION = 2;
+export const GW_CONFIG_PATH = ".graphward/gw.config.json";
+export const LEGACY_CONFIG_PATH = ".graphward/config.json";
+export const GW_CONFIG_SCHEMA_VERSION = 2;
 
 export type ProviderPolicy = "auto" | "full" | "native";
 
@@ -20,7 +20,7 @@ export interface ProvidersConfig {
   exposeRawMcp?: boolean;
 }
 
-export interface EiConfig {
+export interface GwConfig {
   schemaVersion: number;
   hooks?: Record<string, unknown>;
   tokenBudgets: Record<string, number>;
@@ -29,8 +29,8 @@ export interface EiConfig {
   [key: string]: unknown;
 }
 
-const DEFAULT_CONFIG: EiConfig = {
-  schemaVersion: EI_CONFIG_SCHEMA_VERSION,
+const DEFAULT_CONFIG: GwConfig = {
+  schemaVersion: GW_CONFIG_SCHEMA_VERSION,
   hooks: {},
   tokenBudgets: {},
   projectFiles: {},
@@ -67,7 +67,7 @@ function strings(value: unknown): string[] | undefined {
   return result.length > 0 ? result : undefined;
 }
 
-function normalizeConfig(raw: Record<string, unknown>, legacy: Record<string, unknown> = {}): EiConfig {
+function normalizeConfig(raw: Record<string, unknown>, legacy: Record<string, unknown> = {}): GwConfig {
   const projectFiles = raw.projectFiles && typeof raw.projectFiles === "object" && !Array.isArray(raw.projectFiles)
     ? raw.projectFiles as Record<string, unknown>
     : {};
@@ -82,7 +82,7 @@ function normalizeConfig(raw: Record<string, unknown>, legacy: Record<string, un
   const requireProviders = providers.requireProviders === true;
   return {
     ...raw,
-    schemaVersion: EI_CONFIG_SCHEMA_VERSION,
+    schemaVersion: GW_CONFIG_SCHEMA_VERSION,
     hooks: raw.hooks && typeof raw.hooks === "object" && !Array.isArray(raw.hooks)
       ? raw.hooks as Record<string, unknown>
       : {},
@@ -104,45 +104,45 @@ function normalizeConfig(raw: Record<string, unknown>, legacy: Record<string, un
   };
 }
 
-export async function loadEiConfig(root: string): Promise<EiConfig> {
+export async function loadGwConfig(root: string): Promise<GwConfig> {
   const [raw, legacy] = await Promise.all([
-    readJson(path.join(root, EI_CONFIG_PATH)),
+    readJson(path.join(root, GW_CONFIG_PATH)),
     readJson(path.join(root, LEGACY_CONFIG_PATH)),
   ]);
   return normalizeConfig(raw ?? DEFAULT_CONFIG, legacy);
 }
 
-export function defaultEiConfig(overrides: Record<string, unknown> = {}): EiConfig {
+export function defaultGwConfig(overrides: Record<string, unknown> = {}): GwConfig {
   return normalizeConfig({ ...DEFAULT_CONFIG, ...overrides });
 }
 
 /**
- * Consolidate the legacy token-budget file into ei.config.json. The write is
+ * Consolidate the legacy token-budget file into gw.config.json. The write is
  * atomic and unknown user keys are preserved. The legacy file is deliberately
  * not deleted: removing user-owned configuration needs an explicit cleanup.
  */
-export async function migrateEiConfig(root: string): Promise<{ changed: boolean; path: string; config: EiConfig }> {
-  const configPath = path.join(root, EI_CONFIG_PATH);
+export async function migrateGwConfig(root: string): Promise<{ changed: boolean; path: string; config: GwConfig }> {
+  const configPath = path.join(root, GW_CONFIG_PATH);
   const [raw, legacy] = await Promise.all([readJson(configPath), readJson(path.join(root, LEGACY_CONFIG_PATH))]);
   const config = normalizeConfig(raw ?? DEFAULT_CONFIG, legacy);
   const current = raw ? `${JSON.stringify(raw, null, 2)}\n` : undefined;
   const desired = `${JSON.stringify(config, null, 2)}\n`;
-  if (current === desired) return { changed: false, path: EI_CONFIG_PATH, config };
+  if (current === desired) return { changed: false, path: GW_CONFIG_PATH, config };
   await mkdir(path.dirname(configPath), { recursive: true });
   const temporary = `${configPath}.tmp-${process.pid}`;
   await writeFile(temporary, desired, "utf8");
   await rename(temporary, configPath);
-  return { changed: true, path: EI_CONFIG_PATH, config };
+  return { changed: true, path: GW_CONFIG_PATH, config };
 }
 
-export async function setProviderExpertMode(root: string, enabled: boolean): Promise<EiConfig> {
+export async function setProviderExpertMode(root: string, enabled: boolean): Promise<GwConfig> {
   return updateProviderConfig(root, { exposeRawMcp: enabled });
 }
 
-export async function updateProviderConfig(root: string, patch: Partial<ProvidersConfig>): Promise<EiConfig> {
-  const config = await loadEiConfig(root);
-  const updated: EiConfig = { ...config, providers: { ...config.providers, ...patch } };
-  const configPath = path.join(root, EI_CONFIG_PATH);
+export async function updateProviderConfig(root: string, patch: Partial<ProvidersConfig>): Promise<GwConfig> {
+  const config = await loadGwConfig(root);
+  const updated: GwConfig = { ...config, providers: { ...config.providers, ...patch } };
+  const configPath = path.join(root, GW_CONFIG_PATH);
   const temporary = `${configPath}.tmp-${process.pid}`;
   await mkdir(path.dirname(configPath), { recursive: true });
   await writeFile(temporary, `${JSON.stringify(updated, null, 2)}\n`, "utf8");

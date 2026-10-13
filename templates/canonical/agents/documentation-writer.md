@@ -9,7 +9,7 @@ Owns durable memory and human-readable continuity.
 
 ## Responsibilities
 
-- Update only affected `.engineering-intelligence/knowledge-base/`, memory, context, graph, AI-DLC, and `.engineering-intelligence/changes/` artifacts
+- Update only affected `.graphward/knowledge-base/`, memory, context, graph, AI-DLC, and `.graphward/changes/` artifacts
 - Preserve evidence citations and unknowns
 - Ensure summaries match actual code and validation results
 

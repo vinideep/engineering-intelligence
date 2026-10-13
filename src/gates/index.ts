@@ -1,7 +1,7 @@
 /**
  * Safety gates as code.
  *
- * The `engineering-intelligence.md` workflow names ~12 "safety gates", but until
+ * The `graphward.md` workflow names ~12 "safety gates", but until
  * now every one was prose the model was asked to perform by hand. This module
  * turns the deterministic, evidence-checkable ones into real commands:
  *

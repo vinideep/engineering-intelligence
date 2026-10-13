@@ -21,7 +21,7 @@ test("CCE parser accepts human and JSON result formats", () => {
 
 async function indexedFixture() {
   const root = await mkdtemp(path.join(os.tmpdir(), "ei-cce-"));
-  const provider = path.join(root, ".engineering-intelligence", "providers");
+  const provider = path.join(root, ".graphward", "providers");
   const content = "export function authenticate(token: string) {\n  return token.length > 0;\n}\n";
   await mkdir(path.join(root, "src"), { recursive: true });
   await mkdir(path.join(provider, "cce", "project"), { recursive: true });
@@ -42,7 +42,7 @@ async function indexedFixture() {
   return { root, provider, content };
 }
 
-test("CCE retrieval overfetches but returns only current EI-approved source spans", async () => {
+test("CCE retrieval overfetches but returns only current GraphWard-approved source spans", async () => {
   const fx = await indexedFixture();
   const calls = [];
   const runner = async (request) => {
@@ -90,9 +90,9 @@ test("CCE initialization occurs only in the provider sandbox, never in the sourc
   const result = await runCceIndex(root, { runner, providerHome: path.join(root, "provider-home") });
   assert.equal(result.ok, true);
   const index = calls.find((call) => call.args?.[0] === "index");
-  assert.equal(calls.some((call) => call.args?.[0] === "init"), false, "EI must not let CCE install competing hooks/MCP instructions");
+  assert.equal(calls.some((call) => call.args?.[0] === "init"), false, "GraphWard must not let CCE install competing hooks/MCP instructions");
   assert.notEqual(path.resolve(index.cwd), path.resolve(root));
-  assert.match(index.cwd, /\.engineering-intelligence[\\/]providers[\\/]cce[\\/]project$/);
+  assert.match(index.cwd, /\.graphward[\\/]providers[\\/]cce[\\/]project$/);
   assert.equal(index.env.CCE_EMBED_BACKEND, "fastembed");
   assert.match(index.env.CCE_FASTEMBED_CACHE_PATH, /provider-home[\\/]cce[\\/]models$/);
   const config = await readFile(path.join(index.cwd, ".context-engine.yaml"), "utf8");
@@ -100,8 +100,8 @@ test("CCE initialization occurs only in the provider sandbox, never in the sourc
   assert.match(config, /watch: false/);
   assert.ok(index.args.includes("--full"));
   assert.ok(index.args.includes("--path"));
-  assert.match(index.args[index.args.indexOf("--path") + 1], /\.engineering-intelligence[\\/]providers[\\/]cce[\\/]project[\\/]workspace$/);
-  const manifest = JSON.parse(await readFile(path.join(root, ".engineering-intelligence", "providers", "cce", "run.json"), "utf8"));
+  assert.match(index.args[index.args.indexOf("--path") + 1], /\.graphward[\\/]providers[\\/]cce[\\/]project[\\/]workspace$/);
+  const manifest = JSON.parse(await readFile(path.join(root, ".graphward", "providers", "cce", "run.json"), "utf8"));
   assert.equal(manifest.sourceHashes["src/main.ts"], digest("export const main = true;\n"));
-  assert.match(manifest.storagePath, /\.engineering-intelligence[\\/]providers[\\/]cce[\\/]project[\\/]storage$/);
+  assert.match(manifest.storagePath, /\.graphward[\\/]providers[\\/]cce[\\/]project[\\/]storage$/);
 });

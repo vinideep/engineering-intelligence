@@ -1,12 +1,12 @@
-# Engineering Intelligence OS --- Complete Blueprint
+# GraphWard --- Complete Blueprint
 
 ## Vision
 
-Build an installable AI-native Engineering Intelligence Operating
+Build an installable AI-native GraphWard Operating
 System:
 
 ``` bash
-npx engineering-intelligence
+npx graphward
 ```
 
 Goal:
@@ -67,7 +67,7 @@ knowledge-base/
 
 ------------------------------------------------------------------------
 
-# V2: Continuous Engineering Intelligence
+# V2: Continuous GraphWard
 
 Features:
 
@@ -124,7 +124,7 @@ Request types:
 # Folder Structure
 
 .agents/ (or equivalent IDE adapter directory like .cursor/, .claude/, .github/, .gemini/)
-.engineering-intelligence/ (memory/, context/, events/, graph/, reports/)
+.graphward/ (memory/, context/, events/, graph/, reports/)
 knowledge-base/
 .changes/
 
@@ -132,9 +132,9 @@ knowledge-base/
 
 # Workflows
 
-/initialize-engineering-intelligence
+/initialize-graphward
 
-/engineering-intelligence
+/graphward
 
 Flow:
 
@@ -207,7 +207,7 @@ Future Engines:
 
 # Graph Engine
 
-.engineering-intelligence/graph/
+.graphward/graph/
 
 dependency-graph.json service-graph.json runtime-graph.json
 business-flow-graph.json
@@ -241,7 +241,7 @@ analyze() generate() modify() validate() chat()
 
 # CLI Design
 
-npx engineering-intelligence
+npx graphward
 
 Flow:
 

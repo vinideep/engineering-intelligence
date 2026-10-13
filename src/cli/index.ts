@@ -12,6 +12,7 @@ import { IDE_IDS, type FileAction, type IdeId, type OperationResult } from "../t
 import { packageVersion } from "../version.js";
 import type { ProviderName } from "../providers/types.js";
 import type { ProviderPolicy } from "../config/index.js";
+import { migrateLegacyLayout } from "../config/legacy.js";
 
 type Command = "initialize" | "providers" | "install" | "update" | "sync" | "doctor" | "uninstall" | "visualize" | "create" | "map" | "mcp" | "freshness" | "git-analysis" | "user-profile" | "hook" | "gate" | "verify" | "claims" | "context" | "telemetry" | "setup" | "ask" | "guard" | "health" | "impact" | "who-calls" | "preflight" | "postflight" | "evidence-record" | "evidence-check" | "experiment" | "aidlc";
 
@@ -57,41 +58,41 @@ interface Options {
 }
 
 function usage(all = false): string {
-  const core = `engineering-intelligence — codebase intelligence that lives in your repo.
+  const core = `graphward — codebase intelligence that lives in your repo.
 
 Core commands:
 
 Usage:
-  engineering-intelligence install [path] [--ide <id>...] [--yes] [--dry-run] [--force]
-  engineering-intelligence initialize [path] [--providers auto|full|native] [--offline] [--require-providers] [--yes] [--dry-run]
-  engineering-intelligence providers status|install|repair|upgrade|expose|hide|purge [graphify|cce] [path]
-  engineering-intelligence create [path] [--ide <id>...] [--yes]
-  engineering-intelligence update [path] [--dry-run] [--force]
-  engineering-intelligence sync [path] [--files a,b] [--json]
-  engineering-intelligence health [path] [--strict] [--json]
-  engineering-intelligence doctor [path] [--json]
-  engineering-intelligence uninstall [path] [--dry-run] [--force]
-  engineering-intelligence visualize [path] [--open]
-  engineering-intelligence map [path] [--type dependency] [--update] [--files a,b,c]
-  engineering-intelligence mcp [path]
-  engineering-intelligence freshness [path] [--threshold 60] [--json]
-  engineering-intelligence git-analysis [path] [--window 90] [--json]
-  engineering-intelligence user-profile [path] [--json]
-  engineering-intelligence hook <event> [path]   (internal: driven by IDE lifecycle hooks)
-  engineering-intelligence gate <name> [path] [--base <ref>] [--fail-on error|warning] [--json]
-  engineering-intelligence verify [path] [--json]
-  engineering-intelligence claims verify [path] [--json] [--strict]
-  engineering-intelligence claims derive [path] [--json]
-  engineering-intelligence claims add --statement "..." --evidence "src/a.ts:10-20,src/b.ts" --author "name" [path]
-  engineering-intelligence claims list [path] [--json]
-  engineering-intelligence context "<task>" [path] [--files a,b] [--budget 2000] [--json]
-  engineering-intelligence telemetry [path] [--json]
+  graphward install [path] [--ide <id>...] [--yes] [--dry-run] [--force]
+  graphward initialize [path] [--providers auto|full|native] [--offline] [--require-providers] [--yes] [--dry-run]
+  graphward providers status|install|repair|upgrade|expose|hide|purge [graphify|cce] [path]
+  graphward create [path] [--ide <id>...] [--yes]
+  graphward update [path] [--dry-run] [--force]
+  graphward sync [path] [--files a,b] [--json]
+  graphward health [path] [--strict] [--json]
+  graphward doctor [path] [--json]
+  graphward uninstall [path] [--dry-run] [--force]
+  graphward visualize [path] [--open]
+  graphward map [path] [--type dependency] [--update] [--files a,b,c]
+  graphward mcp [path]
+  graphward freshness [path] [--threshold 60] [--json]
+  graphward git-analysis [path] [--window 90] [--json]
+  graphward user-profile [path] [--json]
+  graphward hook <event> [path]   (internal: driven by IDE lifecycle hooks)
+  graphward gate <name> [path] [--base <ref>] [--fail-on error|warning] [--json]
+  graphward verify [path] [--json]
+  graphward claims verify [path] [--json] [--strict]
+  graphward claims derive [path] [--json]
+  graphward claims add --statement "..." --evidence "src/a.ts:10-20,src/b.ts" --author "name" [path]
+  graphward claims list [path] [--json]
+  graphward context "<task>" [path] [--files a,b] [--budget 2000] [--json]
+  graphward telemetry [path] [--json]
 
 IDE ids: ${IDE_IDS.join(", ")}
 Hook events: session-start, pre-tool-use, post-tool-use, stop
 Gates: env-vars, dead-exports, api-diff, migration-lint
 `;
-  if (!all) return core + "\nRun `engineering-intelligence --help --all` for the full advanced command list.\n";
+  if (!all) return core + "\nRun `graphward --help --all` for the full advanced command list.\n";
   return core + `
 Advanced commands (the 4 verbs above orchestrate these; use directly if you want):
   install / create / update / uninstall [path] [--ide <id>...] [--dry-run] [--force]
@@ -390,11 +391,15 @@ async function main(): Promise<void> {
     const payload = normalizeInput(host, await readStdin());
     // The host passes the project directory as cwd; honour it over the process cwd.
     const root = path.resolve(options.root !== process.cwd() ? options.root : (payload.cwd ?? process.cwd()));
+    migrateLegacyLayout(root);
     const result = await runHook(event, root, payload, host);
     if (result.stdout) output.write(`${result.stdout}\n`);
     process.exitCode = result.exitCode;
     return;
   }
+
+  const legacy = migrateLegacyLayout(path.resolve(options.root));
+  if (legacy.message) process.stderr.write(`${legacy.message}\n`);
 
   const version = await packageVersion();
   let readline: any = null;
@@ -420,7 +425,7 @@ async function main(): Promise<void> {
         process.exitCode = 2;
       } else {
         await setProviderExpertMode(options.root, action === "expose");
-        output.write(action === "expose" ? "Expert provider tools enabled for the EI MCP server.\n" : "Expert provider tools hidden; consolidated EI tools remain available.\n");
+        output.write(action === "expose" ? "Expert provider tools enabled for the GraphWard MCP server.\n" : "Expert provider tools hidden; consolidated GraphWard tools remain available.\n");
       }
       if (readline) readline.close();
       return;
@@ -442,8 +447,8 @@ async function main(): Promise<void> {
       if (readline) readline.close();
       return;
     }
-    const { loadEiConfig } = await import("../config/index.js");
-    const providerConfig = await loadEiConfig(options.root);
+    const { loadGwConfig } = await import("../config/index.js");
+    const providerConfig = await loadGwConfig(options.root);
     const disabled = providerConfig.providers.policy === "native";
     const [statuses, projectRuns] = await Promise.all([
       Promise.all(names.map((name) => providerStatus(name, { disabled }))),
@@ -479,7 +484,7 @@ async function main(): Promise<void> {
     });
     if (options.json) output.write(`${JSON.stringify(result, null, 2)}\n`);
     else if (!options.dryRun && result.generationBriefPath) {
-      output.write(`Initialization evidence is ready. Run the installed initialize-engineering-intelligence workflow to synthesize and validate EI-owned knowledge from ${result.generationBriefPath}.\n`);
+      output.write(`Initialization evidence is ready. Run the installed initialize-graphward workflow to synthesize and validate GraphWard-owned knowledge from ${result.generationBriefPath}.\n`);
     }
     process.exitCode = result.ok ? 0 : 1;
     if (readline) readline.close();
@@ -511,7 +516,7 @@ async function main(): Promise<void> {
     const { runAsk } = await import("../orchestrators/ask.js");
     const query = options.positionals.join(" ").trim();
     if (!query) {
-      output.write("Usage: engineering-intelligence ask \"<question>\" | <file...>\n");
+      output.write("Usage: graphward ask \"<question>\" | <file...>\n");
       process.exitCode = 1;
       if (readline) readline.close();
       return;
@@ -533,7 +538,7 @@ async function main(): Promise<void> {
       const record = await preflight(options.root, { intent, files });
       try {
         const { recordEvidenceHashes } = await import("../evidence/index.js");
-        if (existsSync(path.join(options.root, ".engineering-intelligence", "knowledge-base"))) await recordEvidenceHashes(options.root);
+        if (existsSync(path.join(options.root, ".graphward", "knowledge-base"))) await recordEvidenceHashes(options.root);
       } catch { /* best-effort */ }
       if (options.json) {
         output.write(`${JSON.stringify(record, null, 2)}\n`);
@@ -541,7 +546,7 @@ async function main(): Promise<void> {
         output.write(`Flight opened: ${record.id}\n  Intent: ${record.intent}\n`);
         output.write(`  Declared files (${record.declaredFiles.length}): ${record.declaredFiles.join(", ") || "none"}\n`);
         output.write(`  Predicted radius: ${record.predictedRadius.files.length} file(s), ${record.predictedRadius.direct.length} direct dependent(s)\n`);
-        output.write("  …make your edits, then run `engineering-intelligence guard` to audit.\n");
+        output.write("  …make your edits, then run `graphward guard` to audit.\n");
       }
     } else {
       const result = await postflight(options.root, {});
@@ -565,7 +570,7 @@ async function main(): Promise<void> {
     if (options.openBrowser) {
       const { generateDashboardHTML } = await import("../visualizer/index.js");
       const html = await generateDashboardHTML(options.root);
-      const outPath = path.join(options.root, ".engineering-intelligence", "dashboard.html");
+      const outPath = path.join(options.root, ".graphward", "dashboard.html");
       await mkdir(path.dirname(outPath), { recursive: true });
       await writeFile(outPath, html, "utf8");
       output.write(`  Dashboard: ${outPath}\n`);
@@ -604,7 +609,7 @@ async function main(): Promise<void> {
     if (options.json) {
       output.write(`${JSON.stringify(receipt, null, 2)}\n`);
     } else if (noCommands) {
-      output.write("No check commands detected. Set hooks.verifyCommands in .engineering-intelligence/ei.config.json.\n");
+      output.write("No check commands detected. Set hooks.verifyCommands in .graphward/gw.config.json.\n");
     } else {
       for (const run of receipt.commands) {
         output.write(`${run.exitCode === 0 ? "PASS" : "FAIL"}  ${run.command}  (${run.durationMs}ms)\n`);
@@ -743,7 +748,7 @@ async function main(): Promise<void> {
     const { profile, profilePath, isCI } = await runUserProfile(options.root);
     if (isCI) {
       output.write("CI environment detected — personal profile skipped.\n");
-      output.write("Team preferences at .engineering-intelligence/memory/team-preferences.md still apply.\n");
+      output.write("Team preferences at .graphward/memory/team-preferences.md still apply.\n");
     } else if (options.json) {
       output.write(`${JSON.stringify(profile, null, 2)}\n`);
     } else {
@@ -775,7 +780,7 @@ async function main(): Promise<void> {
     const { ensureFreshGraph, analyzeImpact } = await import("../graph/index.js");
     const files = options.files.length > 0 ? options.files : options.positionals;
     if (files.length === 0) {
-      output.write("Usage: engineering-intelligence impact <file...> [--json]\n");
+      output.write("Usage: graphward impact <file...> [--json]\n");
       process.exitCode = 1;
       if (readline) readline.close();
       return;
@@ -803,7 +808,7 @@ async function main(): Promise<void> {
     const { ensureFreshGraph, whoCalls } = await import("../graph/index.js");
     const name = options.positionals[0];
     if (!name) {
-      output.write("Usage: engineering-intelligence who-calls <symbol> [--transitive] [--json]\n");
+      output.write("Usage: graphward who-calls <symbol> [--transitive] [--json]\n");
       process.exitCode = 1;
       if (readline) readline.close();
       return;
@@ -830,7 +835,7 @@ async function main(): Promise<void> {
   if (options.command === "preflight") {
     const { preflight } = await import("../flight/index.js");
     if (!options.intent) {
-      output.write("Usage: engineering-intelligence preflight --intent \"<what you're changing>\" [file...]\n");
+      output.write("Usage: graphward preflight --intent \"<what you're changing>\" [file...]\n");
       process.exitCode = 1;
       if (readline) readline.close();
       return;
@@ -844,7 +849,7 @@ async function main(): Promise<void> {
       output.write(`  Intent: ${record.intent}\n`);
       output.write(`  Declared files (${record.declaredFiles.length}): ${record.declaredFiles.join(", ") || "none"}\n`);
       output.write(`  Predicted radius: ${record.predictedRadius.files.length} file(s), ${record.predictedRadius.direct.length} direct / ${record.predictedRadius.indirect.length} indirect dependents\n`);
-      output.write(`  Run \`engineering-intelligence postflight --id ${record.id}\` after editing.\n`);
+      output.write(`  Run \`graphward postflight --id ${record.id}\` after editing.\n`);
     }
     if (readline) readline.close();
     return;
@@ -962,8 +967,8 @@ async function main(): Promise<void> {
         if (state.position.activeHat) output.write(`  Active Hat:        ${state.position.activeHat}\n`);
         if (state.position.activeUnit) output.write(`  Active Unit:       ${state.position.activeUnit}\n`);
         output.write(`  Breadcrumb:        ${state.breadcrumb}\n`);
-        output.write(`  Source of truth:   .engineering-intelligence/aidlc/aidlc-state.json\n`);
-        output.write(`  Markdown mirror:   .engineering-intelligence/aidlc/aidlc-state.md\n`);
+        output.write(`  Source of truth:   .graphward/aidlc/aidlc-state.json\n`);
+        output.write(`  Markdown mirror:   .graphward/aidlc/aidlc-state.md\n`);
       }
     } else {
       output.write(`Unknown aidlc action "${subAction}". Expected "gate", "clarify", or "state".\n`);
@@ -976,7 +981,7 @@ async function main(): Promise<void> {
   if (options.command === "evidence-record") {
     const { recordEvidenceHashes } = await import("../evidence/index.js");
     const snapshot = await recordEvidenceHashes(options.root);
-    output.write(`Recorded ${snapshot.hashes.length} evidence hash(es) to .engineering-intelligence/knowledge-base/.evidence-hashes.json\n`);
+    output.write(`Recorded ${snapshot.hashes.length} evidence hash(es) to .graphward/knowledge-base/.evidence-hashes.json\n`);
     if (readline) readline.close();
     return;
   }
@@ -1014,7 +1019,7 @@ async function main(): Promise<void> {
   }
   if (options.command === "visualize") {
     const html = await generateDashboardHTML(options.root);
-    const outDir = path.join(options.root, ".engineering-intelligence");
+    const outDir = path.join(options.root, ".graphward");
     const outPath = path.join(outDir, "dashboard.html");
     await mkdir(outDir, { recursive: true });
     await writeFile(outPath, html, "utf8");
@@ -1035,13 +1040,13 @@ async function main(): Promise<void> {
     return;
   }
   if (options.command === "update") {
-    const { migrateEiConfig } = await import("../config/index.js");
+    const { migrateGwConfig } = await import("../config/index.js");
     let ides: IdeId[] | undefined = options.ides.length > 0 ? options.ides : undefined;
     if (!ides && readline && !options.yes) {
       ides = await selectIdes(options, readline);
     }
     if (!options.dryRun) {
-      const migration = await migrateEiConfig(options.root);
+      const migration = await migrateGwConfig(options.root);
       if (migration.changed) output.write(`Configuration migrated to schema ${migration.config.schemaVersion}.\n`);
     }
     const result = ides && ides.length > 0
@@ -1060,7 +1065,7 @@ async function main(): Promise<void> {
       output.write(`${JSON.stringify(result, null, 2)}\n`);
     } else {
       const scope = result.changedFiles.length > 0 ? result.changedFiles.join(", ") : "the working tree";
-      output.write(`Synchronized EI evidence for ${scope}.\n`);
+      output.write(`Synchronized GraphWard evidence for ${scope}.\n`);
       output.write(`  Graph: ${result.graph.nodeCount} nodes, ${result.graph.edgeCount} edges (${result.graph.fileCount} files)\n`);
       output.write(`  Claims: ${result.claims.verified}/${result.claims.total} verified\n`);
       output.write(`  Providers: ${result.providers.policy}${result.providers.degraded ? " with native fallback" : ""}\n`);

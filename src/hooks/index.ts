@@ -18,7 +18,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { computeFreshness } from "../freshness/index.js";
-import { defaultEiConfig, loadEiConfig } from "../config/index.js";
+import { defaultGwConfig, loadGwConfig } from "../config/index.js";
+import { cliInvocation } from "../version.js";
 
 export type HookEvent = "session-start" | "pre-tool-use" | "post-tool-use" | "stop";
 
@@ -89,22 +90,22 @@ export const DEFAULT_HOOK_CONFIG: HookConfig = {
   verifyCommands: [],
 };
 
-const CONFIG_PATH = ".engineering-intelligence/ei.config.json";
+const CONFIG_PATH = ".graphward/gw.config.json";
 
 export async function loadHookConfig(root: string): Promise<HookConfig> {
   try {
-    const config = await loadEiConfig(root);
+    const config = await loadGwConfig(root);
     return { ...DEFAULT_HOOK_CONFIG, ...(config.hooks ?? {}) } as HookConfig;
   } catch {
     return { ...DEFAULT_HOOK_CONFIG };
   }
 }
 
-/** Base command the host invokes for a hook event (matches the repo's `npx` convention). */
+/** Base command the host invokes for a hook event — the version-pinned CLI. */
 export function hookCommand(event: HookEvent, host: HookHost = "claude-code"): string {
   return host === "claude-code"
-    ? `npx engineering-intelligence hook ${event}`
-    : `npx engineering-intelligence hook ${event} --host ${host}`;
+    ? `${cliInvocation()} hook ${event}`
+    : `${cliInvocation()} hook ${event} --host ${host}`;
 }
 
 /**
@@ -158,7 +159,7 @@ export function cursorHookSettings(): string {
 
 /** The default config file the installer seeds. Exported so the adapter renders it. */
 export function defaultConfigFile(): string {
-  return JSON.stringify(defaultEiConfig({
+  return JSON.stringify(defaultGwConfig({
     hooks: {
         freshnessThreshold: DEFAULT_HOOK_CONFIG.freshnessThreshold,
         blockStaleEdits: DEFAULT_HOOK_CONFIG.blockStaleEdits,
@@ -184,7 +185,7 @@ const SOURCE_EXTENSIONS = new Set([
 export function isSourceFile(relPath: string): boolean {
   const normalized = relPath.replace(/\\/g, "/");
   if (
-    normalized.startsWith(".engineering-intelligence/") ||
+    normalized.startsWith(".graphward/") ||
     normalized.startsWith(".claude/") ||
     normalized.includes("node_modules/") ||
     normalized.startsWith("dist/") ||
@@ -217,7 +218,7 @@ interface SessionState {
   validationCommands: string[];
 }
 
-const STATE_DIR = ".engineering-intelligence/.hooks-state";
+const STATE_DIR = ".graphward/.hooks-state";
 
 function sessionId(input: HookInput): string {
   const raw = input.session_id ?? "default";
@@ -250,7 +251,7 @@ async function writeState(root: string, input: HookInput, state: SessionState): 
 
 /** Keep ephemeral session state out of version control in the target repo. */
 async function ensureStateGitignored(root: string): Promise<void> {
-  const gitignorePath = path.join(root, ".engineering-intelligence", ".gitignore");
+  const gitignorePath = path.join(root, ".graphward", ".gitignore");
   let existing = "";
   try { existing = await readFile(gitignorePath, "utf8"); } catch { /* new file */ }
   if (!existing.includes(".hooks-state/")) {
@@ -326,19 +327,19 @@ async function onSessionStart(root: string, input: HookInput, config: HookConfig
   if (report.scores.length === 0) {
     // No intelligence initialized — nudge, but never block.
     return context(
-      "Engineering Intelligence: no persisted intelligence found. Run `initialize-engineering-intelligence` to document this codebase so future work reuses it instead of re-exploring.",
+      "GraphWard: no persisted intelligence found. Run `initialize-graphward` to document this codebase so future work reuses it instead of re-exploring.",
     );
   }
 
   const stale = report.scores.filter((s) => s.action !== "none").sort((a, b) => a.score - b.score);
   const lines = [
-    `Engineering Intelligence — freshness: ${report.driftDecision} (threshold ${report.threshold}).`,
+    `GraphWard — freshness: ${report.driftDecision} (threshold ${report.threshold}).`,
     `${report.scores.length} intelligence docs; ${stale.length} need attention.`,
   ];
   if (stale.length > 0) {
     const top = stale.slice(0, 5).map((s) => `  - ${s.docPath} (score ${s.score}, ${s.action})`);
     lines.push("Stale artifacts:", ...top);
-    lines.push("Run `sync-engineering-intelligence` to refresh before relying on these.");
+    lines.push("Run `sync-graphward` to refresh before relying on these.");
   } else {
     lines.push("All intelligence is fresh — prefer it over re-reading source.");
   }
@@ -360,10 +361,10 @@ async function onPreToolUse(root: string, input: HookInput, config: HookConfig):
     .slice(0, 5)
     .map((s) => `  - ${s.docPath} (score ${s.score})`);
   const detail = [
-    `Engineering Intelligence flags stale documentation (${report.driftDecision}).`,
+    `GraphWard flags stale documentation (${report.driftDecision}).`,
     "Affected artifacts:",
     ...stale,
-    "Sync with `sync-engineering-intelligence` (or `npx engineering-intelligence freshness .`) so this change is guided by accurate intelligence.",
+    `Sync with \`sync-graphward\` (or \`${cliInvocation()} freshness .\`) so this change is guided by accurate intelligence.`,
   ].join("\n");
 
   if (config.blockStaleEdits && report.driftDecision === "Block implementation") {
@@ -436,7 +437,7 @@ async function onStop(root: string, input: HookInput, config: HookConfig): Promi
     : await detectCheckCommands(root);
 
   const reason: string[] = [
-    "Engineering Intelligence: these source changes have no passing verification receipt.",
+    "GraphWard: these source changes have no passing verification receipt.",
     "Validation must be a fact this tool produced, not a command that looked test-shaped.",
     "Unverified files:",
     ...coverage.uncovered.slice(0, 8).map((f) => `  - ${f}`),
@@ -452,8 +453,8 @@ async function onStop(root: string, input: HookInput, config: HookConfig): Promi
   }
   reason.push(
     checks.length > 0
-      ? `Run \`npx engineering-intelligence verify .\` (will run: ${checks.join(", ")}).`
-      : "No check command could be detected. Configure `verify.commands` in .engineering-intelligence/ei.config.json, or state explicitly that validation is unavailable and stop again.",
+      ? `Run \`${cliInvocation()} verify .\` (will run: ${checks.join(", ")}).`
+      : "No check command could be detected. Configure `verify.commands` in .graphward/gw.config.json, or state explicitly that validation is unavailable and stop again.",
   );
   return block(reason.join("\n"));
 }

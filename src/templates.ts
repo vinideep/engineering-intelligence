@@ -13,7 +13,7 @@ export async function exists(location: string): Promise<boolean> {
 
 export const SKILL_NAMES = [
   "initialize-intelligence-skill",
-  "engineering-intelligence-skill",
+  "graphward-skill",
   "deep-project-knowledge-extractor",
   "knowledge-base-validator",
   "impact-analysis-engine",
@@ -81,11 +81,11 @@ export const AGENT_NAMES = [
 ] as const;
 
 export const WORKFLOW_NAMES = [
-  "initialize-engineering-intelligence",
-  "engineering-intelligence",
+  "initialize-graphward",
+  "graphward",
   "map-architecture",
   "analyze-impact",
-  "sync-engineering-intelligence",
+  "sync-graphward",
   "review-engineering-change",
   "scope-requirement",
   "discover-codebase",
@@ -121,7 +121,7 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
     ...SKILL_NAMES.map((name) => ["skills", name] as const),
     ...AGENT_NAMES.map((name) => ["agents", name] as const),
     ...WORKFLOW_NAMES.map((name) => ["workflows", name] as const),
-    ["rules", "engineering-intelligence"] as const,
+    ["rules", "graphward"] as const,
   ];
   for (const [category, name] of required) {
     try {
@@ -161,7 +161,7 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
   for (const workflow of [
     "map-architecture",
     "analyze-impact",
-    "sync-engineering-intelligence",
+    "sync-graphward",
     "review-engineering-change",
     "scope-requirement",
     "discover-codebase",
@@ -174,7 +174,7 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
   }
   const backlog = await readTemplate("skills", "backlog-decomposition-engine").catch(() => "");
   for (const requiredContract of [
-    ".engineering-intelligence/aidlc/agile/backlog/",
+    ".graphward/aidlc/agile/backlog/",
     "EPIC-",
     "FEAT-",
     "TKT-",
@@ -218,7 +218,7 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
       errors.push(`nfr-adr-governor does not define required governance contract: ${requiredContract}`);
     }
   }
-  const implementation = await readTemplate("skills", "engineering-intelligence-skill").catch(() => "");
+  const implementation = await readTemplate("skills", "graphward-skill").catch(() => "");
   for (const requiredContract of [
     "Pre-Flight Freshness Gate",
     "Acceptance Criteria Verification Matrix",
@@ -227,7 +227,7 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
     "api-backward-compatibility-engine",
   ]) {
     if (!implementation.includes(requiredContract)) {
-      errors.push(`engineering-intelligence-skill does not define required accuracy gate: ${requiredContract}`);
+      errors.push(`graphward-skill does not define required accuracy gate: ${requiredContract}`);
     }
   }
   const typeSafety = await readTemplate("skills", "type-safety-engine").catch(() => "");
@@ -244,7 +244,7 @@ export async function validateCanonicalTemplates(): Promise<string[]> {
   }
   const apiCompatibility = await readTemplate("skills", "api-backward-compatibility-engine").catch(() => "");
   // api-backward-compatibility-engine now also absorbs snapshot/replay verification.
-  for (const requiredContract of ["additive", "deprecated", "breaking", "version bump", ".engineering-intelligence/snapshots/", "pre-change", "post-change", "replay"]) {
+  for (const requiredContract of ["additive", "deprecated", "breaking", "version bump", ".graphward/snapshots/", "pre-change", "post-change", "replay"]) {
     if (!apiCompatibility.includes(requiredContract)) {
       errors.push(`api-backward-compatibility-engine does not define required API compatibility/snapshot contract: ${requiredContract}`);
     }

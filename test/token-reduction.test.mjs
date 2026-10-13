@@ -171,7 +171,7 @@ test("all adapters ship SmartCrushed skill files with literal paths and byte-0 f
 
     assert.match(
       skillFile.content,
-      /\.engineering-intelligence\/aidlc\//,
+      /\.graphward\/aidlc\//,
       `${ide}: skill files must carry literal runtime paths, not aliases`,
     );
 
@@ -200,7 +200,7 @@ test("all skills-carrying adapters ship WORKFLOW-ROUTING.md and SKILLS-INDEX.md"
 
     const routingContent = files.find(f => f.path === routing).content;
     assert.match(routingContent, /Workflow Routing Table/, `${ide}: routing table missing header`);
-    assert.match(routingContent, /engineering-intelligence/,  `${ide}: routing table missing workflow`);
+    assert.match(routingContent, /graphward/,  `${ide}: routing table missing workflow`);
   }
 });
 
@@ -209,16 +209,16 @@ test("commandcode adapter ships SKILL-BRIEF.md files (emitBriefs: true)", async 
   const paths = new Set(files.map(f => f.path));
 
   assert.ok(
-    paths.has(".commandcode/skills/engineering-intelligence-skill/SKILL-BRIEF.md"),
-    "commandcode must ship engineering-intelligence-skill/SKILL-BRIEF.md",
+    paths.has(".commandcode/skills/graphward-skill/SKILL-BRIEF.md"),
+    "commandcode must ship graphward-skill/SKILL-BRIEF.md",
   );
   assert.ok(
     paths.has(".commandcode/skills/aidlc-lifecycle-engine/SKILL-BRIEF.md"),
     "commandcode must ship aidlc-lifecycle-engine/SKILL-BRIEF.md",
   );
 
-  const brief = files.find(f => f.path === ".commandcode/skills/engineering-intelligence-skill/SKILL-BRIEF.md");
-  const full  = files.find(f => f.path === ".commandcode/skills/engineering-intelligence-skill/SKILL.md");
+  const brief = files.find(f => f.path === ".commandcode/skills/graphward-skill/SKILL-BRIEF.md");
+  const full  = files.find(f => f.path === ".commandcode/skills/graphward-skill/SKILL.md");
   const briefTokens = estimateTokens(brief.content);
   const fullTokens  = estimateTokens(full.content);
 
@@ -265,9 +265,9 @@ test("KV-cache pinned routing files sort first across every IDE that ships them"
 
 test("cursor adapter optimizes command files with SmartCrush and literal paths", async () => {
   const files = await renderAdapters(["cursor"]);
-  const engCmd = files.find(f => f.path === ".cursor/commands/engineering-intelligence.md");
-  assert.ok(engCmd, "cursor must ship engineering-intelligence command");
-  assert.match(engCmd.content, /\.engineering-intelligence\//, "cursor commands must use literal runtime paths");
+  const engCmd = files.find(f => f.path === ".cursor/commands/graphward.md");
+  assert.ok(engCmd, "cursor must ship graphward command");
+  assert.match(engCmd.content, /\.graphward\//, "cursor commands must use literal runtime paths");
   assert.doesNotMatch(engCmd.content, /\$AIDLC|\$EI/, "cursor commands must not contain aliases");
   assert.doesNotMatch(engCmd.content, /^version:/m, "cursor commands must not contain version:");
 });

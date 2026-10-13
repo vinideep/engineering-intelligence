@@ -8,7 +8,7 @@
   },
   "queries": [
     { "category": "architecture", "query": "ProjectFilePolicy explain symlink path escapes repository root", "scope": ["src/project-files"], "expected": ["src/project-files/index.ts"] },
-    { "category": "configuration", "query": "migrate EI config schema provider policy token budgets", "scope": ["src/config"], "expected": ["src/config/index.ts"] },
+    { "category": "configuration", "query": "migrate GraphWard config schema provider policy token budgets", "scope": ["src/config"], "expected": ["src/config/index.ts"] },
     { "category": "providers", "query": "transactional staged provider installation rollback previous healthy executable", "scope": ["src/providers"], "expected": ["src/providers/manager.ts"] },
     { "category": "providers", "query": "Graphify code only extraction graph report raw evidence", "scope": ["src/providers"], "expected": ["src/providers/graphify.ts"] },
     { "category": "architecture", "query": "reconcile Graphify native edges corroborated contested trust state", "scope": ["src/graph"], "expected": ["src/graph/provider-evidence.ts"] },

@@ -12,7 +12,7 @@ A pre-flight / post-flight audit around every change.
 ### Pre-flight — declare intent, get the blast radius
 
 ```bash
-engineering-intelligence preflight --intent "add retry to charge()" src/pay.js
+graphward preflight --intent "add retry to charge()" src/pay.js
 ```
 
 This:
@@ -21,12 +21,12 @@ This:
    legitimately need to change too (from `analyze_impact` on the declared files).
 3. Snapshots the working tree (baseline commit + already-dirty files) so only
    *new* changes are attributed to this flight.
-4. Writes an open flight record under `.engineering-intelligence/flight/<id>.json`.
+4. Writes an open flight record under `.graphward/flight/<id>.json`.
 
 ### Post-flight — audit actual vs. predicted
 
 ```bash
-engineering-intelligence postflight --id <flight> --strict
+graphward postflight --id <flight> --strict
 ```
 
 This diffs what **actually** changed against the declaration and classifies each
@@ -39,7 +39,7 @@ Verdict is `clean` (nothing out of bounds) or `flagged`. With `--strict`,
 `flagged` exits non-zero — drop it into CI as a merge gate:
 
 ```yaml
-- run: engineering-intelligence postflight --strict
+- run: graphward postflight --strict
 ```
 
 Omit `--id` to close the most recent open flight.
@@ -56,9 +56,9 @@ Prose-based AI memory rots silently. Here, every `file:line` citation in the
 knowledge base is hashed against the line it points at.
 
 ```bash
-engineering-intelligence evidence-record         # snapshot the cited lines' hashes
+graphward evidence-record         # snapshot the cited lines' hashes
 # …code changes over time…
-engineering-intelligence evidence-check --strict  # flag citations whose code moved
+graphward evidence-check --strict  # flag citations whose code moved
 ```
 
 `evidence-check` reports each citation as `ok`, `stale` (the cited line's content

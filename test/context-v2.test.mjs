@@ -25,7 +25,7 @@ async function fixture() {
   await write(root, "dist/generated.js", "export const charge = 'generated';\n");
   await buildGraph(root);
   await deriveClaims(root);
-  await write(root, ".engineering-intelligence/knowledge-base/system-overview.md", "# Billing system\n\nThe charge implementation is in `src/pay.ts:1`.\n");
+  await write(root, ".graphward/knowledge-base/system-overview.md", "# Billing system\n\nThe charge implementation is in `src/pay.ts:1`.\n");
   await recordEvidenceHashes(root);
   return root;
 }
@@ -47,7 +47,7 @@ test("ContextPackV2 is knowledge-first, graph-scoped, hash-pinned, and fallback-
   assert.ok(pack.tokenAllocation.used <= pack.tokenAllocation.budget);
 });
 
-test("ContextPackV2 does not promote drifted EI prose as verified knowledge", async () => {
+test("ContextPackV2 does not promote drifted GraphWard prose as verified knowledge", async () => {
   const root = await fixture();
   await write(root, "src/pay.ts", "export function chargePayment(amount: number) {\n  return amount >= 0;\n}\n");
   const pack = await getEngineeringContext(root, { task: "fix charge", files: ["src/pay.ts"], budget: 2500 }, { runner: missingProvider, providerHome: path.join(root, "missing-providers") });
@@ -72,7 +72,7 @@ test("unverifiable provider-only edges cannot expand the approved retrieval neig
   const root = await fixture();
   await write(root, "src/untrusted.ts", "export const untrusted = true;\n");
   await buildGraph(root);
-  const graphPath = path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json");
+  const graphPath = path.join(root, ".graphward", "graph", "dependency-graph.json");
   const graph = JSON.parse(await readFile(graphPath, "utf8"));
   graph.edges.push({
     from: "module:src/pay",

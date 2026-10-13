@@ -54,7 +54,7 @@ test("30-query golden corpus meets native Recall@10, source-span, and scope-leak
   const spanValidity = spans === 0 ? 0 : validSpans / spans;
   assert.ok(recallAt10 >= corpus.thresholds.recallAt10, `Recall@10 ${recallAt10.toFixed(3)} must be >= ${corpus.thresholds.recallAt10}`);
   assert.equal(spanValidity, corpus.thresholds.validCurrentSpans, "every returned source span must match the current file hash");
-  assert.equal(leakage, corpus.thresholds.scopeLeakage, "retrieval must not leak outside the EI-approved scope");
+  assert.equal(leakage, corpus.thresholds.scopeLeakage, "retrieval must not leak outside the GraphWard-approved scope");
 });
 
 // Mirror the analyze_impact handler (src/mcp/index.ts).

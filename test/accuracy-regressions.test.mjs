@@ -214,7 +214,7 @@ test("verify.changedFiles: works when the analysed root is a monorepo package", 
 test("graph: a renamed file does not linger as a ghost module after incremental refresh", async () => {
   const root = await gitRepo();
   await write(root, "package.json", JSON.stringify({ name: "x", version: "1.0.0" }));
-  await write(root, ".gitignore", ".engineering-intelligence/\n.graphward/\n");
+  await write(root, ".gitignore", ".graphward/\n.graphward/\n");
   await write(root, "src/a.ts", "export const a = 1;\n");
   await write(root, "src/main.ts", 'import { a } from "./a.js";\nexport const m = a;\n');
   git(root, "add", "-A");

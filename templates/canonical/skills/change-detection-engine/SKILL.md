@@ -89,4 +89,4 @@ Produce a structured scope object for downstream consumers:
 ## Cross-References
 
 - Used by: `impact-analysis-engine`, `incremental-sync-engine`, `engineering-change-review`
-- Feeds into: `analyze-impact`, `sync-engineering-intelligence`, `review-engineering-change` workflows
+- Feeds into: `analyze-impact`, `sync-graphward`, `review-engineering-change` workflows

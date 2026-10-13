@@ -63,7 +63,7 @@ export async function getContext(root: string, request: ContextRequest): Promise
   const fileModuleIds = new Set(files.map((f) => toModuleId(root, f)));
 
   // --- Graph neighborhood ---------------------------------------------------
-  const graph = await loadExistingGraph(path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json"));
+  const graph = await loadExistingGraph(path.join(root, ".graphward", "graph", "dependency-graph.json"));
   const dependents = new Set<string>();
   const dependencies = new Set<string>();
   if (graph && files.length > 0) {
@@ -102,8 +102,8 @@ export async function getContext(root: string, request: ContextRequest): Promise
   }
 
   // --- Conventions & dangerous areas (prose intelligence, if present) -------
-  const conventions = await readIfExists(root, ".engineering-intelligence/memory/coding-patterns.md");
-  const dangerous = await readIfExists(root, ".engineering-intelligence/context/dangerous-areas.md");
+  const conventions = await readIfExists(root, ".graphward/memory/coding-patterns.md");
+  const dangerous = await readIfExists(root, ".graphward/context/dangerous-areas.md");
 
   function summarize(md: string, maxLines: number): string {
     return md.split("\n").filter((l) => l.trim()).slice(0, maxLines).join("\n");
@@ -171,7 +171,7 @@ export async function getContext(root: string, request: ContextRequest): Promise
   }
 
   if (included.length === 0) {
-    parts.push("_No persisted intelligence available for this task. Run `initialize-engineering-intelligence` (and `map`) so future context queries are answered from evidence instead of re-exploration._", "");
+    parts.push("_No persisted intelligence available for this task. Run `initialize-graphward` (and `map`) so future context queries are answered from evidence instead of re-exploration._", "");
   }
 
   const markdown = parts.join("\n").replace(/\n{3,}/g, "\n\n");

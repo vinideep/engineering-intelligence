@@ -48,7 +48,7 @@ async function graphWorkspaceHash(root: string): Promise<string> {
 }
 
 export async function buildGraph(root: string, options: BuildGraphOptions = {}): Promise<BuildGraphResult> {
-  const graphDir = path.join(root, ".engineering-intelligence", "graph");
+  const graphDir = path.join(root, ".graphward", "graph");
   const graphPath = path.join(graphDir, "dependency-graph.json");
 
   let result: Awaited<ReturnType<typeof buildDependencyGraph>>;
@@ -73,7 +73,7 @@ export async function buildGraph(root: string, options: BuildGraphOptions = {}):
   if (head) result.graph.commit = head;
   result.graph.workspaceHash = await graphWorkspaceHash(root);
 
-  // EI remains canonical. Fresh Graphify output can corroborate or enrich the
+  // GraphWard remains canonical. Fresh Graphify output can corroborate or enrich the
   // native graph, while stale/out-of-scope provider evidence is rejected.
   if (options.providerEvidence !== false) {
     const reconciliation = await reconcileGraphifyEvidence(root, result.graph);
@@ -118,7 +118,7 @@ export interface FreshnessResult {
 }
 
 function graphFilePath(root: string): string {
-  return path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json");
+  return path.join(root, ".graphward", "graph", "dependency-graph.json");
 }
 
 // Files changed between the graph's stamped commit and HEAD, plus uncommitted

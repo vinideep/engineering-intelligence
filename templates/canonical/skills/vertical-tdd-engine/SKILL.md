@@ -10,7 +10,7 @@ Drive implementation through strict, incremental Test-Driven Development (TDD) u
 
 ## Inputs
 
-- Acceptance criteria from `.engineering-intelligence/aidlc/agile/acceptance-criteria.md` or ticket specification
+- Acceptance criteria from `.graphward/aidlc/agile/acceptance-criteria.md` or ticket specification
 - Target function, module, or component signature
 - Existing test patterns and runner in the repository
 - Type definitions and interface contracts

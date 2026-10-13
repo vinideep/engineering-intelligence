@@ -8,7 +8,7 @@ version: 1.0.0
 
 Build and maintain a personal developer profile so every workflow response is calibrated to the individual — their test philosophy, implementation depth, communication style, and architecture preferences — without asking onboarding questions.
 
-**Seed from git first:** `npx engineering-intelligence user-profile . [--json]` resolves identity and seeds the profile from git history with zero LLM context, and creates the gitignore entry so personal profiles never land in a teammate's checkout. Use the steps below to refine what the CLI cannot infer.
+**Seed from git first:** `npx graphward user-profile . [--json]` resolves identity and seeds the profile from git history with zero LLM context, and creates the gitignore entry so personal profiles never land in a teammate's checkout. Use the steps below to refine what the CLI cannot infer.
 
 This capability does not modify product code.
 
@@ -23,7 +23,7 @@ This capability does not modify product code.
 Before any LLM work, run the CLI:
 
 ```bash
-npx engineering-intelligence user-profile .
+npx graphward user-profile .
 ```
 
 This resolves identity and seeds the profile from git history without consuming any LLM context:
@@ -44,7 +44,7 @@ This resolves identity and seeds the profile from git history without consuming 
 ## Profile Storage (multi-user safe)
 
 ```
-.engineering-intelligence/
+.graphward/
   memory/
     team-preferences.md          ← committed — team consensus layer
     users/                       ← gitignored — never committed
@@ -53,7 +53,7 @@ This resolves identity and seeds the profile from git history without consuming 
   .gitignore                     ← contains: memory/users/
 ```
 
-The `ei user-profile` CLI command creates `.engineering-intelligence/.gitignore` with `memory/users/` on first run. Personal profiles never appear in `git status`.
+The `ei user-profile` CLI command creates `.graphward/.gitignore` with `memory/users/` on first run. Personal profiles never appear in `git status`.
 
 ## CI Guard
 
@@ -64,7 +64,7 @@ If any of `$CI`, `$GITHUB_ACTIONS`, `$GITLAB_CI`, `$JENKINS_URL`, `$TRAVIS`, `$C
 
 ## Profile Document Structure
 
-`.engineering-intelligence/memory/users/<slug>/user-intelligence.md`:
+`.graphward/memory/users/<slug>/user-intelligence.md`:
 
 ```markdown
 # User Intelligence Profile
@@ -118,13 +118,13 @@ If any of `$CI`, `$GITHUB_ACTIONS`, `$GITLAB_CI`, `$JENKINS_URL`, `$TRAVIS`, `$C
 
 ### Mode: seed (first run or `ei user-profile` refresh)
 
-1. Run `npx engineering-intelligence user-profile .` — this handles identity + git seeding.
-2. Read the generated profile at `.engineering-intelligence/memory/users/<slug>/user-intelligence.md`.
+1. Run `npx graphward user-profile .` — this handles identity + git seeding.
+2. Read the generated profile at `.graphward/memory/users/<slug>/user-intelligence.md`.
 3. Apply **Active Predictions** to the current session immediately.
 
 ### Mode: observe (after each workflow interaction)
 
-Run at the END of every `engineering-intelligence` workflow. Extract 1–3 signals from the interaction:
+Run at the END of every `graphward` workflow. Extract 1–3 signals from the interaction:
 
 **Signal extraction rules:**
 
@@ -160,7 +160,7 @@ After extracting signals:
 
 When 2 or more developers independently exhibit the same signal for the same dimension:
 
-1. Read all profiles under `.engineering-intelligence/memory/users/*/user-intelligence.md`.
+1. Read all profiles under `.graphward/memory/users/*/user-intelligence.md`.
 2. Count confirmed signals per dimension across profiles.
 3. If ≥ 2 profiles agree with `medium` or `high` confidence → promote to `team-preferences.md`.
 4. Record the contributing identities and evidence.
@@ -180,9 +180,9 @@ When 2 or more developers independently exhibit the same signal for the same dim
 The context-budget-optimizer loads intelligence in this order:
 
 ```
-Rank 0 (pinned, ~50t): .engineering-intelligence/memory/users/<slug>/user-intelligence.md — Active Predictions block only
-Rank 1 (~100t):        .engineering-intelligence/memory/team-preferences.md
-Rank 2 (~150t):        .engineering-intelligence/memory/coding-patterns.md
+Rank 0 (pinned, ~50t): .graphward/memory/users/<slug>/user-intelligence.md — Active Predictions block only
+Rank 1 (~100t):        .graphward/memory/team-preferences.md
+Rank 2 (~150t):        .graphward/memory/coding-patterns.md
 ...
 ```
 
@@ -213,8 +213,8 @@ coding-patterns   →  applies when both above are silent
 
 - [ ] `ei user-profile .` was run before loading the profile
 - [ ] CI environment check passes before any profile read/write
-- [ ] Personal profile stored under `.engineering-intelligence/memory/users/<slug>/`
-- [ ] `.engineering-intelligence/.gitignore` contains `memory/users/`
+- [ ] Personal profile stored under `.graphward/memory/users/<slug>/`
+- [ ] `.graphward/.gitignore` contains `memory/users/`
 - [ ] Active Predictions block is applied before first response in any workflow
 - [ ] Signals extracted from each interaction and logged
 - [ ] Confidence threshold enforced before updating preferences
@@ -223,9 +223,9 @@ coding-patterns   →  applies when both above are silent
 
 ## Cross-References
 
-- CLI: `npx engineering-intelligence user-profile .` — seeds profile from git history
-- Used by: `context-budget-optimizer` (loads Active Predictions at rank-0), `engineering-intelligence-skill` (pre-flight)
-- Feeds into: `.engineering-intelligence/memory/users/<slug>/user-intelligence.md`, `team-preferences.md`
+- CLI: `npx graphward user-profile .` — seeds profile from git history
+- Used by: `context-budget-optimizer` (loads Active Predictions at rank-0), `graphward-skill` (pre-flight)
+- Feeds into: `.graphward/memory/users/<slug>/user-intelligence.md`, `team-preferences.md`
 - Related: `incremental-sync-engine` (Memory sync manages team-preferences.md), `ongoing-learning-engine` (uncertainty tracking)
 
 This capability does not modify product code.

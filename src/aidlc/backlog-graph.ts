@@ -6,11 +6,11 @@ import { analyzeImpact } from "../graph/index.js";
 import type { DependencyGraph } from "../graph/schema.js";
 
 function aidlcDir(root: string): string {
-  return path.join(root, ".engineering-intelligence", "aidlc");
+  return path.join(root, ".graphward", "aidlc");
 }
 
 function graphPath(root: string): string {
-  return path.join(root, ".engineering-intelligence", "graph", "dependency-graph.json");
+  return path.join(root, ".graphward", "graph", "dependency-graph.json");
 }
 
 export function parseTicketTargetNodes(content: string): string[] {

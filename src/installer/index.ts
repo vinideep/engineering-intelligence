@@ -12,7 +12,7 @@ import type {
   OperationResult,
   RenderedFile,
 } from "../types.js";
-import { readManagedBlock, removeManagedBlock, upsertManagedBlock } from "./blocks.js";
+import { adoptLegacyBlock, readManagedBlock, removeManagedBlock, upsertManagedBlock } from "./blocks.js";
 import { mergeHookConfig, removeOurEntries } from "./json-merge.js";
 
 export interface MutationOptions {
@@ -61,7 +61,7 @@ async function applyRendered(
   options: MutationOptions,
 ): Promise<{ action: FileAction; entry?: ManagedFileEntry }> {
   const absolute = path.join(root, rendered.path);
-  const current = await readMaybe(absolute);
+  let current = await readMaybe(absolute);
   const desiredEntry = entryFor(rendered);
 
   if (rendered.kind === "seed") {
@@ -115,6 +115,11 @@ async function applyRendered(
   }
 
   const id = rendered.blockId!;
+  // A block written before the rename carries the legacy id; adopt it so it is
+  // updated in place rather than left behind next to a new block.
+  const original = current;
+  if (current !== undefined) current = adoptLegacyBlock(current, id);
+  const relabelled = current !== original;
   const existingBlock = current === undefined ? undefined : readManagedBlock(current, id);
   const existingHash = existingBlock === undefined ? undefined : hashContent(existingBlock.trimEnd());
   const isSafe =
@@ -137,7 +142,7 @@ async function applyRendered(
   }
   const status = current === undefined || existingBlock === undefined
     ? "created"
-    : existingHash === desiredEntry.hash
+    : existingHash === desiredEntry.hash && !relabelled
       ? "unchanged"
       : "updated";
   if (!options.dryRun && status !== "unchanged") {
@@ -248,7 +253,7 @@ export async function install(
     updatedAt: now,
   };
   if (!options.dryRun) {
-    await mkdir(path.join(root, ".engineering-intelligence"), { recursive: true });
+    await mkdir(path.join(root, ".graphward"), { recursive: true });
     await writeManifest(root, manifest);
   }
   return summarize(actions);

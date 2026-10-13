@@ -83,7 +83,7 @@ regression-tested in `test/accuracy.test.mjs`:
    so trimming rarely triggers at all.
 
 Escape hatches: pass `budget: 0` to any tool for an uncapped response, set
-per-project caps in `.engineering-intelligence/config.json`
+per-project caps in `.graphward/config.json`
 (`{ "tokenBudgets": { "analyze_impact": 3000 } }`), or use `ask --full` on the
 CLI. And every tool's `--json` / raw output is always complete.
 

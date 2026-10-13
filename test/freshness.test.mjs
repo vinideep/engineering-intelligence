@@ -27,7 +27,7 @@ async function repoWithDocs(docs, sources = {}) {
     await mkdir(path.dirname(abs), { recursive: true });
     await writeFile(abs, content, "utf8");
   }
-  const kb = path.join(root, ".engineering-intelligence", "knowledge-base");
+  const kb = path.join(root, ".graphward", "knowledge-base");
   await mkdir(kb, { recursive: true });
   for (const [name, content] of Object.entries(docs)) {
     await writeFile(path.join(kb, name), content, "utf8");

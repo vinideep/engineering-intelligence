@@ -54,9 +54,9 @@ export const WORKFLOW_SKILL_ROUTING: Record<
   (typeof WORKFLOW_NAMES)[number],
   { primary: string[]; optional: string[] }
 > = {
-  "engineering-intelligence": {
+  "graphward": {
     primary: [
-      "engineering-intelligence-skill",
+      "graphward-skill",
       "socratic-clarification-gate",
       "aidlc-lifecycle-engine",
       "impact-analysis-engine",
@@ -79,7 +79,7 @@ export const WORKFLOW_SKILL_ROUTING: Record<
       "debugging-engine",
     ],
   },
-  "initialize-engineering-intelligence": {
+  "initialize-graphward": {
     primary: ["initialize-intelligence-skill"],
     optional: [
       "deep-project-knowledge-extractor",
@@ -93,7 +93,7 @@ export const WORKFLOW_SKILL_ROUTING: Record<
     optional: ["issue-tracker-sync-engine", "aidlc-lifecycle-engine", "question-file-engine"],
   },
   "deliver-backlog": {
-    primary: ["aidlc-lifecycle-engine", "engineering-intelligence-skill"],
+    primary: ["aidlc-lifecycle-engine", "graphward-skill"],
     optional: [
       "backlog-decomposition-engine",
       "issue-tracker-sync-engine",
@@ -108,7 +108,7 @@ export const WORKFLOW_SKILL_ROUTING: Record<
     primary: ["change-detection-engine", "impact-analysis-engine"],
     optional: ["graph-engine"],
   },
-  "sync-engineering-intelligence": {
+  "sync-graphward": {
     primary: ["change-detection-engine", "incremental-sync-engine"],
     optional: [
       "staleness-detector",

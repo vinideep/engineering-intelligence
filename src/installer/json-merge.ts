@@ -9,15 +9,23 @@
  *
  * Markdown solves this with comment sentinels (see blocks.ts); JSON has no such
  * affordance, so ownership is established by VALUE instead: an entry is ours iff
- * its command invokes `engineering-intelligence hook`. That makes merge, verify
+ * its command invokes `graphward hook`. That makes merge, verify
  * and uninstall all decidable without storing a side-channel manifest of array
  * indices, and it survives the user reordering or adding their own hooks.
  */
 
-const OWNERSHIP_MARKER = "engineering-intelligence hook";
+/**
+ * Hook commands we own. The pre-rename CLI name is still recognised so `update`
+ * replaces (and `uninstall` removes) entries written before the GraphWard rename
+ * instead of leaving a second, stale hook set behind.
+ */
+const OWNERSHIP_MARKER = /\b(?:graphward|engineering-intelligence)(?:@[\w.+-]+)? hook\b/;
 
 /** The key under which we register ourselves in an `mcpServers` map. */
-export const MCP_SERVER_KEY = "engineering-intelligence";
+export const MCP_SERVER_KEY = "graphward";
+
+/** `mcpServers` keys written by pre-rename releases; replaced on merge. */
+export const LEGACY_MCP_SERVER_KEYS: readonly string[] = ["engineering-intelligence"];
 
 type Json = Record<string, unknown>;
 
@@ -31,12 +39,12 @@ function isObject(value: unknown): value is Json {
  * (and on uninstall destroy) the user's own hooks sitting beside ours.
  */
 function isOurs(value: unknown): boolean {
-  return JSON.stringify(value ?? "").includes(OWNERSHIP_MARKER);
+  return OWNERSHIP_MARKER.test(JSON.stringify(value ?? ""));
 }
 
 /** True for an OBJECT KEY that is ours: our entry inside an `mcpServers` map. */
 function isOurKey(parentKey: string | undefined, key: string): boolean {
-  return parentKey === "mcpServers" && key === MCP_SERVER_KEY;
+  return parentKey === "mcpServers" && (key === MCP_SERVER_KEY || LEGACY_MCP_SERVER_KEYS.includes(key));
 }
 
 export function parseJsonOrEmpty(source: string | undefined): Json {
@@ -69,6 +77,10 @@ export function mergeHookConfig(existingSource: string | undefined, oursSource: 
       continue;
     }
     const section: Json = { ...theirValue };
+    // A pre-rename registration would otherwise start a second, stale server.
+    for (const key of Object.keys(section)) {
+      if (isOurKey(topKey, key) && key !== MCP_SERVER_KEY) delete section[key];
+    }
     for (const [event, ourEntries] of Object.entries(ourValue)) {
       const theirEntries = theirValue[event];
       if (!Array.isArray(ourEntries)) {
@@ -92,7 +104,7 @@ export function hasOurEntries(existingSource: string | undefined, oursSource: st
     const theirValue = existing[topKey];
     if (!isObject(theirValue)) return false;
     for (const [key, ourEntries] of Object.entries(ourValue)) {
-      // Object-keyed ownership (mcpServers.engineering-intelligence).
+      // Object-keyed ownership (mcpServers.graphward).
       if (isOurKey(topKey, key)) {
         if (JSON.stringify(theirValue[key]) !== JSON.stringify(ourEntries)) return false;
         continue;

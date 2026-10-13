@@ -45,13 +45,13 @@ Responsible for validating engineering work and providing honest quality assessm
 
 ## Modes
 
-### Implementation Mode (during `engineering-intelligence` workflow)
+### Implementation Mode (during `graphward` workflow)
 - Run validation commands
 - Report findings to the orchestrator
 - Allow blocking on critical findings
 
 ### Review Mode (during `review-engineering-change` workflow)
-- Produce findings report (`.engineering-intelligence/reports/REV-XXX-*.md`)
+- Produce findings report (`.graphward/reports/REV-XXX-*.md`)
 - **Do not** silently apply fixes
 - **Do not** modify product code
 - Report findings only — let the developer decide

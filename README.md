@@ -1,14 +1,14 @@
-# Engineering Intelligence (EI)
+# GraphWard (EI)
 
-Engineering Intelligence gives AI coding assistants a living blueprint of your codebase so they stop guessing, hallucinating, and breaking working code.
+GraphWard gives AI coding assistants a living blueprint of your codebase so they stop guessing, hallucinating, and breaking working code.
 
 ---
 
-## What is Engineering Intelligence? (In Simple Terms)
+## What is GraphWard? (In Simple Terms)
 
 When you ask standard AI to write code, it often guesses how your project works. It might change a button and accidentally break your database, or delete code it didn't understand.
 
-**Engineering Intelligence acts like an automated lead architect and project manager:**
+**GraphWard acts like an automated lead architect and project manager:**
 1. **Maps your project** — Scans your entire app to understand how every file and function connects.
 2. **Clarifies before coding** — If your request is vague, it stops and asks you simple multiple-choice questions instead of guessing.
 3. **Tests in a safety sandbox** — Tests changes in an isolated workspace. If anything breaks, it rolls back automatically so your working files are never damaged.
@@ -25,10 +25,10 @@ You do not need to be an engineer to use this. Here is the step-by-step guide:
 Open your terminal in your project folder and run:
 
 ```bash
-npx engineering-intelligence initialize . --yes
+npx graphward initialize . --yes
 ```
 
-This creates a hidden `.engineering-intelligence/` folder that holds the blueprint, memory, and dependency graphs of your application.
+This creates a hidden `.graphward/` folder that holds the blueprint, memory, and dependency graphs of your application.
 
 ---
 
@@ -91,29 +91,29 @@ flowchart TD
 
 | Command | Best For |
 |---|---|
-| `npx engineering-intelligence initialize . --yes` | Default recommended setup with auto-detected providers |
-| `npx engineering-intelligence initialize . --providers native --yes` | Offline, zero-download deterministic setup using built-in parser |
-| `npx engineering-intelligence initialize . --ide cursor --yes` | Explicitly targets a specific editor adapter |
+| `npx graphward initialize . --yes` | Default recommended setup with auto-detected providers |
+| `npx graphward initialize . --providers native --yes` | Offline, zero-download deterministic setup using built-in parser |
+| `npx graphward initialize . --ide cursor --yes` | Explicitly targets a specific editor adapter |
 
 ### Health & Diagnostic Commands
 
 ```bash
 # Check if your project intelligence is healthy and up-to-date
-npx engineering-intelligence health . --strict
+npx graphward health . --strict
 
 # Diagnose installation and tool dependencies
-npx engineering-intelligence doctor .
+npx graphward doctor .
 
 # Run test receipts and verify code safety gates
-npx engineering-intelligence verify .
+npx graphward verify .
 
 # Fast update of the dependency graph after manual file edits
-npx engineering-intelligence sync . --files src/index.ts
+npx graphward sync . --files src/index.ts
 ```
 
-### What EI Stores in Your Repository
+### What GraphWard Stores in Your Repository
 
-All intelligence lives safely under `.engineering-intelligence/`:
+All intelligence lives safely under `.graphward/`:
 - `knowledge-base/` — Verified documentation and architecture maps.
 - `graph/` — `dependency-graph.json` tracking connections between all modules and symbols.
 - `aidlc/` — Project state, requirements, open questions, and backlog tickets.
@@ -131,4 +131,4 @@ npm run test:integration
 npm run build
 ```
 
-Full technical architecture documentation is available in [WORKFLOW_GUIDE.md](WORKFLOW_GUIDE.md) and [engineering-intelligence-blueprint.md](engineering-intelligence-blueprint.md).
+Full technical architecture documentation is available in [WORKFLOW_GUIDE.md](WORKFLOW_GUIDE.md) and [graphward-blueprint.md](graphward-blueprint.md).

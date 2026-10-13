@@ -10,7 +10,7 @@ Use `change-detection-engine` and `engineering-change-review`.
 ## Procedure
 
 1. **Detect scope** — Identify the implementation diff or changed scope
-2. **Read context** — Call `get_engineering_context`, then load the associated impact report, test evidence, and relevant EI graph slices. Record provider health/fallback; exclude stale and out-of-scope provider evidence.
+2. **Read context** — Call `get_engineering_context`, then load the associated impact report, test evidence, and relevant GraphWard graph slices. Record provider health/fallback; exclude stale and out-of-scope provider evidence.
 3. **Review** — Inspect across five dimensions:
 
 | Dimension | What to Check |
@@ -22,7 +22,7 @@ Use `change-detection-engine` and `engineering-change-review`.
 | Documentation sync | Knowledge, memory, context accuracy |
 | Evidence trust | Current hashes, verified claims, provider provenance, conflicts/unknowns |
 
-4. **Write report** — Generate `.engineering-intelligence/reports/REV-XXX-<slug>.md` with:
+4. **Write report** — Generate `.graphward/reports/REV-XXX-<slug>.md` with:
    - Severity-ordered findings (🔴 Blocker → 🟢 Positive)
    - Evidence paths for each finding
    - Test gaps and coverage concerns

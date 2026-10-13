@@ -58,10 +58,10 @@ test("deriveFacts computes imports, dependencies and routes from source", async 
   await rm(root, { recursive: true, force: true });
 });
 
-test("provider-only structural evidence cannot be promoted into a derived EI claim", async () => {
+test("provider-only structural evidence cannot be promoted into a derived GraphWard claim", async () => {
   const root = await project(SAMPLE);
   await buildGraph(root); // writes the canonical graph fixture
-  const graphPath = path.join(root, ".engineering-intelligence/graph/dependency-graph.json");
+  const graphPath = path.join(root, ".graphward/graph/dependency-graph.json");
   const graph = JSON.parse(await readFile(graphPath, "utf8"));
   graph.edges.push({
     from: "module:src/auth",
@@ -140,10 +140,10 @@ test("asserted claims require an author, so unchecked statements always have an 
 
 test("legacy claims without a kind are read as asserted, never as fact", async () => {
   const root = await project(SAMPLE);
-  await mkdir(path.join(root, ".engineering-intelligence/claims"), { recursive: true });
+  await mkdir(path.join(root, ".graphward/claims"), { recursive: true });
   // A store written before the split: free text, confidence "verified".
   await writeFile(
-    path.join(root, ".engineering-intelligence/claims/claims.json"),
+    path.join(root, ".graphward/claims/claims.json"),
     JSON.stringify({
       schemaVersion: 1,
       generatedAt: new Date(0).toISOString(),
